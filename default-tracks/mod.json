@@ -1,0 +1,32 @@
+{
+  "manifest_version": 2,
+  "mod": {
+    "id": "default-tracks",
+    "name": "Tracks: Default Tracks",
+    "version": "0.1.0-dev.1",
+    "author": "Scott",
+    "description": "Adds New Default Instrument Track and New Default Audio Track actions (shortcuts, Commander and the track right-click menu). Each creates the track after the selected one and loads your Chain preset 'Default Instrument Track' or 'Default Audio Track' into it."
+  },
+  "built_against": {
+    "bitwig_version": "6.1.7",
+    "platform": "macos",
+    "architecture": "universal"
+  },
+  "requires": [
+    { "id": "notifications-framework", "min_version": "0.3.0-dev.1" }
+  ],
+  "registrations": [
+    {
+      "id": "preferences",
+      "consumer": "preferences-composition-framework",
+      "descriptor": "preferences.properties",
+      "jar": "helper.jar"
+    },
+    {
+      "id": "actions",
+      "consumer": "action-menu-composition-framework",
+      "descriptor": "actions.properties",
+      "jar": "helper.jar"
+    }
+  ]
+}

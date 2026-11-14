@@ -1,0 +1,29 @@
+{
+  "manifest_version": 2,
+  "mod": {
+    "id": "save-new-version",
+    "name": "Project: Save New Version",
+    "version": "0.2.0-dev.1",
+    "author": "Scott",
+    "description": "Adds a Save New Version action (shortcut and Commander) that saves the project as the next version of its .bwproject file (name-2, name-3 ... or name-ddMMyyHHmm) and continues under the new name."
+  },
+  "built_against": {
+    "bitwig_version": "6.1.7",
+    "platform": "macos",
+    "architecture": "universal"
+  },
+  "registrations": [
+    {
+      "id": "preferences",
+      "consumer": "preferences-composition-framework",
+      "descriptor": "preferences.properties",
+      "jar": "helper.jar"
+    },
+    {
+      "id": "actions",
+      "consumer": "action-menu-composition-framework",
+      "descriptor": "actions.properties",
+      "jar": "helper.jar"
+    }
+  ]
+}
