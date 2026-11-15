@@ -9,4 +9,4 @@ Mods for [Patchbay](https://github.com/shaboogen-dev/Patchbay) (BML). Both are b
 
 To install a release, add the zip in Patchbay under Mods > Add Mod... (do not unpack it). Each mod has its own README.
 
-To build from source: `./build.sh` inside a mod's folder (needs a JDK, a Patchbay folder at `~/Desktop/Bitwig Patchbay` and Bitwig Studio 6.1.7).
+To build from source: `./build.sh` inside a mod's folder (needs a JDK, a Patchbay folder and Bitwig Studio 6.1.7).
