@@ -1,6 +1,7 @@
 package dev.local.defaulttracks;
 
 import bitwig.obf.PiT;
+import bitwig.obf.SZB;
 import bitwig.obf.YCD;
 import bitwig.obf.aCG;
 import bitwig.obf.aDs;
@@ -12,6 +13,7 @@ import com.bitwig.flt.document.core.iface.bMt;
 import com.bitwig.flt.document.core.iface.uVN;
 import com.bitwig.flt.document.core.master.CmH;
 import com.bitwig.flt.document.core.master.GJy;
+import com.bitwig.flt.document.core.master.rMD;
 import com.bitwig.flt.document.core.master.device.k3K;
 import com.bitwig.flt.document.core.master.device.utt;
 import com.bitwig.flt.packaging.core.SJF;
@@ -61,6 +63,7 @@ public final class DefaultTracks {
                 track = container.beI(kind.type);
                 if (kind.instrumentDefaults) track.beI(document.dvk());
                 container.beI(track, index, true, null);
+                inheritColor(track, place.colorSource());
                 chain = insertChain(track);
             } finally {
                 changes.beI(false);
@@ -74,7 +77,9 @@ public final class DefaultTracks {
     }
 
     /** Where the new track goes: a container (the project or a group) and a position in it. */
-    private record Place(uVN container, int index) {}
+    private record Place(uVN container, int index, Object colorSource) {
+        Place(uVN container, int index) { this(container, index, null); }
+    }
 
     /**
      * Right after the selected track, in the group that holds it. A selected group gets the track at the end
@@ -90,16 +95,36 @@ public final class DefaultTracks {
             Object selected = tracks.get(tracks.size() - 1);
             if (selected instanceof GJy group) {
                 MOD.log("selected a group; adding inside it");
-                return new Place(group, group.qaW());
+                return new Place(group, group.qaW(), group);
             }
             Place found = locate(root, selected, 0);
-            if (found != null) return new Place(found.container(), found.index() + 1);
+            if (found != null) {
+                // inside a group the track takes the group's color, otherwise the color of the track above it
+                Object colorFrom = found.container() == root ? selected : found.container();
+                return new Place(found.container(), found.index() + 1, colorFrom);
+            }
             MOD.log("selected track " + selected.getClass().getName() + " is not in the track tree");
         }
         StringBuilder kinds = new StringBuilder();
         for (Object child : root.xDy()) kinds.append(' ').append(child.getClass().getSimpleName());
         MOD.log("no selected track found; project children:" + kinds);
         return new Place(root, root.qaW());
+    }
+
+    /** Gives the new track the color of its group or of the track above it; no source keeps Bitwig's default. */
+    private static void inheritColor(YCD track, Object source) {
+        if (source == null) return;
+        try {
+            if (!(source instanceof rMD from) || !(track instanceof rMD to)) return;
+            SZB color = from.mYH() != null ? from.mYH() : from.Gak();
+            if (color == null) color = from.Gak();
+            if (color != null) {
+                to.beI(color);
+                MOD.log("track color copied from " + source.getClass().getSimpleName() + ": " + color);
+            }
+        } catch (Throwable t) {
+            MOD.log("could not copy the color: " + t);
+        }
     }
 
     /** The container that directly holds the track, with the track's position in it. */
