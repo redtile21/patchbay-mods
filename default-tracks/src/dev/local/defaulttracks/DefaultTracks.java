@@ -76,6 +76,29 @@ public final class DefaultTracks {
         }
     }
 
+    /** Loads the default audio chain onto tracks that have no devices yet. */
+    static void giveDefaultChain(uVN root, List<PiT> bounced, File preset) {
+        try {
+            if (!(root instanceof GJy rootTracks)) return;
+            bounced = new ArrayList<>(bounced);
+            bounced.removeIf(track -> track.YQe().XnJ() != 0);
+            if (bounced.isEmpty()) return;
+            List<utt> chains = new ArrayList<>();
+            CmH changes = rootTracks.cc_();
+            changes.beI("Default Audio Chain on Bounced Track", false);
+            try {
+                for (PiT track : bounced) chains.add(insertChain(track));
+            } finally {
+                changes.beI(false);
+            }
+            for (utt chain : chains) chain.beI(preset);
+            MOD.log("applied " + preset.getName() + " to " + bounced.size() + " bounced track(s)");
+        } catch (Throwable t) {
+            MOD.log("applying the default chain failed", t);
+            Notifications.toast("Default Tracks: could not update the bounced track (see the log)");
+        }
+    }
+
     /** Where the new track goes: a container (the project or a group) and a position in it. */
     private record Place(uVN container, int index, Object colorSource) {
         Place(uVN container, int index) { this(container, index, null); }
@@ -149,6 +172,8 @@ public final class DefaultTracks {
     }
 
     /** The project window: the widget itself, or (for a menu click on some inner widget) the active window. */
+    static dwe findWindowFor(Object widget) { return findWindow(widget); }
+
     private static dwe findWindow(Object widget) {
         if (widget instanceof aDs window) return window;
         try {

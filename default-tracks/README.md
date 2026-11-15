@@ -7,6 +7,10 @@ A Patchbay mod for Bitwig Studio. It adds two actions that create a track after 
 
 Each action can be given a shortcut (Settings > Shortcuts > "Default Tracks"), is in the Commander, and is in the right-click menu of a track.
 
+A new track takes the color of the group it lands in, or else the color of the track above it. With nothing selected it keeps Bitwig's default color.
+
+- **Bounce to Default Audio Track** is in the right-click menu of a clip and of a time selection. It runs Bitwig's own Bounce, then loads the `Default Audio Track` chain onto the track Bitwig creates for the bounced audio (right after the source track, in its group, with its color). It only works from the right-click menu: a shortcut cannot start Bounce safely, so the action shows a notification instead.
+
 ## Presets
 
 Save a Chain device as a preset with the names above. The mod looks for `<name>.bwpreset` anywhere under your user library (`~/Documents/Bitwig Studio/Library`), the shallowest match winning. To use another folder, run **Choose Default Track Preset Folder...** from the Commander (or give it a shortcut) and set Settings > Mods > Default Tracks > Preset location to Custom folder (choosing a folder switches it for you).

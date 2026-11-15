@@ -16,6 +16,10 @@ public final class TrackActions implements ActionProvider {
                    .in(Menu.selection("track"))
                    .onRun(context -> DefaultTracks.create(kind, context.widget(), context.selection()));
         }
+        actions.action("default_tracks_bounce", "Bounce to Default Audio Track")
+               .category("default_tracks")
+               .in(Menu.selection("arranger_clip"), Menu.selection("arranger_clip_time_selection"))
+               .onRun(context -> BounceToDefault.run(context.widget()));
         actions.action("default_tracks_choose_folder", "Choose Default Track Preset Folder...")
                .category("default_tracks")
                .onRun(context -> FolderChooser.choose());
