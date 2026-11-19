@@ -1,6 +1,6 @@
 # Channel Strip: design
 
-Status: **plan only, nothing built.** This document describes a channel strip for Bitwig Studio 6.1.7 on macOS,
+Status: **plan only, nothing built.** Product: **Elodea Blackstar Channel Strip**, by Elodea Blackstar. This document describes a channel strip for Bitwig Studio 6.1.7 on macOS,
 loaded through Patchbay: the architecture, the risks that could change it, and the order of work. Anything marked
 **(unverified)** is an assumption that a Phase 0 spike must confirm or replace.
 
@@ -16,6 +16,8 @@ Decided:
 - **Native parameter names.** Every parameter appears in automation, modulation and the parameter list with a real
   name ("Compressor Threshold"), never a generic one ("S3 P2").
 - **Builds run on macOS**, like the other mods in this repo.
+- **Names:** every device carries the `EB` prefix and the work is credited to Elodea Blackstar (§3.5).
+- **Version 1 is about working, not character.** Clean designs only; character modes come in version 2 (§12).
 
 Non-goals for version 1: sidechain input from another track, mid/side processing per unit, a gate, emulation of
 specific commercial hardware.
@@ -54,16 +56,16 @@ Each unit is **its own small native device**. The strip is a **container device 
 the same kind of structure as Multiband FX-4's band chains.
 
 ```
-Channel Strip (container .bwdevice)
+EB Blackstar Strip (container .bwdevice)
   Input gain ─▶ [Slot 1 chain] ─▶ [Slot 2] ─▶ … ─▶ [Slot 6] ─▶ Output gain
                     │
-                    └─ holds one unit device, e.g. "CS Compressor" (.bwdevice)
+                    └─ holds one unit device, e.g. "EB Compressor" (.bwdevice)
 ```
 
 Why this fits the requirements:
 
 - **Native names come for free.** Each unit device declares its own named parameters ("Threshold", "Ratio" …).
-  Bitwig shows them as `CS Compressor > Threshold` in automation and modulation, like any native device.
+  Bitwig shows them as `EB Compressor > Threshold` in automation and modulation, like any native device.
 - **Parameter budget is small.** The largest unit (EQ) has 12 parameters; every device fits in **one Nitro core**.
 - **Automation follows the unit.** Move a compressor from slot 3 to slot 1 and its automation moves with it, because it
   belongs to the device, not the slot.
@@ -77,7 +79,7 @@ Costs and unknowns:
 - A Nitro container with **six chains in series** is **(unverified)**. Multiband FX-4 shows nested chains in
   parallel bands. Fallback: one nested chain, with slots as positions in it and the companion mod keeping the count at 6.
 - Slot chains accept any device, not only our units **(unverified whether this can be restricted)**. That is acceptable;
-  the console panel shows non-CS devices as a generic slot.
+  the console panel shows non-EB devices as a generic slot.
 
 ### 3.3 Fallback: one device with named parameters
 
@@ -85,7 +87,7 @@ If containers fail Spike B, go back to a single device with all ≈270 named par
 to get parameters into Nitro without one inport each (value ports, or vector inports carrying several parameters).
 Otherwise reduce the scope, for example fewer parameters per unit.
 
-### 3.4 Deliverables
+### 3.4 Deliverables (folder names)
 
 ```
 channel-strip/
@@ -103,12 +105,28 @@ channel-strip/
 - **Devices**: six `.bwdevice` files, loaded through Framework: Nitro Devices. They work without the companion mod.
 - **Companion mod**: the console panel (Panel Management Framework) and actions (Actions and Menus Framework).
 
+### 3.5 Names and branding
+
+| Item | Name |
+|---|---|
+| Product | Elodea Blackstar Channel Strip |
+| Container device | **EB Blackstar Strip** |
+| Unit devices | **EB Gain**, **EB EQ**, **EB Compressor**, **EB Saturation**, **EB Limiter** |
+| Console panel (view label) | **Blackstar Console** |
+| Companion mod | id `eb-channel-strip`, name "Elodea Blackstar: Channel Strip", author "Elodea Blackstar" |
+| Action category | "Elodea Blackstar" |
+| Device creator / vendor field | Elodea Blackstar **(unverified: where the Nitro document stores it)** |
+| Nitro device ids | `elodea-blackstar.strip`, `elodea-blackstar.gain`, … (polarity uses `polarity.blueprint-gain`) |
+
+Device names come from the `.bwdevice` filename, so the files are `EB Blackstar Strip.bwdevice`, `EB Gain.bwdevice`
+and so on. The browser search keyword is the name, so typing "EB" or "Blackstar" finds them all.
+
 ## 4. Units
 
 Each unit is its own device. Parameters marked **quick** appear on the device's own panel; all appear in the console
 panel and in Bitwig's parameter list. Ranges are a starting point.
 
-### CS Gain
+### EB Gain
 | Parameter | Range | Quick |
 |---|---|---|
 | Gain | -24 to +24 dB | yes |
@@ -117,7 +135,7 @@ panel and in Bitwig's parameter list. Ranges are a starting point.
 | Polarity | Off / L / R / Both | yes |
 | Mono | Off / On | |
 
-### CS EQ (4 bands plus filters)
+### EB EQ (4 bands plus filters)
 | Parameter | Range | Quick |
 |---|---|---|
 | Low Gain | ±15 dB | yes |
@@ -131,7 +149,7 @@ panel and in Bitwig's parameter list. Ranges are a starting point.
 | High Freq / High Shape | 1.5 kHz to 16 kHz; Shelf / Bell | |
 | Low-Pass | 3 kHz to 20 kHz, Off | |
 
-### CS Compressor
+### EB Compressor
 | Parameter | Range | Quick |
 |---|---|---|
 | Threshold | -60 to 0 dB | yes |
@@ -143,10 +161,9 @@ panel and in Bitwig's parameter list. Ranges are a starting point.
 | Knee | 0 to 24 dB | |
 | Detector | Peak / RMS | |
 | Sidechain HPF | Off, 20 Hz to 300 Hz | |
-| Character | Clean / VCA / Opto / FET | |
 | Stereo Link | 0 to 100 % | |
 
-### CS Saturation
+### EB Saturation
 | Parameter | Range | Quick |
 |---|---|---|
 | Drive | 0 to +36 dB | yes |
@@ -158,7 +175,7 @@ panel and in Bitwig's parameter list. Ranges are a starting point.
 | Auto Gain | Off / On | |
 | Oversampling | 1× / 2× / 4× | |
 
-### CS Limiter
+### EB Limiter
 | Parameter | Range | Quick |
 |---|---|---|
 | Input Gain | 0 to +24 dB | yes |
@@ -198,13 +215,13 @@ The Channel Strip container shows input and output gain and six slot bypass butt
 shows its own small panel:
 
 ```
-Channel Strip ┌ In ○  Out ○  [1][2][3][4][5][6] ┐
-  ├ CS EQ          ○ Low  ○ LoMid  ○ HiMid  ○ High   ▮▮
-  ├ CS Compressor  ○ Thr  ○ Ratio  ○ Makeup ○ Mix    ▮▮ GR
-  ├ CS Saturation  ○ Drive ▾Type   ○ Mix    ○ Out    ▮▮
+EB Blackstar Strip ┌ In ○  Out ○  [1][2][3][4][5][6] ┐
+  ├ EB EQ          ○ Low  ○ LoMid  ○ HiMid  ○ High   ▮▮
+  ├ EB Compressor  ○ Thr  ○ Ratio  ○ Makeup ○ Mix    ▮▮ GR
+  ├ EB Saturation  ○ Drive ▾Type   ○ Mix    ○ Out    ▮▮
   ├ (empty)
-  ├ CS Gain        ○ Gain ○ Pan    ○ Width  ▾Pol     ▮▮
-  └ CS Limiter     ○ In   ○ Ceil   ○ Rel    ○ Look   ▮▮ GR
+  ├ EB Gain        ○ Gain ○ Pan    ○ Width  ▾Pol     ▮▮
+  └ EB Limiter     ○ In   ○ Ceil   ○ Rel    ○ Look   ▮▮ GR
 ```
 
 Each unit device's meter is an SkSL display fed by one `f32<4>` vector:
@@ -216,7 +233,7 @@ A Panel Management view, "Channel Strip", from the companion mod. It follows the
 strip on the selected track):
 
 ```
-┌ Channel Strip: Lead Vox ────────────────────────────────────────────────────┐
+┌ Blackstar Console: Lead Vox ────────────────────────────────────────────────┐
 │ 1 EQ        2 COMP      3 SAT       4 —        5 GAIN      6 LIM     I/O  │
 │ HPF ○       Thr  ○      Drive ○                Gain ○      In   ○    In ○ │
 │ Low ○ ○     Ratio ○     Type ▾                 Pan  ○      Ceil ○        │
@@ -235,7 +252,7 @@ strip on the selected track):
   empty slot.
 - Meters: levels and gain reduction per slot **(unverified: needs a way for the companion mod to read the devices'
   display outputs; otherwise version 1 has no meters in the console panel)**.
-- A device in a slot that is not a CS unit shows its name and Bitwig's remote controls for it.
+- A device in a slot that is not an EB unit shows its name and Bitwig's remote controls for it.
 
 The whole panel depends on the companion mod reaching the selected strip's slot chains, the devices in them and their
 parameters through Bitwig's internals. This is not documented in any framework; it is **Spike D**, and is the same
@@ -253,7 +270,7 @@ All DSP written from scratch from public textbook designs:
 - **EQ:** RBJ cookbook biquads (shelf, peak, high-pass, low-pass), transposed direct form II, `f64` state if `f32`
   drifts.
 - **Compressor:** feed-forward, log-domain gain computer with soft knee; peak or RMS detector; attack/release
-  ballistics per character mode; sidechain HPF as a biquad on the detector path.
+  ballistics (one clean design in version 1); sidechain HPF as a biquad on the detector path.
 - **Saturation:** tanh and polynomial soft clip, asymmetric bias, hard clip; optional 2× or 4× polyphase
   oversampling with half-band filters.
 - **Limiter:** lookahead peak limiter (delay line plus sliding-window maximum, smoothed gain), optional true-peak
@@ -302,7 +319,7 @@ to a session with Remote Control so I can run them there.
 |---|---|---|
 | A | macOS build | Blueprint Gain builds on macOS (§8 step 2), or a Linux/Windows build loads and runs on your Mac (§8 step 1). |
 | B | Container | A Nitro container with six chains in series loads cold, passes audio through nested devices, saves and recalls; swapping a device in a chain during playback is click-free or can be faded. |
-| C | Unit device | One unit device (CS Gain) with named parameters, quick controls on its panel and a meter: automation and modulation show real names. |
+| C | Unit device | One unit device (EB Gain) with named parameters, quick controls on its panel and a meter: automation and modulation show real names. |
 | D | Companion link | A Panel Management view finds the selected Channel Strip, lists the devices in its slot chains, and reads and changes one of their parameters through Bitwig widgets. Also confirms the framework works on 6.1.7 macOS. |
 
 If B fails, use the fallback in §3.3. If D fails, the console panel is dropped for version 1 and the full parameters
@@ -335,6 +352,14 @@ the blueprint's `BITWIG-TEST.md`, zip releases like the other mods in this repo.
 
 ## 11. Open questions
 
-1. Should unit "character" modes (console EQ, VCA/Opto/FET compressor) be in version 1 or later?
-2. Prefix for unit device names: `CS Compressor`, `Strip Compressor`, or something else?
-3. Is Panel: Streamlined Views installed? It decides whether the console panel is its own view or a tab in the lower panel.
+1. Is Panel: Streamlined Views installed? It decides whether the console panel is its own view or a tab in the lower panel.
+
+## 12. Version 2: making it amazing
+
+Deferred so version 1 can focus on working end to end:
+
+- Character modes: console-style EQ curves; VCA, Opto and FET compressor ballistics and curves.
+- Saturation models beyond the four basic curves.
+- A distinctive Elodea Blackstar look for the panels and console (colours, artwork, SkSL displays).
+- Meters in the console panel, if version 1 ships without them.
+- Strip presets curated by Elodea Blackstar.
