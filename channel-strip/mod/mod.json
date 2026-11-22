@@ -1,0 +1,26 @@
+{
+  "manifest_version": 2,
+  "mod": {
+    "id": "eb-strip-console",
+    "name": "Tracks: EB Strip Console (spike)",
+    "version": "0.0.1-spike.1",
+    "author": "Scott",
+    "description": "Spike for the EB Blackstar Strip: probes the selected track for strip devices and their nested chain slots, and inserts an EB unit into the first slot."
+  },
+  "built_against": {
+    "bitwig_version": "6.1.7",
+    "platform": "macos",
+    "architecture": "universal"
+  },
+  "requires": [
+    { "id": "notifications-framework", "min_version": "0.3.0-dev.1" }
+  ],
+  "registrations": [
+    {
+      "id": "actions",
+      "consumer": "action-menu-composition-framework",
+      "descriptor": "actions.properties",
+      "jar": "helper.jar"
+    }
+  ]
+}

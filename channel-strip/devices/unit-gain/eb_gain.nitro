@@ -1,0 +1,101 @@
+component eb_gain
+{
+    audio_inport in;
+    audio_inport f32 gain_db = 0.0;
+    audio_inport f32 pan = 0.0;
+    audio_inport f32 stereo_width = 100.0;
+    value_inport i32 polarity;
+    value_inport i32 sum_mono;
+
+    audio_outport out;
+    audio_outport f32<4> display;
+    audio_outport f32<4> display2;
+
+    f32 env_l = 0.0;
+    f32 env_r = 0.0;
+    f32 pk_l = 0.0;
+    f32 pk_r = 0.0;
+    f32 t_l = 0.0;
+    f32 t_r = 0.0;
+
+    reset
+    {
+        env_l = 0.0;
+        env_r = 0.0;
+        pk_l = 0.0;
+        pk_r = 0.0;
+        t_l = 0.0;
+        t_r = 0.0;
+    }
+
+    process
+    {
+        // Gain: dB to linear.
+        f32 g = fmin(24.0, fmax(-24.0, gain_db));
+        f32 lin = exp(g * 0.11512925);
+
+        // Pan: constant power, unity at centre. -100..100 maps to 0..pi/2.
+        f32 p = fmin(100.0, fmax(-100.0, pan));
+        f32 angle = (p + 100.0) * 0.00785398163;
+        f32 gl = cos(angle) * 1.41421356;
+        f32 gr = sin(angle) * 1.41421356;
+
+        // Width: mid/side, 0..200 percent.
+        f32 wd = fmin(200.0, fmax(0.0, stereo_width)) * 0.01;
+        f32<> x = in;
+        f32 mid = (x[0] + x[1]) * 0.5;
+        f32 side = (x[0] - x[1]) * 0.5 * wd;
+        f32 l = (mid + side) * lin * gl;
+        f32 r = (mid - side) * lin * gr;
+        if (polarity == 1 || polarity == 3) { l = -l; }
+        if (polarity == 2 || polarity == 3) { r = -r; }
+        if (sum_mono == 1) {
+            f32 m = (l + r) * 0.5;
+            l = m;
+            r = m;
+        }
+        f32<> y = <l, r>;
+        out = y;
+
+        f32 al = fabs(l);
+        f32 ar = fabs(r);
+        f32 sr = EC.samplerate;
+        f32 hold_len = 5.0 * sr;
+        env_l = fmax(al, env_l * 0.999);
+        env_r = fmax(ar, env_r * 0.999);
+        if (al >= pk_l)
+        {
+            pk_l = al;
+            t_l = 0.0;
+        }
+        else
+        {
+            t_l = t_l + 1.0;
+            if (t_l > hold_len)
+            {
+                pk_l = al;
+                t_l = 0.0;
+            }
+        }
+        if (ar >= pk_r)
+        {
+            pk_r = ar;
+            t_r = 0.0;
+        }
+        else
+        {
+            t_r = t_r + 1.0;
+            if (t_r > hold_len)
+            {
+                pk_r = ar;
+                t_r = 0.0;
+            }
+        }
+        f32 le = fmin(1.0, fmax(0.0, (20.0 * log10(fmax(0.000001, env_l)) + 60.0) / 66.0));
+        f32 re = fmin(1.0, fmax(0.0, (20.0 * log10(fmax(0.000001, env_r)) + 60.0) / 66.0));
+        f32 lp = fmin(1.0, fmax(0.0, (20.0 * log10(fmax(0.000001, pk_l)) + 60.0) / 66.0));
+        f32 rp = fmin(1.0, fmax(0.0, (20.0 * log10(fmax(0.000001, pk_r)) + 60.0) / 66.0));
+        display = <le, re, lp, rp>;
+        display2 = <(g + 24.0) * 0.0208333333, (p + 100.0) * 0.005, wd * 0.5, 0.0>;
+    }
+}

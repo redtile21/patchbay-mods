@@ -1,0 +1,5 @@
+NAME = "EB Gain"
+PROJECT_ID = "elodea-blackstar.gain"
+UUID = "9cbb88dd-8758-46fa-8e9c-a9c66edaa49b"
+DESCRIPTION = "Elodea Blackstar gain, pan and width with a stereo level display."
+NITRO = "eb_gain.nitro"

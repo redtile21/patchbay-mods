@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "projectId": "elodea-blackstar.strip",
+  "name": "EB Blackstar Strip",
+  "surface": "device",
+  "target": {
+    "bitwigVersion": "6.1.7",
+    "platform": "macos-arm64"
+  },
+  "identity": {
+    "uuid": "4f1e9a37-0b6c-4d82-95e3-d7a2c8b1f406",
+    "creator": "Elodea Blackstar",
+    "category": "Container"
+  },
+  "presentation": {
+    "type": "audio-fx",
+    "description": "Elodea Blackstar channel strip: six device slots in series with input and output gain and per-slot bypass."
+  },
+  "sources": {
+    "nitro": [
+      "slot.nitro"
+    ],
+    "sksl": ["panel.sksl"]
+  },
+  "adapter": {
+    "type": "external-builder",
+    "argv": [
+      "python",
+      "{workspace}/build.py",
+      "--out",
+      "{output}"
+    ]
+  },
+  "output": {
+    "path": "build/macos-6.1.7/EB Blackstar Strip.bwdevice",
+    "libraryPath": "EB Blackstar Strip.bwdevice"
+  },
+  "preflight": {
+    "profile": "source-document",
+    "recallSafety": {"canary": "runtime_magic", "arrays": []}
+  }
+}

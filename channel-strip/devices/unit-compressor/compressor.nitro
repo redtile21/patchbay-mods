@@ -1,0 +1,192 @@
+component eb_compressor
+{
+    audio_inport in;
+    audio_inport f32 threshold = -18.0;
+    audio_inport f32 ratio = 4.0;
+    audio_inport f32 attack = 10.0;
+    audio_inport f32 release = 100.0;
+    audio_inport f32 makeup = 0.0;
+    audio_inport f32 knee = 6.0;
+    audio_inport f32 mix = 100.0;
+    audio_inport f32 sc_hpf = 0.0;
+    audio_inport f32 stereo_link = 100.0;
+    value_inport i32 detector;
+
+    audio_outport out;
+    audio_outport f32<4> display;
+    audio_outport f32<4> display2;
+
+    f32 gr_db = 0.0;
+    f32<2> sc_lp = 0.0;
+    f32<2> rms_pw = 0.0;
+    f32 in_env = 0.0;
+    f32 out_env = 0.0;
+    f32 in_pk = 0.0;
+    f32 out_pk = 0.0;
+    f32 gr_pk = 0.0;
+    f32 t_in = 0.0;
+    f32 t_out = 0.0;
+    f32 t_gr = 0.0;
+    f32 t_disp = 0.0;
+    f32 disp_gr = 0.0;
+
+    f32 dbgain(f32 x)
+    {
+        return exp(x * 0.11512925464970229);
+    }
+    f32 bound(f32 x, f32 lo, f32 hi)
+    {
+        return fmax(lo, fmin(hi, x));
+    }
+
+    reset
+    {
+        gr_db = 0.0;
+        sc_lp = 0.0;
+        rms_pw = 0.0;
+        in_env = 0.0;
+        out_env = 0.0;
+        in_pk = 0.0;
+        out_pk = 0.0;
+        gr_pk = 0.0;
+        t_in = 0.0;
+        t_out = 0.0;
+        t_gr = 0.0;
+        t_disp = 0.0;
+        disp_gr = 0.0;
+    }
+
+    process
+    {
+        f32<> x = in;
+        f32 sr = EC.samplerate;
+
+        // Detector path: optional sidechain high-pass, then peak or RMS.
+        f32<> det = x;
+        if (sc_hpf >= 20.0)
+        {
+            f32 hp_a = 1.0 - exp(-6.283185307 * sc_hpf / sr);
+            sc_lp = sc_lp + hp_a * (x - sc_lp);
+            det = x - sc_lp;
+        }
+        f32 a = fabs(det[0]);
+        f32 b = fabs(det[1]);
+        if (detector == 1)
+        {
+            f32 rk = 1.0 - exp(-1.0 / (0.01 * sr));
+            rms_pw = rms_pw + rk * (det * det - rms_pw);
+            a = sqrt(rms_pw[0]);
+            b = sqrt(rms_pw[1]);
+        }
+        f32 lk = bound(stereo_link, 0.0, 100.0) * 0.01;
+        f32 level = lk * fmax(a, b) + (1.0 - lk) * (a + b) * 0.5;
+        f32 x_db = 20.0 * log10(fmax(0.000001, level));
+
+        // Gain computer: soft knee, downward compression. gr_target <= 0 dB.
+        f32 t = bound(threshold, -60.0, 0.0);
+        f32 r = bound(ratio, 1.0, 20.0);
+        f32 w = bound(knee, 0.0, 24.0);
+        f32 over = x_db - t;
+        f32 gr_target = 0.0;
+        if (2.0 * over > w)
+        {
+            gr_target = (1.0 / r - 1.0) * over;
+        }
+        else
+        {
+            if (2.0 * over > -w)
+            {
+                f32 k2 = over + w * 0.5;
+                gr_target = (1.0 / r - 1.0) * k2 * k2 / (2.0 * w);
+            }
+        }
+
+        // Ballistics on the gain reduction in dB.
+        f32 att = exp(-1.0 / (bound(attack, 0.1, 100.0) * 0.001 * sr));
+        f32 rel = exp(-1.0 / (bound(release, 10.0, 2000.0) * 0.001 * sr));
+        if (gr_target < gr_db)
+        {
+            gr_db = att * gr_db + (1.0 - att) * gr_target;
+        }
+        else
+        {
+            gr_db = rel * gr_db + (1.0 - rel) * gr_target;
+        }
+
+        f32 gain = dbgain(gr_db + bound(makeup, 0.0, 24.0));
+        f32 m = bound(mix, 0.0, 100.0) * 0.01;
+        f32<> wet = x * gain;
+        f32<> y = x * (1.0 - m) + wet * m;
+        out = y;
+
+        f32 t_n = bound((t + 60.0) / 60.0, 0.0, 1.0);
+        f32 r_n = bound((r - 1.0) / 19.0, 0.0, 1.0);
+        f32 k_n = bound(w / 24.0, 0.0, 1.0);
+        f32 m_n = bound(makeup / 24.0, 0.0, 1.0);
+        f32 pin = fmax(fabs(x[0]), fabs(x[1]));
+        f32 pout = fmax(fabs(y[0]), fabs(y[1]));
+        in_env = fmax(pin, in_env * 0.999);
+        out_env = fmax(pout, out_env * 0.999);
+        f32 hold_len = 5.0 * sr;
+        f32 gr_now = -gr_db;
+        if (pin >= in_pk)
+        {
+            in_pk = pin;
+            t_in = 0.0;
+        }
+        else
+        {
+            t_in = t_in + 1.0;
+            if (t_in > hold_len)
+            {
+                in_pk = in_env;
+                t_in = 0.0;
+            }
+        }
+        if (pout >= out_pk)
+        {
+            out_pk = pout;
+            t_out = 0.0;
+        }
+        else
+        {
+            t_out = t_out + 1.0;
+            if (t_out > hold_len)
+            {
+                out_pk = out_env;
+                t_out = 0.0;
+            }
+        }
+        if (gr_now >= gr_pk)
+        {
+            gr_pk = gr_now;
+            t_gr = 0.0;
+        }
+        else
+        {
+            t_gr = t_gr + 1.0;
+            if (t_gr > hold_len)
+            {
+                gr_pk = gr_now;
+                t_gr = 0.0;
+            }
+        }
+        f32 ine = bound((20.0 * log10(fmax(0.000001, in_env)) + 60.0) / 60.0, 0.0, 1.0);
+        f32 oute = bound((20.0 * log10(fmax(0.000001, out_env)) + 60.0) / 60.0, 0.0, 1.0);
+        f32 inp = bound((20.0 * log10(fmax(0.000001, in_pk)) + 60.0) / 60.0, 0.0, 1.0);
+        f32 outp = bound((20.0 * log10(fmax(0.000001, out_pk)) + 60.0) / 60.0, 0.0, 1.0);
+        t_disp = t_disp + 1.0;
+        if (t_disp > 1.0 * sr)
+        {
+            disp_gr = gr_pk;
+            t_disp = 0.0;
+        }
+        f32 gr_i = floor(bound(gr_now / 24.0, 0.0, 1.0) * 240.0 + 0.5);
+        f32 gh_i = floor(bound(disp_gr / 24.0, 0.0, 1.0) * 240.0 + 0.5);
+        f32 gr_n = (gr_i * 256.0 + gh_i) / 65536.0;
+        // Ratio (31 steps) and knee share one lane: floor(lane * 32) = ratio step, fract(lane * 32) = knee.
+        f32 rk = (floor(r_n * 31.0) + k_n * 0.99) / 32.0;
+        display = <t_n, rk, m_n, ine>;
+        display2 = <gr_n, oute, inp, outp>;
+    }
+}

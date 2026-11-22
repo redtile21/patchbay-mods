@@ -1,0 +1,5 @@
+NAME = "EB Compressor"
+PROJECT_ID = "elodea-blackstar.compressor"
+UUID = "2b8f5e1a-6d3c-4a7e-8c19-f04a7d92b6e5"
+DESCRIPTION = "Elodea Blackstar feed-forward compressor with soft knee, peak or RMS detector and sidechain filter."
+NITRO = "compressor.nitro"

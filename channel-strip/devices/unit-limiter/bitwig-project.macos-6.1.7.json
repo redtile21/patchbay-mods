@@ -1,0 +1,11 @@
+{
+  "extends": "bitwig-project.json",
+  "target": {
+    "bitwigVersion": "6.1.7",
+    "platform": "macos-arm64"
+  },
+  "output": {
+    "path": "build/macos-6.1.7/EB Limiter.bwdevice",
+    "libraryPath": "EB Limiter.bwdevice"
+  }
+}

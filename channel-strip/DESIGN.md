@@ -1,6 +1,6 @@
 # Channel Strip: design
 
-Status: **plan only, nothing built.** Product: **Elodea Blackstar Channel Strip**, by Elodea Blackstar. This document describes a channel strip for Bitwig Studio 6.1.7 on macOS,
+Status: **Spikes A, B and C passed, all five units work, the strip container is built and awaiting a live test (2026-11-18); Spike D and the companion mod are not started.** Product: **Elodea Blackstar Channel Strip**, by Elodea Blackstar. This document describes a channel strip for Bitwig Studio 6.1.7 on macOS,
 loaded through Patchbay: the architecture, the risks that could change it, and the order of work. Anything marked
 **(unverified)** is an assumption that a Phase 0 spike must confirm or replace.
 
@@ -289,13 +289,13 @@ The blueprint's toolchain supports Windows x64 and Linux x64 only. What it needs
 | Blueprint input | macOS | Status |
 |---|---|---|
 | `bin/bitwig.jar`, `bin/libs.jar` | `/Applications/Bitwig Studio.app/Contents/Java/bitwig.jar` and `libs.jar` (as this repo's `build.sh` already uses) | known |
-| Bitwig's bundled Java (`lib/jre/bin/java`) | inside the app bundle; exact path **(unverified)**, or your JDK 25 | to find |
+| Bitwig's bundled Java (`lib/jre/bin/java`) | `/Applications/Bitwig Studio.app/Contents/PlugIns/JavaVM-arm64.bundle/Contents/Home/bin/java` | **verified** |
 | `javac` | your JDK 25 (`$HOME/.local/jdk/jdk-25.0.5+8/Contents/Home`) | known |
-| Python 3.12, Rust 1.85+ | Homebrew or python.org, rustup | available on macOS |
-| Profile `linux-x86_64-bitwig-6.1.7` in `scripts/build-local-host-tools.py` | new profile `macos-universal-bitwig-6.1.7` | to write |
-| Project file `bitwig-project.linux-6.1.7.json` | `bitwig-project.macos-6.1.7.json` | to write |
+| Python 3.12, Rust 1.85+ | `brew install python@3.12`, `brew install rustup` then `rustup default stable` (Rust 1.100) | **verified** |
+| Compiler profile | the blueprint already ships `macos-arm64-bitwig-6.1.7`; its jar hashes match this Bitwig exactly | **verified, nothing to write** |
+| Project file `bitwig-project.linux-6.1.7.json` | `bitwig-project.macos-6.1.7.json`: a copy of the Linux overlay with platform `macos-arm64` and output `build/macos-6.1.7/` | **verified** |
 | Nitro semantic probe (LLVM IR) | Windows-only already; Linux skips it with `NITRO026`, so macOS can too | acceptable |
-| SkSL check in local Skia | needs a Skia build or Python binding for macOS arm64 **(unverified)** | to check |
+| SkSL check in local Skia | `skia-python==144.0.post2` installs on macOS arm64 and compiles the shader | **verified** |
 
 The approach, in order:
 
@@ -307,7 +307,15 @@ The approach, in order:
    build of the same version: matching preflight results and an identical or equivalent artifact.
 3. Wrap it in `channel-strip/build.sh`, like the other mods' `build.sh`.
 
-Before copying or forking the blueprint's scripts, check its licence and `docs/PROVENANCE.md`.
+Before copying or forking the blueprint's scripts, check its licence and `docs/PROVENANCE.md`. The blueprint has no top-level
+licence file. Its `tools/document_codec` and `tools/host_compiler` are **GPL-3.0-only** and `tools/nitro_ast` is MIT, so the
+build tooling stays in a separate checkout and only our own sources (`.nitro`, `.sksl`, project files) live in this repo.
+
+**Result (Spike A, 2026-11-18):** passed. On macOS arm64 with Bitwig 6.1.7, Blueprint Gain built, passed preflight
+(`NITRO026`: the semantic probe is skipped off Windows, as expected) and loaded through Patchbay, passing the checks in the
+blueprint's `BITWIG-TEST.md`. The macOS artifact has the same SHA-256 as the Windows 6.1.7 one
+(`85127a64…`), so a `.bwdevice` is platform-neutral. Because the semantic probe is skipped, Nitro that parses can still fail
+in the live engine: every device needs a live test.
 
 I can't run macOS in this cloud container. Either you run the steps and send me the output, or you connect your Mac
 to a session with Remote Control so I can run them there.
@@ -315,6 +323,9 @@ to a session with Remote Control so I can run them there.
 ## 9. Plan
 
 ### Phase 0: spikes (go / no-go)
+
+Progress: **A passed.** **C passed in part:** EB Gain (`devices/unit-gain/`) loads on 6.1.7 macOS, audio and the knobs work, automation shows the real parameter names and is recalled after reopening the project. The live engine accepted `exp`, `sin`, `cos` and vector construction even though the semantic probe is skipped on macOS. Findings from decoding polarity's devices (syntax only, no DSP copied): Nitro components keep state in ordinary member variables and process per sample; `EC.samplerate`, `smooth`, `bound`, `dbgain`, `exp`, `sqrt` exist; `value_inport` ports (not counted in the 30 audio inports) carry choices and toggles, so the §3.3 budget worry is smaller than stated; `mono` is a reserved word. The blueprint's gate only supports knob and choice controls, so toggles (Mono, bypass) are modelled as Off/On choice parameters, as OTT does. Width on EB Gain works as designed (it only acts on stereo content, not a centred source); Polarity and Mono work live. Still open from C: whether the new Polarity and Mono choices work live (built, untested), the modulation list check, and latency reporting. Width on EB Gain reported as having no effect (diagnostic build with a width bar in the display, untested). **B passed in part (2026-11-18):** `EB Strip Spike` (`devices/strip/`) has six `nested_device_chain_slot` chains in series between an input and an output gain stage, modelled on Multiband FX-4, which also holds a toggle (`boolean_value_atom`) template. It loads cold on 6.1.7 macOS (after fixing a forward reference: the loader resolves object references as it reads, so proxies must be owned before anything that points at them), shows six slots, automation works, and swapping devices in a slot during playback works with occasional small clicks (so the §5 fade-around-swap is still worth doing if the container can detect a swap). Not yet confirmed live: audio order through several slots, and save/reopen recall of nested devices. D not started. Width on EB Gain was reported not working (under investigation).
+
 | Spike | Question | Pass |
 |---|---|---|
 | A | macOS build | Blueprint Gain builds on macOS (§8 step 2), or a Linux/Windows build loads and runs on your Mac (§8 step 1). |
@@ -326,6 +337,7 @@ If B fails, use the fallback in §3.3. If D fails, the console panel is dropped 
 are reached through each unit device's own panel and Bitwig's parameter list.
 
 ### Phase 1: unit devices
+Progress: EB Gain done as a spike. **EB Compressor built** (`devices/unit-compressor/`: threshold, ratio, makeup, mix, attack, release, knee, sidechain HPF, stereo link, detector; stereo link is a simplified linked/average detector, and Release Auto and Ratio infinity are deferred), preflight passes, live test: works. **EB EQ built** (`devices/unit-eq/`, generated by `gen_eq.py`: six RBJ biquads, coefficients recomputed only when a band's parameters change; frequency knobs are linear because the blueprint gate only accepts linear decimal controls, so a log mapping is an open item; Low-Pass at 20000 and High-Pass below 20 Hz are off), preflight passes, live test: works. **EB Saturation built** (`devices/unit-saturation/`: tape, tube, soft and hard clip, bias, tone tilt, auto gain, oversampling 1x/2x using a simple 2-point interpolator and averager, not a proper half-band, 4x deferred; no latency), and **EB Limiter built** (`devices/unit-limiter/`: lookahead peak limiter with window-minimum gain, one-pole release, hard safety clip at the ceiling, array state with the recall canary the blueprint gate requires; True Peak, Release Auto and PDC reporting deferred), both preflight-clean, live test: both work, so Phase 1 is done. **Phase 2 started:** `EB Blackstar Strip` (`devices/strip/`) replaces the spike: input and output gain, six chain slots in series, and a per-slot bypass (an Off/On choice parameter feeding a 15 ms crossfade core between the slot's input and output), preflight passes, live test pending. The generic unit builder (`eb-unit`, adapted from the blueprint) stays outside this repo.
 Gain, EQ, Saturation, Compressor, Limiter: DSP with offline tests, then each device's panel and meter.
 
 ### Phase 2: container
@@ -350,6 +362,22 @@ the blueprint's `BITWIG-TEST.md`, zip releases like the other mods in this repo.
 | CPU with oversampling | Heavy strip | Oversampling only in Saturation and True Peak. |
 | Bitwig update changes internals | Devices or companion break | Pin to 6.1.7, record the build target in each release. |
 
+## 10b. Polish round 1 (2026-11-18)
+
+Decoding polarity's devices showed Bitwig has native display widgets the blueprint gate does not mention: a display panel
+(log frequency axis, dB axis, native spectrum analyser, lines and points driven by panel expressions on parameter
+identifiers), native stereo peak meters (`vu_meter_atom` + `meter_panel_item`), and up to three shader vectors. Round 1:
+- **EQ:** native spectrum of the output with lines at the band frequencies and points at (frequency, gain), plus native in
+  and out meters. Points are not yet draggable and the combined response curve is not drawn (needs a polyline of points
+  with computed expressions, or packed shader parameters).
+- **Compressor:** transfer-curve shader (threshold, ratio, knee, makeup) with a live operating point, gain-reduction and
+  mix bars, native in and out meters, knobs on the smaller native size.
+- **Limiter:** input and output level bars with the ceiling line, gain-reduction bar, lookahead and release readouts, native
+  meters.
+- **Strip:** the slot bypass behaviour was reported inverted; the condition is flipped.
+- **Swappable modules without the browser** is the companion console (Spike D) and is deliberately next, after these
+  devices are refined.
+
 ## 11. Open questions
 
 1. Is Panel: Streamlined Views installed? It decides whether the console panel is its own view or a tab in the lower panel.
@@ -363,3 +391,7 @@ Deferred so version 1 can focus on working end to end:
 - A distinctive Elodea Blackstar look for the panels and console (colours, artwork, SkSL displays).
 - Meters in the console panel, if version 1 ships without them.
 - Strip presets curated by Elodea Blackstar.
+
+## 10c. Polish round 2 (2026-11-19)
+
+Compressor and limiter follow the built-in Bitwig layout: shader-drawn input and output meters with blue threshold/ceiling lines and peak-hold ticks, held-peak numeric readouts (5 s hold, gain reduction refreshes once per second), main knobs in one row under the display. The EQ draws its combined response curve in a transparent shader over the native spectrum display, with knobs grouped by band. Display data is packed into two vectors (hybrid gate limit). Saved projects embed device copies, so re-insert devices after a rebuild. A small build digit in each display corner is a version stamp to remove before release.
