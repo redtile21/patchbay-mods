@@ -1,5 +1,6 @@
 package dev.local.ebstrip;
 
+import bitwig.obf.drf;
 import bitwig.obf.PiT;
 import bitwig.obf.aCG;
 import bitwig.obf.aDs;
@@ -112,6 +113,7 @@ final class Strip {
             } finally {
                 changes.beI(false);
             }
+            StripViews.refreshAll();
             MOD.log("inserted " + unitName + " into slot " + slot + " at " + found.path);
             Notifications.toast("EB Strip: inserted " + unitName + " into slot " + slot);
         } catch (Throwable t) {
@@ -268,6 +270,7 @@ final class Strip {
             } finally {
                 changes.beI(false);
             }
+            StripViews.refreshAll();
             MOD.log("cleared " + devices.size() + " device(s) from slot " + slot);
             Notifications.toast("EB Strip: cleared slot " + slot);
         } catch (Throwable t) {
@@ -316,6 +319,41 @@ final class Strip {
             onChangesEnded();
         } catch (Throwable t) {
             MOD.log("watch failed", t);
+        }
+    }
+
+    /** Opens the strip's expanded view (its own window): Bitwig's chain widget for each slot with a unit loaded. */
+    static void openView(Object widget, Object selection) {
+        try {
+            arm(widget, selection);
+            Ctx c = context(widget, selection);
+            if (c == null) return;
+            utt strip = findStrip(c);
+            Watch watch = null;
+            synchronized (WATCHES) {
+                for (Watch w : WATCHES) if (w.strip == strip) watch = w;
+            }
+            if (watch == null) return;
+            final Watch w = watch;
+            java.util.function.Supplier<List<k3K>> loaded = () -> {
+                List<k3K> out = new ArrayList<>();
+                for (int n = 1; n <= 6; n++) if (!w.chains[n].qJX().isEmpty()) out.add(w.chains[n]);
+                return out;
+            };
+            StripView view = new StripView((com.bitwig.flt.document.core.iface.bMt) c.root.cc_(), loaded);
+            StripViews.closeAll();
+            StripViews.add(view);
+            drf.EO().runAtEndOfCurrentEvent(() -> {
+                try {
+                    view.open(null);
+                    drf.EO().runAtEndOfCurrentEvent(view::measure);
+                } catch (Throwable t) {
+                    MOD.log("open view failed", t);
+                }
+            });
+        } catch (Throwable t) {
+            MOD.log("open view failed", t);
+            Notifications.toast("EB Strip: could not open the expanded view (see the log)");
         }
     }
 
@@ -464,6 +502,7 @@ final class Strip {
             changes.beI(false);
         }
         MOD.log("slot " + n + " now " + wantDevice);
+        StripViews.refreshAll();
     }
 
     private static Map<UUID, String> registry() {

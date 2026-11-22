@@ -21,6 +21,10 @@ public final class StripActions implements ActionProvider {
                .category("eb_strip")
                .in(Menu.selection("track"))
                .onRun(context -> Strip.arm(context.widget(), context.selection()));
+        actions.action("eb_strip_view", "EB Strip: Open Expanded View")
+               .category("eb_strip")
+               .in(Menu.selection("track"))
+               .onRun(context -> Strip.openView(context.widget(), context.selection()));
         for (int slot = 1; slot <= 3; slot++) {
             final int n = slot;
             actions.action("eb_strip_clear_" + n, "EB Strip: Clear Slot " + n)
