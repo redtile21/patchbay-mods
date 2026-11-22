@@ -196,9 +196,12 @@ half4 main(float2 fragCoord) {
     float gr = audioLow.w;
     float3 col = float3(0.);
     float a = 0.;
-    float3 blue = float3(.50, .76, 1.);
+    float3 blue = float3(.33, .60, .96);   // the units' accent
     float3 red = float3(.95, .42, .26);
-    float3 dim = float3(.26, .29, .33);
+    float3 dim = float3(.21, .24, .28);
+    float3 track = float3(.030, .036, .043); // meter wells, as the units'
+    float3 face = float3(.060, .070, .082);  // panel face, as the units'
+    float3 text = float3(.82, .86, .90);     // as the units'
     bool thru = kind < .5;
     float3 sig = thru ? dim : blue;
 
@@ -217,18 +220,18 @@ half4 main(float2 fragCoord) {
     // The box.
     float inside = box(p, float2(16., 8.), float2(136., 56.));
     float edge = inside * (1. - box(p, float2(17.2, 9.2), float2(134.8, 54.8)));
-    put(col, a, float3(.035, .042, .052), inside * .78);
+    put(col, a, face, inside * .92);
     put(col, a, thru ? dim : blue * .75, edge * .9);
 
     // Level bars along the bottom of the box: input (dim) over output (bright).
     if (!thru) {
         float bx = (p.x - 24.) / 104.;
-        if (p.y > 44. && p.y < 47. && bx > 0. && bx < 1.) put(col, a, float3(.16, .19, .23), 1.);
+        if (p.y > 44. && p.y < 47. && bx > 0. && bx < 1.) put(col, a, track, 1.);
         if (p.y > 44. && p.y < 47. && bx > 0. && bx < inlv) put(col, a, blue * .45, 1.);
-        if (p.y > 49. && p.y < 52. && bx > 0. && bx < 1.) put(col, a, float3(.16, .19, .23), 1.);
-        if (p.y > 49. && p.y < 52. && bx > 0. && bx < outlv) put(col, a, blue, 1.);
+        if (p.y > 49. && p.y < 52. && bx > 0. && bx < 1.) put(col, a, track, 1.);
+        if (p.y > 49. && p.y < 52. && bx > 0. && bx < outlv) put(col, a, mix(float3(.24, .62, .17), float3(.96, .56, .12), smoothstep(.55, 1., bx)) * (bx > .91 ? 0. : 1.) + (bx > .91 ? float3(.92, .30, .22) : float3(0.)), 1.);
         // Gain reduction hangs from the top.
-        if (p.y > 11. && p.y < 14. && bx > 0. && bx < 1.) put(col, a, float3(.16, .19, .23), kind > 2.5 ? 1. : 0.);
+        if (p.y > 11. && p.y < 14. && bx > 0. && bx < 1.) put(col, a, track, kind > 2.5 ? 1. : 0.);
         if (p.y > 11. && p.y < 14. && bx > 0. && bx < gr && (kind > 2.5 && (kind < 3.5 || kind > 4.5))) put(col, a, red, 1.);
     }
 
@@ -249,6 +252,6 @@ half4 main(float2 fragCoord) {
     else if (kind < 3.5) lit = word(p, cx, ly, h, 3., 15., 13., 16., 0., 0.);                 // COMP
     else if (kind < 4.5) lit = word(p, cx, ly, h, 19., 1., 20., 0., 0., 0.);                  // SAT
     else lit = word(p, cx, ly, h, 12., 9., 13., 9., 20., 0.);                                  // LIMIT
-    put(col, a, thru ? dim : float3(.86, .90, .95), lit);
+    put(col, a, thru ? dim : text, lit);
     return half4(half3(col * a), half(a));
 }
