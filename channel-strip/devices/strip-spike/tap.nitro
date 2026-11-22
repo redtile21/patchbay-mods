@@ -1,0 +1,30 @@
+component eb_tap
+{
+    audio_inport in;
+    audio_inport prev;
+    value_inport i32 kind;
+
+    audio_outport out;
+    audio_outport f32<4> display;
+    audio_outport f32<4> display2;
+
+    f32 in_env = 0.0;
+    f32 out_env = 0.0;
+
+    process
+    {
+        f32<> x = prev;
+        f32<> y = in;
+        out = y;
+        f32 pin = fmax(fabs(x[0]), fabs(x[1]));
+        f32 pout = fmax(fabs(y[0]), fabs(y[1]));
+        in_env = fmax(pin, in_env * 0.9995);
+        out_env = fmax(pout, out_env * 0.9995);
+        f32 ine = fmax(0.0, fmin(1.0, (20.0 * log10(fmax(0.000001, in_env)) + 60.0) / 66.0));
+        f32 oute = fmax(0.0, fmin(1.0, (20.0 * log10(fmax(0.000001, out_env)) + 60.0) / 66.0));
+        f32 gr = fmax(0.0, fmin(1.0, 20.0 * log10(fmax(0.000001, in_env) / fmax(0.000001, out_env)) / 24.0));
+        f32 kd = cast(kind, f32);
+        display = <kd * 0.125, ine, oute, gr>;
+        display2 = <0.0, 0.0, 0.0, 0.0>;
+    }
+}
