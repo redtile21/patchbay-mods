@@ -203,8 +203,8 @@ half4 labels(float2 fragCoord) {
     float row = floor(p.y / 96.);
     float2 q = float2(p.x, p.y - row * 96.);
     float k = 0.;
-    float ky = 91.;
-    float kh = 10.;
+    float ky = 72.;
+    float kh = 15.;
     float cx = 76.;
     if (!thru) {
         if (kind < 1.5) {
