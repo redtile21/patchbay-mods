@@ -454,6 +454,10 @@ final class Strip {
                 RESETTING.set(false);
             }
         });
+        if (StripViews.hasOpen()) { // pressing the button again closes the view
+            StripViews.closeAll();
+            return;
+        }
         openViewFor(watch);
     }
 

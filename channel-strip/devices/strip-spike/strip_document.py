@@ -37,10 +37,10 @@ def main_panel(drawing_refs, in_ref, out_ref, type_refs=(), view_ref=None):
     items = []
     if view_ref is not None:
         items.append(obj(1702, "toggle_button_panel_item", {
-            "layout_settings#6226": v("Object", grid_layout(62, 24, 36, 6)),
+            "layout_settings#6226": v("Object", grid_layout(66, 26, 22, 4)),
             "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
             "tooltip_text#6867": v("String", "Open the expanded view"), "data_model#6220": view_ref,
-            "icon_name#6239": v("String", ""), "style#6240": v("Byte", 0),
+            "title#6241": v("String", "View"), "icon_name#6239": v("String", ""), "style#6240": v("Byte", 0),
             "label_style#6267": v("Byte", 0), "color#7527": v("Int16", 6)}))
     for i, tref in enumerate(type_refs):
         items.append(chooser(f"Slot {i + 1} unit", tref, i * (SLOT_W + GAP), 0, SLOT_W))
@@ -208,7 +208,7 @@ def document(project, binary, tap_binary, shader):
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v5".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v6".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,

@@ -18,6 +18,10 @@ final class StripViews {
         OPEN.remove(view);
     }
 
+    static boolean hasOpen() {
+        return !OPEN.isEmpty();
+    }
+
     /** Disposes every earlier view, shown or not, so a stale one can't swallow the next open. */
     static void closeAll() {
         for (StripView view : new ArrayList<>(OPEN)) {
