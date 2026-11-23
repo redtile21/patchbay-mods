@@ -345,14 +345,18 @@ final class Strip {
     /** While the expanded view is open, closes it as soon as its strip is gone from the track (a view of deleted chains crashes Bitwig). */
     private static void watchStrip(Watch w) {
         if (watchdog != null) watchdog.cancel();
+        k3K found = null;
+        try {
+            found = (k3K) findUp(w.strip, o -> o instanceof k3K k && k.qJX().contains(w.strip), 4, 3000);
+        } catch (Throwable t) { MOD.log("watchdog: could not find the strip's chain", t); }
+        MOD.log("watchdog: parent chain " + (found == null ? "not found" : "found"));
+        final k3K parent = found;
         watchdog = drf.EO().beI(() -> {
             try {
                 if (!StripViews.hasOpen()) { watchdog.cancel(); return; }
                 boolean alive;
                 try {
-                    alive = false;
-                    for (Hit d : walk(w.c.track.YQe(), utt.class, 10, 20000)) if (d.object == w.strip) { alive = true; break; }
-                    if (!alive && watchChecks++ < 3) MOD.log("watchdog: strip not found among the track's devices");
+                    alive = parent == null || parent.qJX().contains(w.strip);
                 } catch (Throwable t) { alive = true; if (watchChecks++ < 3) MOD.log("watchdog check failed", t); }
                 if (!alive) {
                     MOD.log("strip is gone; closing the expanded view");
