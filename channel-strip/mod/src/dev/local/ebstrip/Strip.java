@@ -321,7 +321,6 @@ final class Strip {
             }
             Object viewAtom = findByIdentifier(strip, "VIEW");
             if (viewAtom != null) w.view = viewAtom;
-            MOD.log("view atom: " + (viewAtom == null ? "none" : atomInfo(viewAtom)));
             for (int n = 1; n <= 6; n++) for (int k = 1; k <= 3; k++) {
                 Object a = findByIdentifier(strip, "SLOT" + n + "_K" + k);
                 if (a instanceof bitwig.obf.xdh x) w.knobs[n][k - 1] = x;
@@ -331,7 +330,6 @@ final class Strip {
                 WATCHES.add(w);
             }
             for (int n = 1; n <= 6; n++) relink(w, n, false);
-            MOD.log("watching strip on the selected track");
             Notifications.toast("EB Strip: watching the dropdowns on this track");
             onChangesEnded();
         } catch (Throwable t) {
@@ -349,7 +347,6 @@ final class Strip {
         try {
             found = (k3K) findUp(w.strip, o -> o instanceof k3K k && k.qJX().contains(w.strip), 4, 3000);
         } catch (Throwable t) { MOD.log("watchdog: could not find the strip's chain", t); }
-        MOD.log("watchdog: parent chain " + (found == null ? "not found" : "found"));
         final k3K parent = found;
         watchdog = drf.EO().beI(() -> {
             try {
@@ -449,20 +446,6 @@ final class Strip {
         if (ours) onChangesEnded();
     }
 
-    private static String atomInfo(Object o) {
-        StringBuilder sb = new StringBuilder();
-        for (Class<?> c = o.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
-            sb.append(c.getName()).append(" {");
-            for (java.lang.reflect.Method m : c.getDeclaredMethods()) {
-                if (java.lang.reflect.Modifier.isStatic(m.getModifiers())) continue;
-                Class<?>[] p = m.getParameterTypes();
-                if (p.length == 1 && (p[0] == int.class || p[0] == boolean.class || p[0] == double.class)) sb.append(m.getName()).append('(').append(p[0].getSimpleName()).append(") ");
-            }
-            sb.append("} <- ");
-        }
-        return sb.toString();
-    }
-
     private static Watch watchWithView(Object atom) {
         synchronized (WATCHES) {
             for (Watch w : WATCHES) if (w.view == atom) return w;
@@ -482,7 +465,6 @@ final class Strip {
     private static final String[] KNOB_KINDS = {"Gain", "EQ", "Compressor", "Saturation", "Limiter"};
     private static final double ENHANCE_DB = 6.0;
     private static final ThreadLocal<Boolean> SYNCING = ThreadLocal.withInitial(() -> false);
-    private static int knobCalls;
 
     /** Finds the parameters of slot n's loaded unit that the strip's knobs drive; with {@code reset}, the knobs take the unit's values. */
     static void relink(Watch w, int n, boolean reset) {
@@ -508,7 +490,6 @@ final class Strip {
                     bitwig.obf.aG range = u.XdI();
                     w.lo[n][k] = Math.min(range.scr(), range.ZRB());
                     w.hi[n][k] = Math.max(range.scr(), range.ZRB());
-                    if (knobCalls < 60) MOD.log("slot " + n + " knob " + (k + 1) + " = " + id + " value " + u.GwM() + " range " + w.lo[n][k] + ".." + w.hi[n][k]);
                 } else {
                     MOD.log("slot " + n + " knob " + (k + 1) + ": no parameter " + id + " in " + kind);
                 }
@@ -529,12 +510,10 @@ final class Strip {
         for (Watch w : copy) {
             for (int n = 1; n <= 6; n++) for (int k = 0; k < 3; k++) {
                 if (w.knobs[n][k] == atom && w.units[n][k] != null) {
-                    if (knobCalls++ < 150) MOD.log("strip knob " + n + "." + (k + 1) + " moved via " + via + " to " + atom.GwM());
                     knobToUnit(w, n, k);
                     return;
                 }
                 if (w.units[n][k] == atom || (k == 2 && w.enhanceHigh[n] == atom && w.units[n][k] != null)) {
-                    if (knobCalls++ < 150) MOD.log("unit parameter " + n + "." + (k + 1) + " moved via " + via);
                     unitToKnob(w, n, k, (bitwig.obf.xdh) atom);
                     return;
                 }
@@ -581,7 +560,6 @@ final class Strip {
     }
 
     private static final ThreadLocal<Boolean> RESETTING = ThreadLocal.withInitial(() -> false);
-    private static int buttonCalls;
     private static long lastButton;
 
     /** Called after the "Expanded View" button's atom is set: opens the view, then lets the button spring back. */
@@ -590,7 +568,6 @@ final class Strip {
         long now = System.currentTimeMillis();
         if (now - lastButton < 500) return;
         if (!"VIEW".equals(identifierOf(atom))) return;
-        if (buttonCalls++ < 20) MOD.log("view button set via " + via);
         lastButton = now;
         Watch w = watchWithView(atom);
         if (w == null && !AUTO_FAILED.contains(atom)) {
@@ -650,7 +627,6 @@ final class Strip {
                 WATCHES.add(w);
             }
             for (int n = 1; n <= 6; n++) relink(w, n, false);
-            MOD.log("auto-armed strip");
             return true;
         } catch (Throwable t) {
             AUTO_FAILED.add(atom);
@@ -681,10 +657,7 @@ final class Strip {
         return null;
     }
 
-    private static int hookCalls;
-
     static void onChangesEnded() {
-        if (hookCalls < 40) { hookCalls++; MOD.log("changes ended #" + hookCalls + " watches=" + WATCHES.size() + " busy=" + BUSY.get()); }
         if (WATCHES.isEmpty() || BUSY.get()) return;
         BUSY.set(true);
         try {
@@ -701,7 +674,6 @@ final class Strip {
                             if (names == null) names = registry();
                             have = names.getOrDefault(((utt) devices.get(0)).beI(), "?");
                         }
-                        if (hookCalls < 40) MOD.log("slot " + n + " want=" + want + " have=" + have);
                         String wantDevice = "Bypass".equals(want) ? "Bypass" : "EB " + want;
                         if (wantDevice.equalsIgnoreCase(have)) continue;
                         swap(w, n, devices, wantDevice);

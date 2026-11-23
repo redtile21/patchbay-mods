@@ -21,7 +21,6 @@ final class TrackSelection {
         List<Object> found = new ArrayList<>();
         if (selection == null) return found;
         collect(selection, found, 0);
-        Strip.MOD.log("selection " + selection.getClass().getName() + " -> " + found.size() + " track(s)");
         if (found.isEmpty()) describe(selection);
         return found;
     }

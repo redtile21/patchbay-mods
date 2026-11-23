@@ -145,7 +145,6 @@ final class StripView extends dvv implements aEp {
             if (w > 0) {
                 cachedW = Math.max(cachedW, w);
                 cachedH = h;
-                Strip.MOD.log("measured widest=" + w + " height=" + h);
             }
         } catch (Throwable t) {
             Strip.MOD.log("measure failed: " + t);
@@ -213,7 +212,6 @@ final class StripView extends dvv implements aEp {
 
     /** Opens the view in its own window (anchor null) or docked from the anchor widget. */
     void open(dwF anchor) {
-        Strip.MOD.log("opening view, rows=" + rows.size());
         gEH app = (gEH) Hvv.mEL();
         dpU where = anchor == null ? aEv.beI : app.beI(anchor, this);
         dwF owner = anchor != null ? anchor : app.LRq();
