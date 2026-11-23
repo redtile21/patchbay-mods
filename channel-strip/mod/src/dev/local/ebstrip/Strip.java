@@ -313,6 +313,7 @@ final class Strip {
             }
             Object viewAtom = findByIdentifier(strip, "VIEW");
             if (viewAtom != null) w.view = viewAtom;
+            MOD.log("view atom: " + (viewAtom == null ? "none" : atomInfo(viewAtom)));
             synchronized (WATCHES) {
                 WATCHES.removeIf(o -> o.strip == strip);
                 WATCHES.add(w);
@@ -403,6 +404,20 @@ final class Strip {
         if (ours) onChangesEnded();
     }
 
+    private static String atomInfo(Object o) {
+        StringBuilder sb = new StringBuilder();
+        for (Class<?> c = o.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
+            sb.append(c.getName()).append(" {");
+            for (java.lang.reflect.Method m : c.getDeclaredMethods()) {
+                if (java.lang.reflect.Modifier.isStatic(m.getModifiers())) continue;
+                Class<?>[] p = m.getParameterTypes();
+                if (p.length == 1 && (p[0] == int.class || p[0] == boolean.class || p[0] == double.class)) sb.append(m.getName()).append('(').append(p[0].getSimpleName()).append(") ");
+            }
+            sb.append("} <- ");
+        }
+        return sb.toString();
+    }
+
     private static Watch watchWithView(Object atom) {
         synchronized (WATCHES) {
             for (Watch w : WATCHES) if (w.view == atom) return w;
@@ -412,12 +427,16 @@ final class Strip {
 
     private static final ThreadLocal<Boolean> RESETTING = ThreadLocal.withInitial(() -> false);
     private static int buttonCalls;
+    private static long lastButton;
 
     /** Called after the "Expanded View" button's atom is set: opens the view, then lets the button spring back. */
-    static void buttonSet(bitwig.obf.Hmd atom) {
+    static void buttonSet(bitwig.obf.cbF atom, String via) {
         if (RESETTING.get()) return;
+        long now = System.currentTimeMillis();
+        if (now - lastButton < 500) return;
         if (!"VIEW".equals(identifierOf(atom))) return;
-        if (buttonCalls++ < 20) MOD.log("view button set");
+        if (buttonCalls++ < 20) MOD.log("view button set via " + via);
+        lastButton = now;
         Watch w = watchWithView(atom);
         if (w == null && !AUTO_FAILED.contains(atom)) {
             autoArm(atom);
@@ -428,7 +447,7 @@ final class Strip {
         drf.EO().runAtEndOfCurrentEvent(() -> {
             try {
                 RESETTING.set(true);
-                atom.MgQ(0);
+                atom.MgQ(false);
             } catch (Throwable t) {
                 MOD.log("could not reset the view button", t);
             } finally {
@@ -463,6 +482,7 @@ final class Strip {
             }
             Object viewAtom = findByIdentifier(strip, "VIEW");
             if (viewAtom != null) w.view = viewAtom;
+            MOD.log("view atom: " + (viewAtom == null ? "none" : atomInfo(viewAtom)));
             synchronized (WATCHES) {
                 WATCHES.removeIf(o -> o.strip == strip);
                 WATCHES.add(w);
