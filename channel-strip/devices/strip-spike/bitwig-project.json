@@ -13,7 +13,7 @@
     "type": "audio-fx",
     "description": "Spike B: six device chains in series with input and output gain."
   },
-  "sources": {"nitro": ["gain_stage.nitro", "tap.nitro"], "sksl": ["flow.sksl"]},
+  "sources": {"nitro": ["gain_stage.nitro", "tap.nitro", "meter.nitro"], "sksl": ["flow.sksl", "meter.sksl"]},
   "adapter": {
     "type": "external-builder",
     "argv": ["python", "{workspace}/build.py", "--out", "{output}"]

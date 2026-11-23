@@ -20,7 +20,10 @@ KINDS = ("Bypass", "Gain", "EQ", "Compressor", "Saturation", "Limiter")
 
 SLOTS = 6
 SLOT_W, SLOT_H, GAP = 19, 8, 1
-PANEL_WIDTH = SLOTS * SLOT_W + (SLOTS - 1) * GAP
+X0 = 7                      # slots start after the input meter
+RIGHT_X = X0 + SLOTS * SLOT_W + (SLOTS - 1) * GAP + 1
+RIGHT_W = 21
+PANEL_WIDTH = RIGHT_X + RIGHT_W + 1
 PANEL_HEIGHT = 38
 
 
@@ -33,33 +36,37 @@ def chooser(tip, ref, x, y, w):
         "style#6266": v("Byte", 0), "color#7528": v("Int16", 6)})
 
 
-def main_panel(drawing_refs, in_ref, out_ref, type_refs=(), view_ref=None):
+def drawing_item(ref, x, y, w, h):
+    return obj(5517, "", {
+        "layout_settings#6226": v("Object", grid_layout(x, y, w, h)),
+        "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
+        "tooltip_text#6867": v("String", ""), "help_id#10543": v("String", ""),
+        "help_location#10546": v("Byte", 0), "data_model#6220": ref})
+
+
+def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_meter_ref):
     items = []
-    if view_ref is not None:
-        items.append(obj(1702, "toggle_button_panel_item", {
-            "layout_settings#6226": v("Object", grid_layout(66, 26, 22, 4)),
-            "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
-            "tooltip_text#6867": v("String", "Open the expanded view"), "data_model#6220": view_ref,
-            "title#6241": v("String", "View"), "icon_name#6239": v("String", ""), "style#6240": v("Byte", 0),
-            "label_style#6267": v("Byte", 0), "color#7527": v("Int16", 6)}))
+    items.append(drawing_item(in_meter_ref, 0, 0, 6, PANEL_HEIGHT - 1))
     for i, tref in enumerate(type_refs):
-        items.append(chooser(f"Slot {i + 1} unit", tref, i * (SLOT_W + GAP), 0, SLOT_W))
+        items.append(chooser(f"Slot {i + 1} unit", tref, X0 + i * (SLOT_W + GAP), 0, SLOT_W))
     for i, dref in enumerate(drawing_refs):
-        items.append(obj(5517, "", {
-            "layout_settings#6226": v("Object", grid_layout(i * (SLOT_W + GAP), 6, SLOT_W, SLOT_H)),
-            "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
-            "tooltip_text#6867": v("String", ""), "help_id#10543": v("String", ""),
-            "help_location#10546": v("Byte", 0), "data_model#6220": dref}))
-    for title, ref, x in (("In", in_ref, 4), ("Out", out_ref, 30)):
-        items.append(obj(1687, "knob_panel_item", {
-            "layout_settings#6226": v("Object", grid_layout(x, 15, 21, 22)),
-            "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
-            "tooltip_text#6867": v("String", title + " gain in dB"),
-            "data_model#6220": ref, "title#6241": v("String", title + " Gain"),
-            "knob_size#6223": v("Byte", 3), "show_value_popup#10569": v("Bool", True),
-            "attribute_id#11012": v("Int16", 712), "knob_style#7055": v("Byte", 3),
-            "label_color#7056": v("Int16", 6), "pie_color#7057": v("Byte", 6),
-        }))
+        items.append(drawing_item(dref, X0 + i * (SLOT_W + GAP), 6, SLOT_W, SLOT_H))
+    items.append(drawing_item(out_meter_ref, RIGHT_X, 0, RIGHT_W, 22))
+    items.append(obj(1687, "knob_panel_item", {
+        "layout_settings#6226": v("Object", grid_layout(RIGHT_X + 3, 22, 15, 12)),
+        "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
+        "tooltip_text#6867": v("String", "Output gain in dB"),
+        "data_model#6220": out_ref, "title#6241": v("String", "Out"),
+        "knob_size#6223": v("Byte", 1), "show_value_popup#10569": v("Bool", True),
+        "attribute_id#11012": v("Int16", 712), "knob_style#7055": v("Byte", 3),
+        "label_color#7056": v("Int16", 6), "pie_color#7057": v("Byte", 6),
+    }))
+    items.append(obj(1702, "toggle_button_panel_item", {
+        "layout_settings#6226": v("Object", grid_layout(RIGHT_X + 3, 34, 15, 4)),
+        "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
+        "tooltip_text#6867": v("String", "Open the expanded view"), "data_model#6220": view_ref,
+        "title#6241": v("String", "View"), "icon_name#6239": v("String", ""), "style#6240": v("Byte", 0),
+        "label_style#6267": v("Byte", 0), "color#7527": v("Int16", 6)}))
     grid = obj(1681, "grid_panel_item", {
         "layout_settings#6226": v("NullObject"), "items#6221": v("ObjectList", owned(*items)),
         "border_style#6228": v("Byte", 0), "title#6242": v("String", ""),
@@ -128,7 +135,21 @@ def tap(binary, connections):
     })
 
 
-def document(project, binary, tap_binary, shader):
+def meter_atom(binary, connections):
+    inputs = [nitro_port("in", 0, 2, output=False)]
+    outputs = [nitro_port("out", 0, 2, output=True), nitro_port("display", 1, 4, output=True), nitro_port("display2", 2, 4, output=True)]
+    return obj(1721, "nitro_atom", {
+        "settings#6194": settings(connections),
+        "channel_count#607": v("Byte", 0), "oversampling#608": v("Byte", 0),
+        "fft_order#6567": v("Byte", 0), "code_storage#10421": v("ByteArray", [0, *binary]),
+        "is_code_storage_binary_ast#14616": v("Bool", True),
+        "use_code_path#11360": v("Bool", False), "code_path#11357": v("String", ""),
+        "nitro_inputs#15756": v("ObjectList", owned(*inputs)),
+        "nitro_outputs#15757": v("ObjectList", owned(*outputs)),
+    })
+
+
+def document(project, binary, tap_binary, meter_binary, shader, meter_shader):
     bindings = []
 
     def ref(target, *, list_entry=False):
@@ -154,13 +175,19 @@ def document(project, binary, tap_binary, shader):
         "settings#6194": settings([wire(input_proxy)]), "channel_count#607": v("Byte", 0),
         "oversampling#608": v("Byte", 0),
     })
-    in_gain = parameter("Input Gain", "INPUT_GAIN", -24.0, 24.0, 0.0, 1)
     out_gain = parameter("Output Gain", "OUTPUT_GAIN", -24.0, 24.0, 0.0, 1)
     view = boolean_parameter("Expanded View", "VIEW", False)
     types = [indexed_parameter(f"Slot {i}", f"SLOT{i}_TYPE", KINDS, 0) for i in range(1, SLOTS + 1)]
-    stage_in = stage(binary, [wire(compensation), wire(in_gain)])
+    def drawing_atom(meter, ident, code):
+        return obj(5512, "", {
+            "settings#6194": settings([wire(meter, 1), wire(meter, 2)] + [connection() for _ in range(7)]),
+            "channel_count#607": v("Byte", 0), "name#374": v("String", ""),
+            "prevent_parent_from_sleeping#11002": v("Bool", False),
+            "preset_identifier#701": v("String", ident), "#16316": v("WideString", code)})
 
-    previous = stage_in
+    meter_in = meter_atom(meter_binary, [wire(compensation)])
+    in_drawing = drawing_atom(meter_in, "IN_METER", meter_shader)
+    previous = meter_in
     placeholders, slots, taps, drawings = [], [], [], []
     for index in range(1, SLOTS + 1):
         ph = placeholder([wire(previous), connection()])
@@ -179,13 +206,16 @@ def document(project, binary, tap_binary, shader):
     stage_out = stage(binary, [wire(previous), wire(out_gain)])
 
     output_proxy = proxy(output=True)
-    output_proxy["fields"]["settings#6194"] = settings([wire(stage_out, 0)])
-    panel = main_panel([ref(d) for d in drawings], ref(in_gain), ref(out_gain), [ref(t) for t in types], ref(view))
+    meter_out = meter_atom(meter_binary, [wire(stage_out)])
+    out_drawing = drawing_atom(meter_out, "OUT_METER", meter_shader)
+    output_proxy["fields"]["settings#6194"] = settings([wire(meter_out, 0)])
+    panel = main_panel([ref(d) for d in drawings], ref(out_gain), [ref(t) for t in types], ref(view),
+                       ref(in_drawing), ref(out_drawing))
     identity = project["identity"]
-    children = [audio_source, compensation, in_gain, out_gain, *types, view, stage_in]
+    children = [audio_source, compensation, out_gain, *types, view, meter_in, in_drawing]
     for ph, sl, tp, dr in zip(placeholders, slots, taps, drawings):
         children += [ph, sl, tp, dr]
-    children.append(stage_out)
+    children += [stage_out, meter_out, out_drawing]
     # Field order matters: the loader resolves references as it reads, so the
     # proxies must be owned (and read) before any component that points at them.
     body = obj(151, "device_contents", {
@@ -208,7 +238,7 @@ def document(project, binary, tap_binary, shader):
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v6".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v7".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,

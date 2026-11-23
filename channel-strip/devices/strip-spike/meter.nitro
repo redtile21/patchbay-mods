@@ -1,0 +1,84 @@
+component eb_meter
+{
+    audio_inport in;
+
+    audio_outport out;
+    audio_outport f32<4> display;
+    audio_outport f32<4> display2;
+
+    i32 runtime_magic = 0;
+    f32 p_sr = 0.0;
+    f32 env_l = 0.0;
+    f32 env_r = 0.0;
+    f32 ms_m = 0.0;
+    f32 ms_s = 0.0;
+    f32 b0_1 = 1.0;
+    f32 b1_1 = 0.0;
+    f32 b2_1 = 0.0;
+    f32 a1_1 = 0.0;
+    f32 a2_1 = 0.0;
+    f32 a1_2 = 0.0;
+    f32 a2_2 = 0.0;
+    f32<2> z1_1 = 0.0;
+    f32<2> z2_1 = 0.0;
+    f32<2> z1_2 = 0.0;
+    f32<2> z2_2 = 0.0;
+    f32 k_m = 0.0;
+    f32 k_s = 0.0;
+
+    reset
+    {
+        runtime_magic = 0;
+    }
+
+    process
+    {
+        f32 sr = EC.samplerate;
+        if (sr != p_sr)
+        {
+            p_sr = sr;
+            // ITU-R BS.1770 K-weighting: high shelf then 38 Hz high-pass.
+            f32 w1 = 3.141592654 * 1681.9744509555319 / sr;
+            f32 kk1 = sin(w1) / cos(w1);
+            f32 q1 = 0.7071752369554196;
+            f32 vh = exp(3.999843853973347 * 0.11512925464970229);
+            f32 vb = exp(log(vh) * 0.4996667741545416);
+            f32 a0_1 = 1.0 + kk1 / q1 + kk1 * kk1;
+            b0_1 = (vh + vb * kk1 / q1 + kk1 * kk1) / a0_1;
+            b1_1 = 2.0 * (kk1 * kk1 - vh) / a0_1;
+            b2_1 = (vh - vb * kk1 / q1 + kk1 * kk1) / a0_1;
+            a1_1 = 2.0 * (kk1 * kk1 - 1.0) / a0_1;
+            a2_1 = (1.0 - kk1 / q1 + kk1 * kk1) / a0_1;
+            f32 w2 = 3.141592654 * 38.13547087613982 / sr;
+            f32 kk2 = sin(w2) / cos(w2);
+            f32 q2 = 0.5003270373253953;
+            f32 a0_2 = 1.0 + kk2 / q2 + kk2 * kk2;
+            a1_2 = 2.0 * (kk2 * kk2 - 1.0) / a0_2;
+            a2_2 = (1.0 - kk2 / q2 + kk2 * kk2) / a0_2;
+            // Smoothing of the mean square: momentary about 0.4 s, short-term about 3 s.
+            k_m = 1.0 - exp(-1.0 / (0.2 * sr));
+            k_s = 1.0 - exp(-1.0 / (1.5 * sr));
+        }
+        f32<> x = in;
+        out = x;
+        // First stage, direct form II transposed.
+        f32<> s1 = b0_1 * x + z1_1;
+        z1_1 = b1_1 * x - a1_1 * s1 + z2_1;
+        z2_1 = b2_1 * x - a2_1 * s1;
+        // Second stage (numerator 1, -2, 1 over its own a0).
+        f32<> s2 = s1 + z1_2;
+        z1_2 = -2.0 * s1 - a1_2 * s2 + z2_2;
+        z2_2 = s1 - a2_2 * s2;
+        f32 sq = s2[0] * s2[0] + s2[1] * s2[1];
+        ms_m = ms_m + k_m * (sq - ms_m);
+        ms_s = ms_s + k_s * (sq - ms_s);
+        env_l = fmax(fabs(x[0]), env_l * 0.99997);
+        env_r = fmax(fabs(x[1]), env_r * 0.99997);
+        f32 pl = fmax(0.0, fmin(1.0, (20.0 * log10(fmax(0.000001, env_l)) + 60.0) / 66.0));
+        f32 pr = fmax(0.0, fmin(1.0, (20.0 * log10(fmax(0.000001, env_r)) + 60.0) / 66.0));
+        f32 lm = -0.691 + 10.0 * log10(fmax(0.0000000001, ms_m));
+        f32 ls = -0.691 + 10.0 * log10(fmax(0.0000000001, ms_s));
+        display = <pl, pr, fmax(0.0, fmin(1.0, (lm + 60.0) / 60.0)), fmax(0.0, fmin(1.0, (ls + 60.0) / 60.0))>;
+        display2 = <0.0, 0.0, 0.0, 0.0>;
+    }
+}

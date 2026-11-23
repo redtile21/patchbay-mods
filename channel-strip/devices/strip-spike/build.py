@@ -27,16 +27,19 @@ def main() -> int:
     codec, _ = compiler_profiles.document_parser(inputs, profile)
     output = (args.out or HERE / project["output"]["path"]).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
-    nitro, tap_nitro = project["sources"]["nitro"]
+    nitro, tap_nitro, meter_nitro = project["sources"]["nitro"]
     shader = (HERE / project["sources"]["sksl"][0]).read_text(encoding="utf-8")
+    meter_shader = (HERE / project["sources"]["sksl"][1]).read_text(encoding="utf-8")
     with TemporaryDirectory(prefix="eb-strip-", dir=output.parent) as temporary:
         staging = Path(temporary)
         compiled = staging / "stage.nitrobin"
         compiler_profiles.compile_source(HERE / nitro, compiled, args.compiler_inputs)
+        meter_compiled = staging / "meter.nitrobin"
+        compiler_profiles.compile_source(HERE / meter_nitro, meter_compiled, args.compiler_inputs)
         tap_compiled = staging / "tap.nitrobin"
         compiler_profiles.compile_source(HERE / tap_nitro, tap_compiled, args.compiler_inputs)
         source = staging / "device.json"
-        source.write_text(json.dumps(document(project, compiled.read_bytes(), tap_compiled.read_bytes(), shader), ensure_ascii=False), encoding="utf-8")
+        source.write_text(json.dumps(document(project, compiled.read_bytes(), tap_compiled.read_bytes(), meter_compiled.read_bytes(), shader, meter_shader), ensure_ascii=False), encoding="utf-8")
         candidate = staging / output.name
         run([str(codec), "from-json", str(source), str(candidate)])
         candidate.replace(output)
