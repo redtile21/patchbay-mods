@@ -152,6 +152,10 @@ final class Strip {
     }
 
     private static String identifierOf(Object o) {
+        return identifierOf(o, text -> text.matches("SLOT[1-6]_(TYPE|CHAIN|K[1-3])|INPUT_GAIN|VIEW"));
+    }
+
+    private static String identifierOf(Object o, java.util.function.Predicate<String> accept) {
         String name = o.getClass().getName();
         if (name.contains(".") && !name.startsWith("com.bitwig.")) return null;
         for (Class<?> c = o.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
@@ -160,7 +164,7 @@ final class Strip {
                 try {
                     f.setAccessible(true);
                     Object v = f.get(o);
-                    if (v instanceof String text && text.matches("SLOT[1-6]_(TYPE|CHAIN)|INPUT_GAIN|VIEW")) return text;
+                    if (v instanceof String text && accept.test(text)) return text;
                 } catch (Throwable ignored) {
                     // unreadable
                 }
@@ -286,6 +290,10 @@ final class Strip {
         final lpr[] types = new lpr[7];
         Object view; // the "Expanded View" button's atom, if the strip has one
         final k3K[] chains = new k3K[7];
+        final bitwig.obf.xdh[][] knobs = new bitwig.obf.xdh[7][3];   // the strip's own knobs
+        final bitwig.obf.xdh[][] units = new bitwig.obf.xdh[7][3];   // the loaded unit's parameters they drive
+        final bitwig.obf.xdh[] enhanceHigh = new bitwig.obf.xdh[7];  // the EQ's high band, driven with its low band by Enhance
+        final double[][] lo = new double[7][3], hi = new double[7][3];
         Watch(Ctx c, utt strip) { this.c = c; this.strip = strip; }
     }
 
@@ -314,10 +322,15 @@ final class Strip {
             Object viewAtom = findByIdentifier(strip, "VIEW");
             if (viewAtom != null) w.view = viewAtom;
             MOD.log("view atom: " + (viewAtom == null ? "none" : atomInfo(viewAtom)));
+            for (int n = 1; n <= 6; n++) for (int k = 1; k <= 3; k++) {
+                Object a = findByIdentifier(strip, "SLOT" + n + "_K" + k);
+                if (a instanceof bitwig.obf.xdh x) w.knobs[n][k - 1] = x;
+            }
             synchronized (WATCHES) {
                 WATCHES.removeIf(o -> o.strip == strip);
                 WATCHES.add(w);
             }
+            for (int n = 1; n <= 6; n++) relink(w, n, false);
             MOD.log("watching strip on the selected track");
             Notifications.toast("EB Strip: watching the dropdowns on this track");
             onChangesEnded();
@@ -382,7 +395,7 @@ final class Strip {
                 if (++nodes > 40000) break;
                 Object o = hit.object;
                 if (o != strip && o instanceof utt) continue;
-                if (wanted.equals(identifierOf(o))) return o;
+                if (identifierOf(o, wanted::equals) != null) return o;
                 for (Hit child : children(hit)) {
                     if (child.object == null || seen.put(child.object, true) != null) continue;
                     next.add(child);
@@ -423,6 +436,116 @@ final class Strip {
             for (Watch w : WATCHES) if (w.view == atom) return w;
         }
         return null;
+    }
+
+    // ---- the three macro knobs under each slot ----
+
+    private static final String[][] KNOB_PARAMS = {
+        {"GAIN", "PAN", "WIDTH"},                       // Gain
+        {"LPF", "HPF", "ENHANCE"},                      // EQ
+        {"THRESHOLD", "RATIO", "MAKEUP"},               // Compressor
+        {"DRIVE", "TONE", "MIX"},                       // Saturation
+        {"INPUT_GAIN", "CEILING", "RELEASE"},           // Limiter
+    };
+    private static final String[] KNOB_KINDS = {"Gain", "EQ", "Compressor", "Saturation", "Limiter"};
+    private static final double ENHANCE_DB = 6.0;
+    private static final ThreadLocal<Boolean> SYNCING = ThreadLocal.withInitial(() -> false);
+    private static int knobCalls;
+
+    /** Finds the parameters of slot n's loaded unit that the strip's knobs drive; with {@code reset}, the knobs take the unit's values. */
+    static void relink(Watch w, int n, boolean reset) {
+        try {
+            for (int k = 0; k < 3; k++) { w.units[n][k] = null; }
+            w.enhanceHigh[n] = null;
+            String kind = w.types[n].sSO();
+            int row = -1;
+            for (int i = 0; i < KNOB_KINDS.length; i++) if (KNOB_KINDS[i].equals(kind)) row = i;
+            List<?> devices = new ArrayList<>(w.chains[n].qJX());
+            if (row < 0 || devices.isEmpty()) return;
+            Object device = devices.get(0);
+            for (int k = 0; k < 3; k++) {
+                String id = KNOB_PARAMS[row][k];
+                if ("ENHANCE".equals(id)) {
+                    Object low = findByIdentifier((utt) device, "LOW_GAIN"), high = findByIdentifier((utt) device, "HIGH_GAIN");
+                    if (low instanceof bitwig.obf.xdh l && high instanceof bitwig.obf.xdh h) { w.units[n][k] = l; w.enhanceHigh[n] = h; }
+                } else if (findByIdentifier((utt) device, id) instanceof bitwig.obf.xdh x) {
+                    w.units[n][k] = x;
+                }
+                bitwig.obf.xdh u = w.units[n][k];
+                if (u != null) {
+                    bitwig.obf.aG range = u.XdI();
+                    w.lo[n][k] = Math.min(range.scr(), range.ZRB());
+                    w.hi[n][k] = Math.max(range.scr(), range.ZRB());
+                    if (knobCalls < 60) MOD.log("slot " + n + " knob " + (k + 1) + " = " + id + " value " + u.GwM() + " range " + w.lo[n][k] + ".." + w.hi[n][k]);
+                } else {
+                    MOD.log("slot " + n + " knob " + (k + 1) + ": no parameter " + id + " in " + kind);
+                }
+            }
+            if (reset) {
+                for (int k = 0; k < 3; k++) if (w.units[n][k] != null) unitToKnob(w, n, k, w.units[n][k]);
+            }
+        } catch (Throwable t) {
+            MOD.log("could not link the knobs of slot " + n, t);
+        }
+    }
+
+    /** Called after any knob-type atom has its value set: keeps a strip knob and the unit parameter it drives in step. */
+    static void knobSet(bitwig.obf.kh atom, String via) {
+        if (SYNCING.get() || WATCHES.isEmpty() || !(atom instanceof bitwig.obf.xdh)) return;
+        List<Watch> copy;
+        synchronized (WATCHES) { copy = new ArrayList<>(WATCHES); }
+        for (Watch w : copy) {
+            for (int n = 1; n <= 6; n++) for (int k = 0; k < 3; k++) {
+                if (w.knobs[n][k] == atom && w.units[n][k] != null) {
+                    if (knobCalls++ < 60) MOD.log("strip knob " + n + "." + (k + 1) + " moved via " + via);
+                    knobToUnit(w, n, k);
+                    return;
+                }
+                if (w.units[n][k] == atom || (k == 2 && w.enhanceHigh[n] == atom && w.units[n][k] != null)) {
+                    if (knobCalls++ < 60) MOD.log("unit parameter " + n + "." + (k + 1) + " moved via " + via);
+                    unitToKnob(w, n, k, (bitwig.obf.xdh) atom);
+                    return;
+                }
+            }
+        }
+    }
+
+    private static boolean isEnhance(Watch w, int n, int k) { return w.enhanceHigh[n] != null && k == 2; }
+
+    private static void knobToUnit(Watch w, int n, int k) {
+        double pct = w.knobs[n][k].GwM();
+        SYNCING.set(true);
+        try {
+            if (isEnhance(w, n, k)) {
+                double db = Math.max(0, Math.min(1, pct / 100.0)) * ENHANCE_DB;
+                w.units[n][k].GwM(db);
+                w.enhanceHigh[n].GwM(db);
+            } else {
+                w.units[n][k].GwM(w.lo[n][k] + Math.max(0, Math.min(1, pct / 100.0)) * (w.hi[n][k] - w.lo[n][k]));
+            }
+        } catch (Throwable t) {
+            MOD.log("could not drive the unit from knob " + n + "." + (k + 1), t);
+        } finally {
+            SYNCING.set(false);
+        }
+    }
+
+    private static void unitToKnob(Watch w, int n, int k, bitwig.obf.xdh source) {
+        if (w.knobs[n][k] == null) return;
+        double pct;
+        if (isEnhance(w, n, k)) pct = Math.max(0, Math.min(1, source.GwM() / ENHANCE_DB)) * 100.0;
+        else {
+            double span = w.hi[n][k] - w.lo[n][k];
+            pct = span == 0 ? 0 : Math.max(0, Math.min(1, (source.GwM() - w.lo[n][k]) / span)) * 100.0;
+        }
+        SYNCING.set(true);
+        try {
+            w.knobs[n][k].GwM(pct);
+        } catch (Throwable t) {
+            MOD.log("could not move knob " + n + "." + (k + 1), t);
+        } finally {
+            SYNCING.set(false);
+        }
     }
 
     private static final ThreadLocal<Boolean> RESETTING = ThreadLocal.withInitial(() -> false);
@@ -467,7 +590,7 @@ final class Strip {
     private static boolean autoArm(Object atom) {
         try {
             String id = identifierOf(atom);
-            if (id == null || !id.matches("SLOT[1-6]_TYPE|VIEW")) return false;
+            if (id == null || !id.matches("SLOT[1-6]_TYPE|VIEW|SLOT[1-6]_K[1-3]")) return false;
             utt strip = (utt) findUp(atom, o -> o instanceof utt u && STRIP_UUIDS.contains(String.valueOf(u.beI())), 8, 6000);
             PiT track = strip == null ? null : (PiT) findUp(strip, o -> o instanceof PiT, 8, 6000);
             GJy root = track == null ? null : (GJy) findUp(track, o -> o instanceof GJy, 8, 6000);
@@ -486,11 +609,15 @@ final class Strip {
             }
             Object viewAtom = findByIdentifier(strip, "VIEW");
             if (viewAtom != null) w.view = viewAtom;
-            MOD.log("view atom: " + (viewAtom == null ? "none" : atomInfo(viewAtom)));
+            for (int n = 1; n <= 6; n++) for (int k = 1; k <= 3; k++) {
+                Object a = findByIdentifier(strip, "SLOT" + n + "_K" + k);
+                if (a instanceof bitwig.obf.xdh x) w.knobs[n][k - 1] = x;
+            }
             synchronized (WATCHES) {
                 WATCHES.removeIf(o -> o.strip == strip);
                 WATCHES.add(w);
             }
+            for (int n = 1; n <= 6; n++) relink(w, n, false);
             MOD.log("auto-armed strip");
             return true;
         } catch (Throwable t) {
@@ -575,6 +702,7 @@ final class Strip {
             changes.beI(false);
         }
         MOD.log("slot " + n + " now " + wantDevice);
+        relink(w, n, true);
         StripViews.refreshAll();
     }
 

@@ -25,6 +25,8 @@ component eb_meter
     f32<2> z2_2 = 0.0;
     f32 k_m = 0.0;
     f32 k_s = 0.0;
+    f32 hold = 0.0;
+    f32 hold_n = 0.0;
 
     reset
     {
@@ -79,6 +81,10 @@ component eb_meter
         f32 lm = -0.691 + 10.0 * log10(fmax(0.0000000001, ms_m));
         f32 ls = -0.691 + 10.0 * log10(fmax(0.0000000001, ms_s));
         display = <pl, pr, fmax(0.0, fmin(1.0, (lm + 60.0) / 60.0)), fmax(0.0, fmin(1.0, (ls + 60.0) / 60.0))>;
-        display2 = <0.0, 0.0, 0.0, 0.0>;
+        // Peak hold: the largest recent peak of either channel, kept for about three seconds.
+        f32 pk = fmax(fabs(x[0]), fabs(x[1]));
+        if (pk >= hold) { hold = pk; hold_n = 3.0 * sr; }
+        else { hold_n = hold_n - 1.0; if (hold_n < 0.0) { hold = hold * 0.9999; } }
+        display2 = <fmax(-100.0, 20.0 * log10(fmax(0.00001, hold))) / 100.0, 0.0, 0.0, 0.0>;
     }
 }

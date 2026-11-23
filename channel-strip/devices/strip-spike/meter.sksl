@@ -319,30 +319,39 @@ void bar(inout float3 col, inout float a, float2 p, float x0, float x1, float y0
 half4 main(float2 fragCoord) {
     float2 uv = fragCoord / iResolution.xy;
     bool wide = iResolution.x / iResolution.y > .5;
-    float2 p = wide ? uv * float2(168., 176.) : uv * float2(48., 304.);
+    // 8 design units per grid unit; both meters are 136 tall so their bars match.
+    float2 p = uv * float2(wide ? 168. : 56., 136.);
     float3 col = float3(0.);
     float a = 0.;
     float3 text = float3(.82, .86, .90);
     float3 dim = float3(.21, .24, .28);
-    if (!wide) {
-        bar(col, a, p, 6., 21., 8., 296., audioLow.x);
-        bar(col, a, p, 27., 42., 8., 296., audioLow.y);
+    float3 warn = float3(.95, .42, .26);
+    bar(col, a, p, 8., 26., 28., 132., audioLow.x);
+    bar(col, a, p, 30., 48., 28., 132., audioLow.y);
+    // Peak-hold number above the bars.
+    float pkdb = audioMedium.x * 100.;
+    float lit = 0.;
+    if (pkdb > -59.) {
+        lit = number(p, float2(9., 6.), 14., pkdb);
+        put(col, a, pkdb > -.05 ? warn : text, lit);
     } else {
-        bar(col, a, p, 6., 22., 8., 168., audioLow.x);
-        bar(col, a, p, 28., 44., 8., 168., audioLow.y);
-        // LUFS label and the short-term value.
-        float lit = 0.;
-        float2 s = p - float2(56., 40.);
+        float d = sdseg(p, float2(22., 13.), float2(34., 13.));
+        put(col, a, dim, 1. - smoothstep(.8, 1.6, d));
+    }
+    if (wide) {
+        float l2 = 0.;
+        float2 s = p - float2(60., 34.);
         float w = 8.;
         float adv = 10.5;
-        lit = max(lit, letter(s / w, 12.));
-        lit = max(lit, letter((s - float2(adv, 0.)) / w, 21.));
+        l2 = max(l2, letter(s / w, 12.));
+        l2 = max(l2, letter((s - float2(adv, 0.)) / w, 21.));
         float2 f = (s - float2(2. * adv, 0.)) / w;
-        lit = max(lit, 1. - smoothstep(.10, .20, min(sdseg(f, float2(.9, .05), float2(.1, .05)), min(sdseg(f, float2(.1, .05), float2(.1, 1.95)), sdseg(f, float2(.1, 1.), float2(.7, 1.))))));
-        lit = max(lit, letter((s - float2(3. * adv, 0.)) / w, 19.));
-        put(col, a, dim * 2., lit);
+        l2 = max(l2, 1. - smoothstep(.10, .20, min(sdseg(f, float2(.9, .05), float2(.1, .05)), min(sdseg(f, float2(.1, .05), float2(.1, 1.95)), sdseg(f, float2(.1, 1.), float2(.7, 1.))))));
+        l2 = max(l2, letter((s - float2(3. * adv, 0.)) / w, 19.));
+        put(col, a, dim * 2., l2);
         float lufs = audioLow.w * 60. - 60.;
-        put(col, a, text, number(p, float2(52., 74.), 24., lufs));
+        if (audioLow.w > .002) put(col, a, text, number(p, float2(56., 62.), 24., lufs));
+        else put(col, a, dim, 1. - smoothstep(.8, 1.6, sdseg(p, float2(64., 74.), float2(84., 74.))));
     }
     return half4(half3(col * a), half(a));
 }
