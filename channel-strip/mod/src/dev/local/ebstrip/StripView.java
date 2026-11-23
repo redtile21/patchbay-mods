@@ -9,7 +9,10 @@ import bitwig.obf.doV;
 import bitwig.obf.dwC;
 import bitwig.obf.dpU;
 import bitwig.obf.dqN;
+import bitwig.obf.dxE;
 import bitwig.obf.dxF;
+import bitwig.obf.dxG;
+import bitwig.obf.dqO;
 import com.bitwig.base.geom.ijY;
 import bitwig.obf.drf;
 import bitwig.obf.dvv;
@@ -152,12 +155,52 @@ final class StripView extends dvv implements aEp {
     /** The window opens as wide as the widest unit panel seen so far. */
     @Override
     public dxF ly_() {
+        try {
+            var st = Strip.MOD.settings();
+            if (st.get("window.width", null) != null) return new dqN(st.getInt("window.width", 800), st.getInt("window.height", 600));
+        } catch (Throwable t) {
+            Strip.MOD.log("could not read the window size", t);
+        }
         if (cachedW > 0) {
             // layout units are device pixels (2 per screen point on a retina display); window sizes are points
             long scale = 2;
             return new dqN(cachedW / scale + 60, Math.min(cachedH / scale + 60, 900));
         }
         return super.ly_();
+    }
+
+    /** Where the window opens: where it was last left. */
+    @Override
+    public dxE lx_() {
+        try {
+            var st = Strip.MOD.settings();
+            if (st.get("window.x", null) != null) return new dqO(st.getInt("window.x", 0), st.getInt("window.y", 0));
+        } catch (Throwable t) {
+            Strip.MOD.log("could not read the window place", t);
+        }
+        return super.lx_();
+    }
+
+    @Override
+    public void beI(dxG move) { // moved
+        super.beI(move);
+        try {
+            Strip.MOD.settings().putInt("window.x", (int) move.um());
+            Strip.MOD.settings().putInt("window.y", (int) move.KLw());
+        } catch (Throwable t) {
+            Strip.MOD.log("could not store the window place", t);
+        }
+    }
+
+    @Override
+    public void Gef(dxG resize) { // resized
+        super.Gef(resize);
+        try {
+            Strip.MOD.settings().putInt("window.width", (int) resize.iAR());
+            Strip.MOD.settings().putInt("window.height", (int) resize.gPa());
+        } catch (Throwable t) {
+            Strip.MOD.log("could not store the window size", t);
+        }
     }
 
     boolean isShown() {
