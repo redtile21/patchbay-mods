@@ -193,19 +193,19 @@ float box(float2 p, float2 lo, float2 hi) {
 }
 
 half4 labels(float2 fragCoord) {
-    // 9 x 24 grid units: three rows of 8, one per knob beside it.
-    float2 p = fragCoord / iResolution.xy * float2(72., 192.);
+    // 19 x 36 grid units: three rows of 12; the knob sits in the upper 9 of each row, its name below.
+    float2 p = fragCoord / iResolution.xy * float2(152., 288.);
     float kind = floor(audioLow.x * 8. + .5);
     float3 col = float3(0.);
     float a = 0.;
     float3 dim = float3(.21, .24, .28);
     bool thru = kind < .5;
-    float row = floor(p.y / 64.);
-    float2 q = float2(p.x, p.y - row * 64.);
+    float row = floor(p.y / 96.);
+    float2 q = float2(p.x, p.y - row * 96.);
     float k = 0.;
-    float ky = 38.;
+    float ky = 91.;
     float kh = 10.;
-    float cx = 36.;
+    float cx = 76.;
     if (!thru) {
         if (kind < 1.5) {
             if (row < .5) k = word(q, cx, ky, kh, 7., 1., 9., 14., 0., 0.);

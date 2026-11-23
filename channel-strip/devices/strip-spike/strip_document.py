@@ -24,10 +24,10 @@ X0 = 7                      # slots start after the input meter
 RIGHT_X = X0 + SLOTS * SLOT_W + (SLOTS - 1) * GAP + 1
 RIGHT_W = 21
 PANEL_WIDTH = RIGHT_X + RIGHT_W + 1
-KNOB_Y = 15
+KNOB_Y = 16
 METER_Y = 0
-METER_H = 29
-PANEL_HEIGHT = 40
+METER_H = 42
+PANEL_HEIGHT = 53
 
 
 def chooser(tip, ref, x, y, w):
@@ -63,7 +63,7 @@ def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_met
     items = []
     items.append(drawing_item(in_meter_ref, 0, METER_Y, X0 - 1, METER_H))
     items.append(obj(1702, "toggle_button_panel_item", {
-        "layout_settings#6226": v("Object", grid_layout(0, METER_Y + METER_H + 1, X0 - 1, 4)),
+        "layout_settings#6226": v("Object", grid_layout(0, METER_Y + METER_H + 2, X0 - 1, 4)),
         "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
         "tooltip_text#6867": v("String", "Open or close the expanded view"), "data_model#6220": view_ref,
         "title#6241": v("String", "View"), "icon_name#6239": v("String", ""), "style#6240": v("Byte", 0),
@@ -73,9 +73,9 @@ def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_met
     for i, dref in enumerate(drawing_refs):
         sx = X0 + i * (SLOT_W + GAP)
         items.append(drawing_item(dref, sx, 6, SLOT_W, 8))
-        items.append(drawing_item(dref, sx, KNOB_Y, 9, 24))   # the same drawing, narrow: the knob names
+        items.append(drawing_item(dref, sx, KNOB_Y, SLOT_W, 36))   # the same drawing, tall: the knob names
         for k in range(3):
-            items.append(knob_item(knob_refs[i][k], sx + 9, KNOB_Y + 8 * k, 9, 8, 1, "", f"Slot {i + 1} knob {k + 1}"))
+            items.append(knob_item(knob_refs[i][k], sx + 5, KNOB_Y + 12 * k, 9, 9, 1, "", f"Slot {i + 1} knob {k + 1}"))
     items.append(drawing_item(out_meter_ref, RIGHT_X, METER_Y, RIGHT_W, METER_H))
     items.append(knob_item(out_ref, RIGHT_X, METER_Y + METER_H + 1, 9, 9, 1, "Out", "Output gain in dB"))
     grid = obj(1681, "grid_panel_item", {
@@ -250,7 +250,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader):
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v9".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v10".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,
