@@ -339,6 +339,28 @@ final class Strip {
         }
     }
 
+    private static java.util.TimerTask watchdog;
+
+    /** While the expanded view is open, closes it as soon as its strip is gone from the track (a view of deleted chains crashes Bitwig). */
+    private static void watchStrip(Watch w) {
+        if (watchdog != null) watchdog.cancel();
+        watchdog = drf.EO().beI(() -> {
+            try {
+                if (!StripViews.hasOpen()) { watchdog.cancel(); return; }
+                boolean alive;
+                try { alive = findStrip(w.c) == w.strip; } catch (Throwable t) { alive = false; }
+                if (!alive) {
+                    MOD.log("strip is gone; closing the expanded view");
+                    StripViews.closeAll();
+                    synchronized (WATCHES) { WATCHES.remove(w); }
+                    watchdog.cancel();
+                }
+            } catch (Throwable t) {
+                MOD.log("watchdog failed", t);
+            }
+        }, 100L, 100L);
+    }
+
     /** Opens the strip's expanded view (its own window): Bitwig's chain widget for each slot with a unit loaded. */
     static void openView(Object widget, Object selection) {
         try {
@@ -369,6 +391,7 @@ final class Strip {
             StripView view = new StripView((com.bitwig.flt.document.core.iface.bMt) c.root.cc_(), loaded);
             StripViews.closeAll();
             StripViews.add(view);
+            watchStrip(w);
             drf.EO().runAtEndOfCurrentEvent(() -> {
                 try {
                     view.open(null);

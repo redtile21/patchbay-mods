@@ -2,10 +2,10 @@ component eb_tap
 {
     audio_inport in;
     audio_inport prev;
-    value_inport i32 kind;
     audio_inport f32 k1 = 50.0;
     audio_inport f32 k2 = 50.0;
     audio_inport f32 k3 = 50.0;
+    value_inport i32 kind;
 
     audio_outport out;
     audio_outport f32<4> display;

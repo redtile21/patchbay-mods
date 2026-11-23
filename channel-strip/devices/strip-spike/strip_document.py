@@ -133,8 +133,9 @@ def stage(binary, connections):
 
 
 def tap(binary, connections):
-    inputs = [nitro_port("in", 0, 2, output=False), nitro_port("prev", 1, 2, output=False), value_port("kind", 2, boolean=False),
-              nitro_port("k1", 3, 1, output=False), nitro_port("k2", 4, 1, output=False), nitro_port("k3", 5, 1, output=False)]
+    inputs = [nitro_port("in", 0, 2, output=False), nitro_port("prev", 1, 2, output=False),
+              nitro_port("k1", 2, 1, output=False), nitro_port("k2", 3, 1, output=False), nitro_port("k3", 4, 1, output=False),
+              value_port("kind", 5, boolean=False)]
     outputs = [nitro_port("out", 0, 2, output=True), nitro_port("display", 1, 4, output=True), nitro_port("display2", 2, 4, output=True)]
     return obj(1721, "nitro_atom", {
         "settings#6194": settings(connections),
@@ -205,7 +206,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader):
     for index in range(1, SLOTS + 1):
         ph = placeholder([wire(previous), connection()])
         sl = slot(index, [wire(ph), wire(note_proxy)])
-        tp = tap(tap_binary, [wire(sl), wire(previous), wire(types[index - 1]), *(wire(k) for k in knobs[index - 1])])
+        tp = tap(tap_binary, [wire(sl), wire(previous), *(wire(k) for k in knobs[index - 1]), wire(types[index - 1])])
         drawing = obj(5512, "", {
             "settings#6194": settings([wire(tp, 1), wire(tp, 2)] + [connection() for _ in range(7)]),
             "channel_count#607": v("Byte", 0), "name#374": v("String", ""),
@@ -251,7 +252,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader):
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v11".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v12".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,
