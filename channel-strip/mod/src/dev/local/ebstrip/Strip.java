@@ -284,6 +284,7 @@ final class Strip {
     private static final class Watch {
         final Ctx c; final utt strip;
         final lpr[] types = new lpr[7];
+        lpr view; // the "Expanded View" button's atom, if the strip has one
         final k3K[] chains = new k3K[7];
         Watch(Ctx c, utt strip) { this.c = c; this.strip = strip; }
     }
@@ -310,6 +311,8 @@ final class Strip {
                 w.types[n] = (lpr) atom;
                 w.chains[n] = (k3K) chain.object;
             }
+            Object viewAtom = findByIdentifier(strip, "VIEW");
+            if (viewAtom instanceof lpr) w.view = (lpr) viewAtom;
             synchronized (WATCHES) {
                 WATCHES.removeIf(o -> o.strip == strip);
                 WATCHES.add(w);
@@ -334,7 +337,16 @@ final class Strip {
                 for (Watch w : WATCHES) if (w.strip == strip) watch = w;
             }
             if (watch == null) return;
-            final Watch w = watch;
+            openViewFor(watch);
+        } catch (Throwable t) {
+            MOD.log("open view failed", t);
+            Notifications.toast("EB Strip: could not open the expanded view (see the log)");
+        }
+    }
+
+    static void openViewFor(Watch w) {
+        try {
+            Ctx c = w.c;
             java.util.function.Supplier<List<StripView.Entry>> loaded = () -> {
                 List<StripView.Entry> out = new ArrayList<>();
                 for (int n = 1; n <= 6; n++) if (!w.chains[n].qJX().isEmpty()) out.add(new StripView.Entry(w.chains[n], "Slot " + n));
@@ -387,8 +399,37 @@ final class Strip {
         synchronized (WATCHES) {
             for (Watch w : WATCHES) for (int n = 1; n <= 6; n++) if (w.types[n] == atom) ours = true;
         }
-        if (!ours && !AUTO_FAILED.contains(atom)) ours = autoArm(atom);
+        if (!ours && !AUTO_FAILED.contains(atom) && !isViewAtom(atom)) ours = autoArm(atom);
+        if (!ours && isViewAtom(atom)) ours = autoArmIfNeeded(atom);
+        Watch viewOf = watchWithView(atom);
+        if (viewOf != null) {
+            if ("Open".equals(atom.sSO())) {
+                drf.EO().runAtEndOfCurrentEvent(() -> {
+                    try { atom.MgQ(0); } catch (Throwable t) { MOD.log("could not reset the view button", t); }
+                });
+                openViewFor(viewOf);
+            }
+            return;
+        }
         if (ours) onChangesEnded();
+    }
+
+    private static boolean isViewAtom(lpr atom) {
+        return "VIEW".equals(identifierOf(atom));
+    }
+
+    private static Watch watchWithView(lpr atom) {
+        synchronized (WATCHES) {
+            for (Watch w : WATCHES) if (w.view == atom) return w;
+        }
+        return null;
+    }
+
+    /** The view button can be the first thing touched: arm the strip it belongs to. */
+    private static boolean autoArmIfNeeded(lpr atom) {
+        if (watchWithView(atom) != null) return true;
+        if (AUTO_FAILED.contains(atom)) return false;
+        return autoArm(atom);
     }
 
     private static final Set<Object> AUTO_FAILED = Collections.newSetFromMap(new java.util.WeakHashMap<>());
@@ -397,7 +438,7 @@ final class Strip {
     private static boolean autoArm(lpr atom) {
         try {
             String id = identifierOf(atom);
-            if (id == null || !id.matches("SLOT[1-6]_TYPE")) return false;
+            if (id == null || !id.matches("SLOT[1-6]_TYPE|VIEW")) return false;
             utt strip = (utt) findUp(atom, o -> o instanceof utt u && STRIP_UUIDS.contains(String.valueOf(u.beI())), 8, 6000);
             PiT track = strip == null ? null : (PiT) findUp(strip, o -> o instanceof PiT, 8, 6000);
             GJy root = track == null ? null : (GJy) findUp(track, o -> o instanceof GJy, 8, 6000);
@@ -414,6 +455,8 @@ final class Strip {
                 w.types[n] = (lpr) a;
                 w.chains[n] = (k3K) chain.object;
             }
+            Object viewAtom = findByIdentifier(strip, "VIEW");
+            if (viewAtom instanceof lpr) w.view = (lpr) viewAtom;
             synchronized (WATCHES) {
                 WATCHES.removeIf(o -> o.strip == strip);
                 WATCHES.add(w);

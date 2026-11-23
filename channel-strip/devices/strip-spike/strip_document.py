@@ -32,8 +32,10 @@ def chooser(tip, ref, x, y, w):
         "style#6266": v("Byte", 0), "color#7528": v("Int16", 6)})
 
 
-def main_panel(drawing_refs, in_ref, out_ref, type_refs=()):
+def main_panel(drawing_refs, in_ref, out_ref, type_refs=(), view_ref=None):
     items = []
+    if view_ref is not None:
+        items.append(chooser("Open the expanded view", view_ref, 64, 24, 32))
     for i, tref in enumerate(type_refs):
         items.append(chooser(f"Slot {i + 1} unit", tref, i * (SLOT_W + GAP), 0, SLOT_W))
     for i, dref in enumerate(drawing_refs):
@@ -148,6 +150,7 @@ def document(project, binary, tap_binary, shader):
     })
     in_gain = parameter("Input Gain", "INPUT_GAIN", -24.0, 24.0, 0.0, 1)
     out_gain = parameter("Output Gain", "OUTPUT_GAIN", -24.0, 24.0, 0.0, 1)
+    view = indexed_parameter("Expanded View", "VIEW", ("Expanded View", "Open"), 0)
     types = [indexed_parameter(f"Slot {i}", f"SLOT{i}_TYPE", KINDS, 0) for i in range(1, SLOTS + 1)]
     stage_in = stage(binary, [wire(compensation), wire(in_gain)])
 
@@ -171,9 +174,9 @@ def document(project, binary, tap_binary, shader):
 
     output_proxy = proxy(output=True)
     output_proxy["fields"]["settings#6194"] = settings([wire(stage_out, 0)])
-    panel = main_panel([ref(d) for d in drawings], ref(in_gain), ref(out_gain), [ref(t) for t in types])
+    panel = main_panel([ref(d) for d in drawings], ref(in_gain), ref(out_gain), [ref(t) for t in types], ref(view))
     identity = project["identity"]
-    children = [audio_source, compensation, in_gain, out_gain, *types, stage_in]
+    children = [audio_source, compensation, in_gain, out_gain, *types, view, stage_in]
     for ph, sl, tp, dr in zip(placeholders, slots, taps, drawings):
         children += [ph, sl, tp, dr]
     children.append(stage_out)
@@ -199,7 +202,7 @@ def document(project, binary, tap_binary, shader):
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v3".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v4".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,
