@@ -35,7 +35,7 @@ import java.util.UUID;
 final class Strip {
     static final Bml.Mod MOD = Bml.mod("eb-strip-console");
     /** The strip and the nested-chain test strip. */
-    static final Set<String> STRIP_UUIDS = Set.of("4f1e9a37-0b6c-4d82-95e3-d7a2c8b1f406", "5d0c6a52-3c5e-4f0b-9a58-2f1d4b7e6c31");
+    static final Set<String> STRIP_UUIDS = Set.of("4f1e9a37-0b6c-4d82-95e3-d7a2c8b1f406", "5d0c6a52-3c5e-4f0b-9a58-2f1d4b7e6c31", "4bbafd81-3c2f-4644-82e4-e8764ca1e565");
 
     private Strip() {}
 

@@ -27,7 +27,7 @@ Putting every unit's named parameters into every slot of one device would mean a
 cores, each limited to 30 inports) and automation that stays in the slot when a unit moves. Instead:
 
 ```
-EB Strip Spike (container .bwdevice)
+EB BlackStrip (container .bwdevice)
   In ▶ meter ▶ [slot 1 chain] ▶ tap ▶ [slot 2 chain] ▶ tap ▶ … ▶ [slot 6] ▶ tap ▶ Out gain ▶ meter ▶ Out
                   │
                   └─ one unit device, e.g. "EB Compressor" (inserted by the companion mod)
@@ -39,14 +39,15 @@ EB Strip Spike (container .bwdevice)
   reduction and the unit kind, plus the three macro knob values, to that slot's drawing.
 - The dropdown `SLOTn_TYPE` (Bypass, Gain, EQ, Compressor, Saturation, Limiter) chooses the unit. The strip itself
   cannot insert devices; the **companion mod** does (§2.3).
-- The container device keeps UUID `4f1e9a37…`/`5d0c6a52…` (see `STRIP_UUIDS` in the mod). The device is currently
-  named "EB Strip Spike"; renaming is a release task.
+- The container device keeps UUID `4f1e9a37…`/`5d0c6a52…` (see `STRIP_UUIDS` in the mod). Both containers
+  (EB BlackStrip and the TDR-style EB BlackStrip TDR) are recognised by the mod.
 
 ### 2.2 Devices
 
 | Folder | Device | Notes |
 |---|---|---|
-| `devices/strip-spike/` | EB Strip Spike (container) | sources mirrored from the blueprint checkout, see §4 |
+| `devices/blackstrip/` | EB BlackStrip (container) | sources mirrored from the blueprint checkout (`devices/eb-strip`), see §4 |
+| `devices/blackstrip-tdr/` | EB BlackStrip TDR (container) | same device and mod behaviour, flat charcoal look with a shader backdrop and framed sections (blueprint `devices/eb-strip-tdr`); own UUID |
 | `devices/unit-gain/` | EB Gain | gain, pan, width, polarity, mono |
 | `devices/unit-eq/` | EB EQ | native spectrum (output boosted +34 dB by the `tap` outport so it fills the display), band lines and points, shader response curve |
 | `devices/unit-compressor/` | EB Compressor | transfer-curve shader, meters |
@@ -82,7 +83,7 @@ How it works:
   deleted chains crashes Bitwig.
 - Bitwig loads mods only at startup.
 
-### 2.4 Strip face (`devices/strip-spike/`)
+### 2.4 Strip face (`devices/blackstrip/`)
 
 Panel is 53 grid units high (the standard device height). Per slot column (19 wide): dropdown, signal-flow box
 (`flow.sksl`), three macro knobs (9 x 9, no title). One drawing atom per slot feeds two panel items: the wide box and a
@@ -137,7 +138,7 @@ Mod: `channel-strip/mod/build.sh` (needs JDK 25 and the Patchbay folder), then c
 ## 6. Open items
 
 - Docking the expanded view in Bitwig's detail panel (needs an anchor in a device header; not a priority).
-- Rename "EB Strip Spike" and give the container its final name and icon; presets and a release zip.
+- Container icon, presets and a release zip. The older "EB Blackstar Strip" device (first plan) can be deleted from the Patchbay device folder.
 - A distinctive Elodea Blackstar / TDR-style look using Nitro and SkSL (version 2).
 - Version 2 ideas: character modes (console EQ, VCA/opto/FET compression), more saturation models, curated strip presets.
 - Remove the small build digit some unit displays draw in a corner before release.

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "projectId": "elodea-blackstar.strip-spike",
-  "name": "EB Strip Spike",
+  "projectId": "elodea-blackstar.blackstrip",
+  "name": "EB BlackStrip",
   "surface": "device",
   "target": {"bitwigVersion": "6.1.7", "platform": "macos-arm64"},
   "identity": {
@@ -11,7 +11,7 @@
   },
   "presentation": {
     "type": "audio-fx",
-    "description": "Spike B: six device chains in series with input and output gain."
+    "description": "Six swappable unit slots (Gain, EQ, Compressor, Saturation, Limiter) with macro knobs, meters and an expanded view."
   },
   "sources": {"nitro": ["gain_stage.nitro", "tap.nitro", "meter.nitro"], "sksl": ["flow.sksl", "meter.sksl"]},
   "adapter": {
@@ -19,8 +19,8 @@
     "argv": ["python", "{workspace}/build.py", "--out", "{output}"]
   },
   "output": {
-    "path": "build/macos-6.1.7/EB Strip Spike.bwdevice",
-    "libraryPath": "EB Strip Spike.bwdevice"
+    "path": "build/macos-6.1.7/EB BlackStrip.bwdevice",
+    "libraryPath": "EB BlackStrip.bwdevice"
   },
   "preflight": {"profile": "source-document"}
 }

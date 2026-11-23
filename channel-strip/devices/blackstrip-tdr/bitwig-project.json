@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "projectId": "elodea-blackstar.blackstrip-tdr",
+  "name": "EB BlackStrip TDR",
+  "surface": "device",
+  "target": {"bitwigVersion": "6.1.7", "platform": "macos-arm64"},
+  "identity": {
+    "uuid": "4bbafd81-3c2f-4644-82e4-e8764ca1e565",
+    "creator": "Elodea Blackstar",
+    "category": "Container"
+  },
+  "presentation": {
+    "type": "audio-fx",
+    "description": "Six swappable unit slots (Gain, EQ, Compressor, Saturation, Limiter) with macro knobs, meters and an expanded view."
+  },
+  "sources": {"nitro": ["gain_stage.nitro", "tap.nitro", "meter.nitro"], "sksl": ["flow.sksl", "meter.sksl", "backdrop.sksl"]},
+  "adapter": {
+    "type": "external-builder",
+    "argv": ["python", "{workspace}/build.py", "--out", "{output}"]
+  },
+  "output": {
+    "path": "build/macos-6.1.7/EB BlackStrip TDR.bwdevice",
+    "libraryPath": "EB BlackStrip TDR.bwdevice"
+  },
+  "preflight": {"profile": "source-document"}
+}

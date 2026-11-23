@@ -1,0 +1,492 @@
+// EB Strip slot display: one box on the signal path.
+// audioLow: kind / 8 (0 thru, 1 gain, 2 eq, 3 compressor, 4 saturation, 5 limiter), input level, output level (-60..+6 dB), gain reduction / 24 dB
+uniform float4 audioLow;
+uniform float4 audioMedium;
+
+float sdseg(float2 p, float2 a, float2 b) {
+    float2 pa = p - a;
+    float2 ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0., 1.);
+    return length(pa - ba * h);
+}
+// Monoline sans-serif capital in a 1 x 2 box; c is 1 for A to 26 for Z, 0 draws nothing.
+float letter(float2 q, float c) {
+    if (c < .5) return 0.;
+    float m = 10.;
+    if (c > 0.5 && c < 1.5) {
+        m = min(m, sdseg(q, float2(0.05, 1.95), float2(0.5, 0.05)));
+        m = min(m, sdseg(q, float2(0.5, 0.05), float2(0.95, 1.95)));
+        m = min(m, sdseg(q, float2(0.25, 1.3), float2(0.75, 1.3)));
+    }
+    else if (c > 2.5 && c < 3.5) {
+        m = min(m, sdseg(q, float2(0.95, 0.45), float2(0.7, 0.08)));
+        m = min(m, sdseg(q, float2(0.7, 0.08), float2(0.3, 0.08)));
+        m = min(m, sdseg(q, float2(0.3, 0.08), float2(0.05, 0.45)));
+        m = min(m, sdseg(q, float2(0.05, 0.45), float2(0.05, 1.55)));
+        m = min(m, sdseg(q, float2(0.05, 1.55), float2(0.3, 1.92)));
+        m = min(m, sdseg(q, float2(0.3, 1.92), float2(0.7, 1.92)));
+        m = min(m, sdseg(q, float2(0.7, 1.92), float2(0.95, 1.55)));
+    }
+    else if (c > 3.5 && c < 4.5) {
+        m = min(m, sdseg(q, float2(0.08, 0.05), float2(0.08, 1.95)));
+        m = min(m, sdseg(q, float2(0.08, 1.95), float2(0.55, 1.95)));
+        m = min(m, sdseg(q, float2(0.55, 1.95), float2(0.92, 1.5)));
+        m = min(m, sdseg(q, float2(0.92, 1.5), float2(0.92, 0.5)));
+        m = min(m, sdseg(q, float2(0.92, 0.5), float2(0.55, 0.05)));
+        m = min(m, sdseg(q, float2(0.55, 0.05), float2(0.08, 0.05)));
+    }
+    else if (c > 4.5 && c < 5.5) {
+        m = min(m, sdseg(q, float2(0.9, 0.05), float2(0.1, 0.05)));
+        m = min(m, sdseg(q, float2(0.1, 0.05), float2(0.1, 1.95)));
+        m = min(m, sdseg(q, float2(0.1, 1.95), float2(0.9, 1.95)));
+        m = min(m, sdseg(q, float2(0.1, 1.0), float2(0.7, 1.0)));
+    }
+    else if (c > 5.5 && c < 6.5) {
+        m = min(m, sdseg(q, float2(0.1, 0.05), float2(0.1, 1.95)));
+        m = min(m, sdseg(q, float2(0.1, 0.05), float2(0.9, 0.05)));
+        m = min(m, sdseg(q, float2(0.1, 1.0), float2(0.7, 1.0)));
+    }
+    else if (c > 6.5 && c < 7.5) {
+        m = min(m, sdseg(q, float2(0.95, 0.45), float2(0.7, 0.08)));
+        m = min(m, sdseg(q, float2(0.7, 0.08), float2(0.3, 0.08)));
+        m = min(m, sdseg(q, float2(0.3, 0.08), float2(0.05, 0.45)));
+        m = min(m, sdseg(q, float2(0.05, 0.45), float2(0.05, 1.55)));
+        m = min(m, sdseg(q, float2(0.05, 1.55), float2(0.3, 1.92)));
+        m = min(m, sdseg(q, float2(0.3, 1.92), float2(0.7, 1.92)));
+        m = min(m, sdseg(q, float2(0.7, 1.92), float2(0.95, 1.55)));
+        m = min(m, sdseg(q, float2(0.95, 1.55), float2(0.95, 1.05)));
+        m = min(m, sdseg(q, float2(0.95, 1.05), float2(0.55, 1.05)));
+    }
+    else if (c > 7.5 && c < 8.5) {
+        m = min(m, sdseg(q, float2(0.1, 0.05), float2(0.1, 1.95)));
+        m = min(m, sdseg(q, float2(0.9, 0.05), float2(0.9, 1.95)));
+        m = min(m, sdseg(q, float2(0.1, 1.0), float2(0.9, 1.0)));
+    }
+    else if (c > 8.5 && c < 9.5) {
+        m = min(m, sdseg(q, float2(0.5, 0.05), float2(0.5, 1.95)));
+        m = min(m, sdseg(q, float2(0.2, 0.05), float2(0.8, 0.05)));
+        m = min(m, sdseg(q, float2(0.2, 1.95), float2(0.8, 1.95)));
+    }
+    else if (c > 10.5 && c < 11.5) {
+        m = min(m, sdseg(q, float2(0.1, 0.05), float2(0.1, 1.95)));
+        m = min(m, sdseg(q, float2(0.9, 0.05), float2(0.1, 1.1)));
+        m = min(m, sdseg(q, float2(0.35, 0.8), float2(0.9, 1.95)));
+    }
+    else if (c > 11.5 && c < 12.5) {
+        m = min(m, sdseg(q, float2(0.1, 0.05), float2(0.1, 1.95)));
+        m = min(m, sdseg(q, float2(0.1, 1.95), float2(0.9, 1.95)));
+    }
+    else if (c > 12.5 && c < 13.5) {
+        m = min(m, sdseg(q, float2(0.05, 1.95), float2(0.05, 0.05)));
+        m = min(m, sdseg(q, float2(0.05, 0.05), float2(0.5, 1.2)));
+        m = min(m, sdseg(q, float2(0.5, 1.2), float2(0.95, 0.05)));
+        m = min(m, sdseg(q, float2(0.95, 0.05), float2(0.95, 1.95)));
+    }
+    else if (c > 13.5 && c < 14.5) {
+        m = min(m, sdseg(q, float2(0.1, 1.95), float2(0.1, 0.05)));
+        m = min(m, sdseg(q, float2(0.1, 0.05), float2(0.9, 1.95)));
+        m = min(m, sdseg(q, float2(0.9, 1.95), float2(0.9, 0.05)));
+    }
+    else if (c > 14.5 && c < 15.5) {
+        m = min(m, sdseg(q, float2(0.3, 0.05), float2(0.7, 0.05)));
+        m = min(m, sdseg(q, float2(0.7, 0.05), float2(0.92, 0.4)));
+        m = min(m, sdseg(q, float2(0.92, 0.4), float2(0.92, 1.6)));
+        m = min(m, sdseg(q, float2(0.92, 1.6), float2(0.7, 1.95)));
+        m = min(m, sdseg(q, float2(0.7, 1.95), float2(0.3, 1.95)));
+        m = min(m, sdseg(q, float2(0.3, 1.95), float2(0.08, 1.6)));
+        m = min(m, sdseg(q, float2(0.08, 1.6), float2(0.08, 0.4)));
+        m = min(m, sdseg(q, float2(0.08, 0.4), float2(0.3, 0.05)));
+    }
+    else if (c > 15.5 && c < 16.5) {
+        m = min(m, sdseg(q, float2(0.1, 1.95), float2(0.1, 0.05)));
+        m = min(m, sdseg(q, float2(0.1, 0.05), float2(0.7, 0.05)));
+        m = min(m, sdseg(q, float2(0.7, 0.05), float2(0.92, 0.35)));
+        m = min(m, sdseg(q, float2(0.92, 0.35), float2(0.92, 0.8)));
+        m = min(m, sdseg(q, float2(0.92, 0.8), float2(0.7, 1.1)));
+        m = min(m, sdseg(q, float2(0.7, 1.1), float2(0.1, 1.1)));
+    }
+    else if (c > 17.5 && c < 18.5) {
+        m = min(m, sdseg(q, float2(0.1, 1.95), float2(0.1, 0.05)));
+        m = min(m, sdseg(q, float2(0.1, 0.05), float2(0.7, 0.05)));
+        m = min(m, sdseg(q, float2(0.7, 0.05), float2(0.92, 0.35)));
+        m = min(m, sdseg(q, float2(0.92, 0.35), float2(0.92, 0.8)));
+        m = min(m, sdseg(q, float2(0.92, 0.8), float2(0.7, 1.1)));
+        m = min(m, sdseg(q, float2(0.7, 1.1), float2(0.1, 1.1)));
+        m = min(m, sdseg(q, float2(0.45, 1.1), float2(0.92, 1.95)));
+    }
+    else if (c > 18.5 && c < 19.5) {
+        m = min(m, sdseg(q, float2(0.9, 0.35), float2(0.7, 0.05)));
+        m = min(m, sdseg(q, float2(0.7, 0.05), float2(0.3, 0.05)));
+        m = min(m, sdseg(q, float2(0.3, 0.05), float2(0.08, 0.35)));
+        m = min(m, sdseg(q, float2(0.08, 0.35), float2(0.1, 0.7)));
+        m = min(m, sdseg(q, float2(0.1, 0.7), float2(0.5, 1.0)));
+        m = min(m, sdseg(q, float2(0.5, 1.0), float2(0.9, 1.3)));
+        m = min(m, sdseg(q, float2(0.9, 1.3), float2(0.92, 1.65)));
+        m = min(m, sdseg(q, float2(0.92, 1.65), float2(0.7, 1.95)));
+        m = min(m, sdseg(q, float2(0.7, 1.95), float2(0.3, 1.95)));
+        m = min(m, sdseg(q, float2(0.3, 1.95), float2(0.08, 1.65)));
+    }
+    else if (c > 19.5 && c < 20.5) {
+        m = min(m, sdseg(q, float2(0.05, 0.05), float2(0.95, 0.05)));
+        m = min(m, sdseg(q, float2(0.5, 0.05), float2(0.5, 1.95)));
+    }
+    else if (c > 20.5 && c < 21.5) {
+        m = min(m, sdseg(q, float2(0.1, 0.05), float2(0.1, 1.55)));
+        m = min(m, sdseg(q, float2(0.1, 1.55), float2(0.3, 1.95)));
+        m = min(m, sdseg(q, float2(0.3, 1.95), float2(0.7, 1.95)));
+        m = min(m, sdseg(q, float2(0.7, 1.95), float2(0.9, 1.55)));
+        m = min(m, sdseg(q, float2(0.9, 1.55), float2(0.9, 0.05)));
+    }
+    else if (c > 21.5 && c < 22.5) {
+        m = min(m, sdseg(q, float2(0.05, 0.05), float2(0.5, 1.95)));
+        m = min(m, sdseg(q, float2(0.5, 1.95), float2(0.95, 0.05)));
+    }
+    else if (c > 22.5 && c < 23.5) {
+        m = min(m, sdseg(q, float2(0.03, 0.05), float2(0.25, 1.95)));
+        m = min(m, sdseg(q, float2(0.25, 1.95), float2(0.5, 0.8)));
+        m = min(m, sdseg(q, float2(0.5, 0.8), float2(0.75, 1.95)));
+        m = min(m, sdseg(q, float2(0.75, 1.95), float2(0.97, 0.05)));
+    }
+    else if (c > 23.5 && c < 24.5) {
+        m = min(m, sdseg(q, float2(0.1, 0.05), float2(0.9, 1.95)));
+        m = min(m, sdseg(q, float2(0.9, 0.05), float2(0.1, 1.95)));
+    }
+    else if (c > 24.5 && c < 25.5) {
+        m = min(m, sdseg(q, float2(0.05, 0.05), float2(0.5, 1.0)));
+        m = min(m, sdseg(q, float2(0.5, 1.0), float2(0.95, 0.05)));
+        m = min(m, sdseg(q, float2(0.5, 1.0), float2(0.5, 1.95)));
+    }
+    return 1. - smoothstep(.10, .20, m);
+}
+
+// A word of up to six letters centred on x; the baseline origin is the top-left of the first glyph.
+float word(float2 p, float cx, float y, float h, float a, float b, float c, float d, float e, float f) {
+    float w = h * .5;
+    float adv = w * 1.3;
+    float n = 0.;
+    if (a > .5) n += 1.;
+    if (b > .5) n += 1.;
+    if (c > .5) n += 1.;
+    if (d > .5) n += 1.;
+    if (e > .5) n += 1.;
+    if (f > .5) n += 1.;
+    float x0 = cx - n * adv * .5;
+    float2 s = p - float2(x0, y - h);
+    float lit = 0.;
+    lit = max(lit, letter(s / w, a));
+    lit = max(lit, letter((s - float2(adv, 0.)) / w, b));
+    lit = max(lit, letter((s - float2(2. * adv, 0.)) / w, c));
+    lit = max(lit, letter((s - float2(3. * adv, 0.)) / w, d));
+    lit = max(lit, letter((s - float2(4. * adv, 0.)) / w, e));
+    lit = max(lit, letter((s - float2(5. * adv, 0.)) / w, f));
+    return lit;
+}
+
+
+void put(inout float3 col, inout float a, float3 c, float ca) {
+    float na = ca + a * (1. - ca);
+    if (na > .001) col = (c * ca + col * a * (1. - ca)) / na;
+    a = na;
+}
+float box(float2 p, float2 lo, float2 hi) {
+    return (p.x >= lo.x && p.x <= hi.x && p.y >= lo.y && p.y <= hi.y) ? 1. : 0.;
+}
+
+// Monoline sans-serif digit in a 1 x 2 box; d < 0 draws nothing.
+float digit(float2 q, float d) {
+    if (d < 0.) return 0.;
+    float m = 10.;
+    if (d < 0.5) {
+        m = min(m, sdseg(q, float2(0.25, 0.05), float2(0.75, 0.05)));
+        m = min(m, sdseg(q, float2(0.75, 0.05), float2(0.92, 0.35)));
+        m = min(m, sdseg(q, float2(0.92, 0.35), float2(0.92, 1.65)));
+        m = min(m, sdseg(q, float2(0.92, 1.65), float2(0.75, 1.95)));
+        m = min(m, sdseg(q, float2(0.75, 1.95), float2(0.25, 1.95)));
+        m = min(m, sdseg(q, float2(0.25, 1.95), float2(0.08, 1.65)));
+        m = min(m, sdseg(q, float2(0.08, 1.65), float2(0.08, 0.35)));
+        m = min(m, sdseg(q, float2(0.08, 0.35), float2(0.25, 0.05)));
+    }
+    else if (d < 1.5) {
+        m = min(m, sdseg(q, float2(0.18, 0.45), float2(0.55, 0.05)));
+        m = min(m, sdseg(q, float2(0.55, 0.05), float2(0.55, 1.95)));
+    }
+    else if (d < 2.5) {
+        m = min(m, sdseg(q, float2(0.1, 0.4), float2(0.25, 0.1)));
+        m = min(m, sdseg(q, float2(0.25, 0.1), float2(0.5, 0.05)));
+        m = min(m, sdseg(q, float2(0.5, 0.05), float2(0.75, 0.1)));
+        m = min(m, sdseg(q, float2(0.75, 0.1), float2(0.9, 0.4)));
+        m = min(m, sdseg(q, float2(0.9, 0.4), float2(0.85, 0.75)));
+        m = min(m, sdseg(q, float2(0.85, 0.75), float2(0.1, 1.95)));
+        m = min(m, sdseg(q, float2(0.1, 1.95), float2(0.92, 1.95)));
+    }
+    else if (d < 3.5) {
+        m = min(m, sdseg(q, float2(0.12, 0.12), float2(0.5, 0.05)));
+        m = min(m, sdseg(q, float2(0.5, 0.05), float2(0.85, 0.25)));
+        m = min(m, sdseg(q, float2(0.85, 0.25), float2(0.85, 0.65)));
+        m = min(m, sdseg(q, float2(0.85, 0.65), float2(0.45, 0.95)));
+        m = min(m, sdseg(q, float2(0.45, 0.95), float2(0.88, 1.25)));
+        m = min(m, sdseg(q, float2(0.88, 1.25), float2(0.9, 1.7)));
+        m = min(m, sdseg(q, float2(0.9, 1.7), float2(0.5, 1.95)));
+        m = min(m, sdseg(q, float2(0.5, 1.95), float2(0.1, 1.85)));
+    }
+    else if (d < 4.5) {
+        m = min(m, sdseg(q, float2(0.75, 1.95), float2(0.75, 0.05)));
+        m = min(m, sdseg(q, float2(0.75, 0.05), float2(0.05, 1.35)));
+        m = min(m, sdseg(q, float2(0.05, 1.35), float2(0.95, 1.35)));
+    }
+    else if (d < 5.5) {
+        m = min(m, sdseg(q, float2(0.9, 0.05), float2(0.2, 0.05)));
+        m = min(m, sdseg(q, float2(0.2, 0.05), float2(0.12, 0.95)));
+        m = min(m, sdseg(q, float2(0.12, 0.95), float2(0.5, 0.85)));
+        m = min(m, sdseg(q, float2(0.5, 0.85), float2(0.85, 0.95)));
+        m = min(m, sdseg(q, float2(0.85, 0.95), float2(0.92, 1.5)));
+        m = min(m, sdseg(q, float2(0.92, 1.5), float2(0.75, 1.9)));
+        m = min(m, sdseg(q, float2(0.75, 1.9), float2(0.45, 1.97)));
+        m = min(m, sdseg(q, float2(0.45, 1.97), float2(0.1, 1.8)));
+    }
+    else if (d < 6.5) {
+        m = min(m, sdseg(q, float2(0.85, 0.15), float2(0.5, 0.05)));
+        m = min(m, sdseg(q, float2(0.5, 0.05), float2(0.18, 0.35)));
+        m = min(m, sdseg(q, float2(0.18, 0.35), float2(0.1, 1.0)));
+        m = min(m, sdseg(q, float2(0.1, 1.0), float2(0.1, 1.6)));
+        m = min(m, sdseg(q, float2(0.1, 1.6), float2(0.4, 1.95)));
+        m = min(m, sdseg(q, float2(0.4, 1.95), float2(0.75, 1.9)));
+        m = min(m, sdseg(q, float2(0.75, 1.9), float2(0.92, 1.55)));
+        m = min(m, sdseg(q, float2(0.92, 1.55), float2(0.8, 1.15)));
+        m = min(m, sdseg(q, float2(0.8, 1.15), float2(0.45, 1.05)));
+        m = min(m, sdseg(q, float2(0.45, 1.05), float2(0.12, 1.3)));
+    }
+    else if (d < 7.5) {
+        m = min(m, sdseg(q, float2(0.08, 0.05), float2(0.92, 0.05)));
+        m = min(m, sdseg(q, float2(0.92, 0.05), float2(0.4, 1.95)));
+    }
+    else if (d < 8.5) {
+        m = min(m, sdseg(q, float2(0.5, 0.95), float2(0.15, 0.7)));
+        m = min(m, sdseg(q, float2(0.15, 0.7), float2(0.15, 0.3)));
+        m = min(m, sdseg(q, float2(0.15, 0.3), float2(0.5, 0.05)));
+        m = min(m, sdseg(q, float2(0.5, 0.05), float2(0.85, 0.3)));
+        m = min(m, sdseg(q, float2(0.85, 0.3), float2(0.85, 0.7)));
+        m = min(m, sdseg(q, float2(0.85, 0.7), float2(0.5, 0.95)));
+        m = min(m, sdseg(q, float2(0.5, 0.95), float2(0.1, 1.25)));
+        m = min(m, sdseg(q, float2(0.1, 1.25), float2(0.1, 1.7)));
+        m = min(m, sdseg(q, float2(0.1, 1.7), float2(0.5, 1.95)));
+        m = min(m, sdseg(q, float2(0.5, 1.95), float2(0.9, 1.7)));
+        m = min(m, sdseg(q, float2(0.9, 1.7), float2(0.9, 1.25)));
+        m = min(m, sdseg(q, float2(0.9, 1.25), float2(0.5, 0.95)));
+    }
+    else {
+        m = min(m, sdseg(q, float2(0.15, 1.85), float2(0.5, 1.95)));
+        m = min(m, sdseg(q, float2(0.5, 1.95), float2(0.82, 1.65)));
+        m = min(m, sdseg(q, float2(0.82, 1.65), float2(0.9, 1.0)));
+        m = min(m, sdseg(q, float2(0.9, 1.0), float2(0.9, 0.4)));
+        m = min(m, sdseg(q, float2(0.9, 0.4), float2(0.6, 0.05)));
+        m = min(m, sdseg(q, float2(0.6, 0.05), float2(0.25, 0.1)));
+        m = min(m, sdseg(q, float2(0.25, 0.1), float2(0.08, 0.45)));
+        m = min(m, sdseg(q, float2(0.08, 0.45), float2(0.2, 0.85)));
+        m = min(m, sdseg(q, float2(0.2, 0.85), float2(0.55, 0.95)));
+        m = min(m, sdseg(q, float2(0.55, 0.95), float2(0.88, 0.7)));
+    }
+    return 1. - smoothstep(.09, .16, m);
+}
+// Signed number with one decimal (|val| < 100), top-left at o, digit height h.
+float number(float2 p, float2 o, float h, float val) {
+    float w = h * .5;
+    float adv = w * 1.45;
+    float2 s = p - o;
+    float a = abs(val);
+    float t10 = floor(a * 10. + .5);
+    float hund = floor(t10 / 100.);
+    float ones = mod(floor(t10 / 10.), 10.);
+    float tenth = mod(t10, 10.);
+    float lit = 0.;
+    if (val < -.049) lit = 1. - smoothstep(.09, .16, sdseg(s / w, float2(.1, 1.), float2(.8, 1.)));
+    if (val > .049) {
+        float pl = min(sdseg(s / w, float2(.1, 1.), float2(.8, 1.)), sdseg(s / w, float2(.45, .65), float2(.45, 1.35)));
+        lit = 1. - smoothstep(.09, .16, pl);
+    }
+    lit = max(lit, digit((s - float2(adv, 0.)) / w, hund > .5 ? hund : -1.));
+    lit = max(lit, digit((s - float2(2. * adv, 0.)) / w, ones));
+    float dd = length(s - float2(2. * adv + w * 1.25, h * .93));
+    lit = max(lit, 1. - smoothstep(h * .07, h * .11, dd));
+    lit = max(lit, digit((s - float2(2. * adv + w * 1.5, 0.)) / w, tenth));
+    return lit;
+}
+
+
+// Integer centred on cx with its top at y; digit height h.
+float inum(float2 p, float cx, float y, float h, float val) {
+    float w = h * .5;
+    float adv = w * 1.45;
+    float a = floor(abs(val) + .5);
+    float n = 1.;
+    if (a >= 10.) n = 2.;
+    if (a >= 100.) n = 3.;
+    if (a >= 1000.) n = 4.;
+    if (a >= 10000.) n = 5.;
+    float neg = val < -.5 ? 1. : 0.;
+    float x0 = cx - (n + neg) * adv * .5;
+    float2 s = p - float2(x0, y);
+    float lit = 0.;
+    if (neg > .5) lit = 1. - smoothstep(.09, .16, sdseg(s / w, float2(.1, 1.), float2(.8, 1.)));
+    for (int i = 0; i < 5; i++) {
+        float fi = float(i);
+        if (fi < n) {
+            float d = mod(floor(a / pow(10., n - 1. - fi) + .0001), 10.);
+            lit = max(lit, digit((s - float2((fi + neg) * adv, 0.)) / w, d));
+        }
+    }
+    return lit;
+}
+
+// The knob's value in the unit's own scale: x = value, y = mode (0 one decimal, 1 whole number, 2 Hz, 3 off).
+float2 readout(float kind, float row, float p) {
+    if (kind < 1.5) {
+        if (row < .5) return float2(-24. + 48. * p, 0.);
+        if (row < 1.5) return float2(-100. + 200. * p, 1.);
+        return float2(200. * p, 1.);
+    }
+    if (kind < 2.5) {
+        if (row < .5) return p > .995 ? float2(0., 3.) : float2(20. * pow(1000., p), 2.);
+        if (row < 1.5) return p < .005 ? float2(0., 3.) : float2(20. * pow(1000., p), 2.);
+        return float2(6. * p, 0.);
+    }
+    if (kind < 3.5) {
+        if (row < .5) return float2(-60. + 60. * p, 0.);
+        if (row < 1.5) return float2(1. + 19. * p, 0.);
+        return float2(24. * p, 0.);
+    }
+    if (kind < 4.5) {
+        if (row < .5) return float2(36. * p, 0.);
+        if (row < 1.5) return float2(-6. + 12. * p, 0.);
+        return float2(100. * p, 1.);
+    }
+    if (row < .5) return float2(24. * p, 0.);
+    if (row < 1.5) return float2(-12. + 12. * p, 0.);
+    return float2(1. + 999. * p, 1.);
+}
+
+half4 labels(float2 fragCoord) {
+    // 19 x 36 grid units: three rows of 12; the knob sits in the upper 9 of each row, its name below.
+    float2 p = fragCoord / iResolution.xy * float2(152., 288.);
+    float kind = floor(audioLow.x * 8. + .5);
+    float3 col = float3(0.);
+    float a = 0.;
+    float3 dim = float3(.30, .31, .33);
+    bool thru = kind < .5;
+    float row = floor(p.y / 96.);
+    float2 q = float2(p.x, p.y - row * 96.);
+    float k = 0.;
+    float ky = 72.;
+    float kh = 15.;
+    float cx = 76.;
+    if (!thru) {
+        if (kind < 1.5) {
+            if (row < .5) k = word(q, cx, ky, kh, 7., 1., 9., 14., 0., 0.);
+            else if (row < 1.5) k = word(q, cx, ky, kh, 16., 1., 14., 0., 0., 0.);
+            else k = word(q, cx, ky, kh, 23., 9., 4., 20., 8., 0.);
+        } else if (kind < 2.5) {
+            if (row < .5) k = word(q, cx, ky, kh, 12., 16., 6., 0., 0., 0.);
+            else if (row < 1.5) k = word(q, cx, ky, kh, 8., 16., 6., 0., 0., 0.);
+            else k = word(q, cx, ky, kh, 5., 14., 8., 0., 0., 0.);
+        } else if (kind < 3.5) {
+            if (row < .5) k = word(q, cx, ky, kh, 20., 8., 18., 5., 19., 8.);
+            else if (row < 1.5) k = word(q, cx, ky, kh, 18., 1., 20., 9., 15., 0.);
+            else k = word(q, cx, ky, kh, 13., 1., 11., 5., 21., 16.);
+        } else if (kind < 4.5) {
+            if (row < .5) k = word(q, cx, ky, kh, 4., 18., 9., 22., 5., 0.);
+            else if (row < 1.5) k = word(q, cx, ky, kh, 20., 15., 14., 5., 0., 0.);
+            else k = word(q, cx, ky, kh, 13., 9., 24., 0., 0., 0.);
+        } else {
+            if (row < .5) k = word(q, cx, ky, kh, 9., 14., 16., 21., 20., 0.);
+            else if (row < 1.5) k = word(q, cx, ky, kh, 3., 5., 9., 12., 0., 0.);
+            else k = word(q, cx, ky, kh, 18., 5., 12., 0., 0., 0.);
+        }
+        put(col, a, dim * 2.6, k);
+        // The value under the name, in the unit's own scale.
+        float pv = row < .5 ? audioMedium.x : (row < 1.5 ? audioMedium.y : audioMedium.z);
+        float2 ro = readout(kind, row, clamp(pv, 0., 1.));
+        float vl = 0.;
+        float vh = 14.;
+        if (ro.y < .5) vl = number(q, float2(cx - 2.7 * vh * .5, 78.), vh, ro.x);
+        else if (ro.y < 1.5) vl = inum(q, cx, 78., vh, ro.x);
+        else if (ro.y < 2.5) {
+            if (ro.x >= 1000.) {
+                vl = number(q, float2(cx - 2.7 * vh * .5 - 5., 78.), vh, ro.x / 1000.);
+                vl = max(vl, letter((q - float2(cx + 2.7 * vh * .5 - 1., 78.)) / (vh * .5), 11.));
+            } else vl = inum(q, cx, 78., vh, ro.x);
+        } else vl = word(q, cx, 92., 14., 15., 6., 6., 0., 0., 0.);
+        put(col, a, float3(.82, .86, .90), vl);
+    }
+    return half4(half3(col * a), half(a));
+}
+
+half4 main(float2 fragCoord) {
+    if (iResolution.x / iResolution.y < 1.) return labels(fragCoord);
+    // 19 x 8 grid units -> 152 x 64 design units.
+    float2 p = fragCoord / iResolution.xy * float2(152., 64.);
+    float kind = floor(audioLow.x * 8. + .5);
+    float inlv = audioLow.y;
+    float outlv = audioLow.z;
+    float gr = audioLow.w;
+    float3 col = float3(0.);
+    float a = 0.;
+    float3 blue = float3(.30, .68, .92);   // the units' accent
+    float3 red = float3(.98, .52, .14);
+    float3 dim = float3(.30, .31, .33);
+    float3 track = float3(.040, .042, .048); // meter wells, as the units'
+    float3 face = float3(.060, .064, .072);  // panel face, as the units'
+    float3 text = float3(.80, .82, .84);     // as the units'
+    bool thru = kind < .5;
+    float3 sig = thru ? dim : blue;
+
+    // Signal path in and out of the box, brighter with level.
+    float lineY = abs(p.y - 32.);
+    float inLine = (p.x < 16.) ? (1. - smoothstep(.9, 1.6, lineY)) : 0.;
+    float outLine = (p.x > 136.) ? (1. - smoothstep(.9, 1.6, lineY)) : 0.;
+    put(col, a, dim, inLine * .7);
+    put(col, a, dim, outLine * .7);
+    put(col, a, sig, inLine * clamp(inlv * 1.3, 0., 1.));
+    put(col, a, sig, outLine * clamp(outlv * 1.3, 0., 1.));
+    // Arrow head on the right.
+    float ax = 152. - p.x;
+    if (ax > 0. && ax < 7. && abs(p.y - 32.) < ax * .6) put(col, a, thru ? dim : sig, .85);
+
+    // The box.
+    float inside = box(p, float2(16., 8.), float2(136., 56.));
+    float edge = inside * (1. - box(p, float2(17.2, 9.2), float2(134.8, 54.8)));
+    put(col, a, face, inside * .92);
+    put(col, a, thru ? dim : blue * .75, edge * .9);
+
+    // Level bars along the bottom of the box: input (dim) over output (bright).
+    if (!thru) {
+        float bx = (p.x - 24.) / 104.;
+        if (p.y > 44. && p.y < 47. && bx > 0. && bx < 1.) put(col, a, track, 1.);
+        if (p.y > 44. && p.y < 47. && bx > 0. && bx < inlv) put(col, a, blue * .45, 1.);
+        if (p.y > 49. && p.y < 52. && bx > 0. && bx < 1.) put(col, a, track, 1.);
+        if (p.y > 49. && p.y < 52. && bx > 0. && bx < outlv) put(col, a, mix(float3(.24, .62, .17), float3(.96, .56, .12), smoothstep(.55, 1., bx)) * (bx > .91 ? 0. : 1.) + (bx > .91 ? float3(.92, .30, .22) : float3(0.)), 1.);
+        // Gain reduction hangs from the top.
+        if (p.y > 11. && p.y < 14. && bx > 0. && bx < 1.) put(col, a, track, kind > 2.5 ? 1. : 0.);
+        if (p.y > 11. && p.y < 14. && bx > 0. && bx < gr && (kind > 2.5 && (kind < 3.5 || kind > 4.5))) put(col, a, red, 1.);
+    }
+
+    // The unit's name.
+    float lit = 0.;
+    float h = 15.;
+    float cx = 76.;
+    float ly = 36.;
+    if (kind < .5) lit = word(p, cx, ly, h, 20., 8., 18., 21., 0., 0.);                       // THRU
+    else if (kind < 1.5) lit = word(p, cx, ly, h, 7., 1., 9., 14., 0., 0.);                   // GAIN
+    else if (kind < 2.5) {                                                                      // EQ
+        float2 s = p - float2(cx - 14., ly - h);
+        float w = h * .5;
+        lit = max(letter(s / w, 5.), letter((s - float2(w * 1.5, 0.)) / w, 15.));
+        float2 q = (s - float2(w * 1.5, 0.)) / w;
+        lit = max(lit, 1. - smoothstep(.10, .20, sdseg(q, float2(.6, 1.5), float2(1., 2.05))));
+    }
+    else if (kind < 3.5) lit = word(p, cx, ly, h, 3., 15., 13., 16., 0., 0.);                 // COMP
+    else if (kind < 4.5) lit = word(p, cx, ly, h, 19., 1., 20., 0., 0., 0.);                  // SAT
+    else lit = word(p, cx, ly, h, 12., 9., 13., 9., 20., 0.);                                  // LIMIT
+    put(col, a, thru ? dim : text, lit);
+
+    return half4(half3(col * a), half(a));
+}
