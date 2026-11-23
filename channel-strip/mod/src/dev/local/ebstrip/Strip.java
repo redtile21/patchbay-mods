@@ -160,7 +160,7 @@ final class Strip {
                 try {
                     f.setAccessible(true);
                     Object v = f.get(o);
-                    if (v instanceof String text && text.matches("SLOT[1-6]_(TYPE|CHAIN)|INPUT_GAIN")) return text;
+                    if (v instanceof String text && text.matches("SLOT[1-6]_(TYPE|CHAIN)|INPUT_GAIN|VIEW")) return text;
                 } catch (Throwable ignored) {
                     // unreadable
                 }
@@ -284,7 +284,7 @@ final class Strip {
     private static final class Watch {
         final Ctx c; final utt strip;
         final lpr[] types = new lpr[7];
-        lpr view; // the "Expanded View" button's atom, if the strip has one
+        Object view; // the "Expanded View" button's atom, if the strip has one
         final k3K[] chains = new k3K[7];
         Watch(Ctx c, utt strip) { this.c = c; this.strip = strip; }
     }
@@ -312,7 +312,7 @@ final class Strip {
                 w.chains[n] = (k3K) chain.object;
             }
             Object viewAtom = findByIdentifier(strip, "VIEW");
-            if (viewAtom instanceof lpr) w.view = (lpr) viewAtom;
+            if (viewAtom != null) w.view = viewAtom;
             synchronized (WATCHES) {
                 WATCHES.removeIf(o -> o.strip == strip);
                 WATCHES.add(w);
@@ -399,43 +399,49 @@ final class Strip {
         synchronized (WATCHES) {
             for (Watch w : WATCHES) for (int n = 1; n <= 6; n++) if (w.types[n] == atom) ours = true;
         }
-        if (!ours && !AUTO_FAILED.contains(atom) && !isViewAtom(atom)) ours = autoArm(atom);
-        if (!ours && isViewAtom(atom)) ours = autoArmIfNeeded(atom);
-        Watch viewOf = watchWithView(atom);
-        if (viewOf != null) {
-            if ("Open".equals(atom.sSO())) {
-                drf.EO().runAtEndOfCurrentEvent(() -> {
-                    try { atom.MgQ(0); } catch (Throwable t) { MOD.log("could not reset the view button", t); }
-                });
-                openViewFor(viewOf);
-            }
-            return;
-        }
+        if (!ours && !AUTO_FAILED.contains(atom)) ours = autoArm(atom);
         if (ours) onChangesEnded();
     }
 
-    private static boolean isViewAtom(lpr atom) {
-        return "VIEW".equals(identifierOf(atom));
-    }
-
-    private static Watch watchWithView(lpr atom) {
+    private static Watch watchWithView(Object atom) {
         synchronized (WATCHES) {
             for (Watch w : WATCHES) if (w.view == atom) return w;
         }
         return null;
     }
 
-    /** The view button can be the first thing touched: arm the strip it belongs to. */
-    private static boolean autoArmIfNeeded(lpr atom) {
-        if (watchWithView(atom) != null) return true;
-        if (AUTO_FAILED.contains(atom)) return false;
-        return autoArm(atom);
+    private static final ThreadLocal<Boolean> RESETTING = ThreadLocal.withInitial(() -> false);
+    private static int buttonCalls;
+
+    /** Called after the "Expanded View" button's atom is set: opens the view, then lets the button spring back. */
+    static void buttonSet(bitwig.obf.Hmd atom) {
+        if (RESETTING.get()) return;
+        if (!"VIEW".equals(identifierOf(atom))) return;
+        if (buttonCalls++ < 20) MOD.log("view button set");
+        Watch w = watchWithView(atom);
+        if (w == null && !AUTO_FAILED.contains(atom)) {
+            autoArm(atom);
+            w = watchWithView(atom);
+        }
+        if (w == null) return;
+        final Watch watch = w;
+        drf.EO().runAtEndOfCurrentEvent(() -> {
+            try {
+                RESETTING.set(true);
+                atom.MgQ(0);
+            } catch (Throwable t) {
+                MOD.log("could not reset the view button", t);
+            } finally {
+                RESETTING.set(false);
+            }
+        });
+        openViewFor(watch);
     }
 
     private static final Set<Object> AUTO_FAILED = Collections.newSetFromMap(new java.util.WeakHashMap<>());
 
     /** Finds the strip that owns this dropdown by following Bitwig's own references upwards, and starts watching it. */
-    private static boolean autoArm(lpr atom) {
+    private static boolean autoArm(Object atom) {
         try {
             String id = identifierOf(atom);
             if (id == null || !id.matches("SLOT[1-6]_TYPE|VIEW")) return false;
@@ -456,7 +462,7 @@ final class Strip {
                 w.chains[n] = (k3K) chain.object;
             }
             Object viewAtom = findByIdentifier(strip, "VIEW");
-            if (viewAtom instanceof lpr) w.view = (lpr) viewAtom;
+            if (viewAtom != null) w.view = viewAtom;
             synchronized (WATCHES) {
                 WATCHES.removeIf(o -> o.strip == strip);
                 WATCHES.add(w);

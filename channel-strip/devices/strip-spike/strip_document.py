@@ -15,6 +15,7 @@ _spec.loader.exec_module(_gain)
 owned, settings, proxy, parameter, indexed_parameter, nitro_port, metadata = (
     _gain.owned, _gain.settings, _gain.proxy, _gain.parameter, _gain.indexed_parameter, _gain.nitro_port, _gain.metadata)
 value_port = _gain.value_port
+boolean_parameter = _gain.boolean_parameter
 KINDS = ("Bypass", "Gain", "EQ", "Compressor", "Saturation", "Limiter")
 
 SLOTS = 6
@@ -35,7 +36,12 @@ def chooser(tip, ref, x, y, w):
 def main_panel(drawing_refs, in_ref, out_ref, type_refs=(), view_ref=None):
     items = []
     if view_ref is not None:
-        items.append(chooser("Open the expanded view", view_ref, 64, 24, 32))
+        items.append(obj(1702, "toggle_button_panel_item", {
+            "layout_settings#6226": v("Object", grid_layout(62, 24, 36, 6)),
+            "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
+            "tooltip_text#6867": v("String", "Open the expanded view"), "data_model#6220": view_ref,
+            "icon_name#6239": v("String", ""), "style#6240": v("Byte", 0),
+            "label_style#6267": v("Byte", 0), "color#7527": v("Int16", 6)}))
     for i, tref in enumerate(type_refs):
         items.append(chooser(f"Slot {i + 1} unit", tref, i * (SLOT_W + GAP), 0, SLOT_W))
     for i, dref in enumerate(drawing_refs):
@@ -150,7 +156,7 @@ def document(project, binary, tap_binary, shader):
     })
     in_gain = parameter("Input Gain", "INPUT_GAIN", -24.0, 24.0, 0.0, 1)
     out_gain = parameter("Output Gain", "OUTPUT_GAIN", -24.0, 24.0, 0.0, 1)
-    view = indexed_parameter("Expanded View", "VIEW", ("Expanded View", "Open"), 0)
+    view = boolean_parameter("Expanded View", "VIEW", False)
     types = [indexed_parameter(f"Slot {i}", f"SLOT{i}_TYPE", KINDS, 0) for i in range(1, SLOTS + 1)]
     stage_in = stage(binary, [wire(compensation), wire(in_gain)])
 
@@ -202,7 +208,7 @@ def document(project, binary, tap_binary, shader):
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v4".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v5".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,
