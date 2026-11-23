@@ -335,9 +335,9 @@ final class Strip {
             }
             if (watch == null) return;
             final Watch w = watch;
-            java.util.function.Supplier<List<k3K>> loaded = () -> {
-                List<k3K> out = new ArrayList<>();
-                for (int n = 1; n <= 6; n++) if (!w.chains[n].qJX().isEmpty()) out.add(w.chains[n]);
+            java.util.function.Supplier<List<StripView.Entry>> loaded = () -> {
+                List<StripView.Entry> out = new ArrayList<>();
+                for (int n = 1; n <= 6; n++) if (!w.chains[n].qJX().isEmpty()) out.add(new StripView.Entry(w.chains[n], "Slot " + n));
                 return out;
             };
             StripView view = new StripView((com.bitwig.flt.document.core.iface.bMt) c.root.cc_(), loaded);

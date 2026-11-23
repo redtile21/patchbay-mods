@@ -4,6 +4,9 @@ import bitwig.obf.aEv;
 import bitwig.obf.aEp;
 import bitwig.obf.dUr;
 import bitwig.obf.dXL;
+import bitwig.obf.doI;
+import bitwig.obf.doV;
+import bitwig.obf.dwC;
 import bitwig.obf.dpU;
 import bitwig.obf.dqN;
 import bitwig.obf.dxF;
@@ -28,14 +31,14 @@ import java.util.function.Supplier;
  */
 final class StripView extends dvv implements aEp {
     private final bMt track;
-    private final Supplier<List<k3K>> loaded;
+    private final Supplier<List<Entry>> loaded;
     private final dXL column;
     private final dwF filler;
-    private final List<k3K> shown = new ArrayList<>();
+    private final List<Entry> shown = new ArrayList<>();
     private final List<dwF> rows = new ArrayList<>();
     private boolean disposed;
 
-    StripView(bMt track, Supplier<List<k3K>> loaded) {
+    StripView(bMt track, Supplier<List<Entry>> loaded) {
         super();
         this.track = track;
         this.loaded = loaded;
@@ -57,7 +60,7 @@ final class StripView extends dvv implements aEp {
     void refresh() {
         if (disposed) return;
         try {
-            List<k3K> now = loaded.get();
+            List<Entry> now = loaded.get();
             if (now.equals(shown)) return;
             for (dwF row : rows) {
                 column.neH(row); // remove
@@ -65,10 +68,10 @@ final class StripView extends dvv implements aEp {
             }
             rows.clear();
             column.neH(filler);
-            for (k3K chain : now) {
-                UTA widget = UTA.MgQ((bitwig.obf.v1Y) chain); // the chain, as the device panel shows it
-                rows.add(widget);
-                column.IvP(widget);
+            for (Entry entry : now) {
+                dwF row = row(entry);
+                rows.add(row);
+                column.IvP(row);
             }
             column.IvP(filler);
             shown.clear();
@@ -76,6 +79,33 @@ final class StripView extends dvv implements aEp {
         } catch (Throwable t) {
             Strip.MOD.log("could not update the expanded view", t);
         }
+    }
+
+    /** A slot's chain and the name shown in its header. */
+    record Entry(k3K chain, String label) {
+    }
+
+    /** One slot: a vertical name header at the left, Bitwig's own chain widget beside it. */
+    private static dwF row(Entry entry) {
+        dwC name = dwC.IKw(); // a vertical label, reading bottom to top
+        try {
+            // the string is an expression, so a literal is quoted
+            com.bitwig.ramona.core.EO prop = (com.bitwig.ramona.core.EO) (Object) name.vws();
+            try {
+                doI.beI(prop, "\"" + entry.label() + "\"");
+            } catch (Throwable first) {
+                doI.beI(prop, "'" + entry.label() + "'");
+            }
+        } catch (Throwable t) {
+            Strip.MOD.log("could not label a row", t);
+        }
+        doV header = doV.beI(name, 1, 1, 5, 5);
+        UTA widget = UTA.MgQ((bitwig.obf.v1Y) entry.chain()); // the chain, as the device panel shows it
+        dXL row = new dXL();
+        row.MgQ(mLC.beI); // horizontal
+        row.beI(header, 0.0f);
+        row.beI(widget, 1.0f);
+        return row;
     }
 
     void queueRefresh() {
