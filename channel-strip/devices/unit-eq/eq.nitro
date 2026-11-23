@@ -22,6 +22,7 @@ component eb_eq
     audio_outport out;
     audio_outport f32<4> display;
     audio_outport f32<4> display2;
+    audio_outport tap;
     f32 b0_hp = 1.0;
     f32 b1_hp = 0.0;
     f32 b2_hp = 0.0;
@@ -379,6 +380,8 @@ component eb_eq
         z2_lp2 = b2_lp2 * y_lp - a2_lp2 * y_lp2;
         f32<> y = y_lp2;
         out = y;
+        f32<> boosted = y * 50.0;
+        tap = boosted;
         f32 sh_lo = 0.0;
         if (low_shape == 1)
         {

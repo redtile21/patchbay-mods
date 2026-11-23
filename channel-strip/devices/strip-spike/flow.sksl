@@ -43,7 +43,7 @@ float letter(float2 q, float c) {
     }
     else if (c > 5.5 && c < 6.5) {
         m = min(m, sdseg(q, float2(0.1, 0.05), float2(0.1, 1.95)));
-        m = min(m, sdseg(q, float2(0.1, 1.95), float2(0.9, 1.95)));
+        m = min(m, sdseg(q, float2(0.1, 0.05), float2(0.9, 0.05)));
         m = min(m, sdseg(q, float2(0.1, 1.0), float2(0.7, 1.0)));
     }
     else if (c > 6.5 && c < 7.5) {
@@ -192,6 +192,179 @@ float box(float2 p, float2 lo, float2 hi) {
     return (p.x >= lo.x && p.x <= hi.x && p.y >= lo.y && p.y <= hi.y) ? 1. : 0.;
 }
 
+// Monoline sans-serif digit in a 1 x 2 box; d < 0 draws nothing.
+float digit(float2 q, float d) {
+    if (d < 0.) return 0.;
+    float m = 10.;
+    if (d < 0.5) {
+        m = min(m, sdseg(q, float2(0.25, 0.05), float2(0.75, 0.05)));
+        m = min(m, sdseg(q, float2(0.75, 0.05), float2(0.92, 0.35)));
+        m = min(m, sdseg(q, float2(0.92, 0.35), float2(0.92, 1.65)));
+        m = min(m, sdseg(q, float2(0.92, 1.65), float2(0.75, 1.95)));
+        m = min(m, sdseg(q, float2(0.75, 1.95), float2(0.25, 1.95)));
+        m = min(m, sdseg(q, float2(0.25, 1.95), float2(0.08, 1.65)));
+        m = min(m, sdseg(q, float2(0.08, 1.65), float2(0.08, 0.35)));
+        m = min(m, sdseg(q, float2(0.08, 0.35), float2(0.25, 0.05)));
+    }
+    else if (d < 1.5) {
+        m = min(m, sdseg(q, float2(0.18, 0.45), float2(0.55, 0.05)));
+        m = min(m, sdseg(q, float2(0.55, 0.05), float2(0.55, 1.95)));
+    }
+    else if (d < 2.5) {
+        m = min(m, sdseg(q, float2(0.1, 0.4), float2(0.25, 0.1)));
+        m = min(m, sdseg(q, float2(0.25, 0.1), float2(0.5, 0.05)));
+        m = min(m, sdseg(q, float2(0.5, 0.05), float2(0.75, 0.1)));
+        m = min(m, sdseg(q, float2(0.75, 0.1), float2(0.9, 0.4)));
+        m = min(m, sdseg(q, float2(0.9, 0.4), float2(0.85, 0.75)));
+        m = min(m, sdseg(q, float2(0.85, 0.75), float2(0.1, 1.95)));
+        m = min(m, sdseg(q, float2(0.1, 1.95), float2(0.92, 1.95)));
+    }
+    else if (d < 3.5) {
+        m = min(m, sdseg(q, float2(0.12, 0.12), float2(0.5, 0.05)));
+        m = min(m, sdseg(q, float2(0.5, 0.05), float2(0.85, 0.25)));
+        m = min(m, sdseg(q, float2(0.85, 0.25), float2(0.85, 0.65)));
+        m = min(m, sdseg(q, float2(0.85, 0.65), float2(0.45, 0.95)));
+        m = min(m, sdseg(q, float2(0.45, 0.95), float2(0.88, 1.25)));
+        m = min(m, sdseg(q, float2(0.88, 1.25), float2(0.9, 1.7)));
+        m = min(m, sdseg(q, float2(0.9, 1.7), float2(0.5, 1.95)));
+        m = min(m, sdseg(q, float2(0.5, 1.95), float2(0.1, 1.85)));
+    }
+    else if (d < 4.5) {
+        m = min(m, sdseg(q, float2(0.75, 1.95), float2(0.75, 0.05)));
+        m = min(m, sdseg(q, float2(0.75, 0.05), float2(0.05, 1.35)));
+        m = min(m, sdseg(q, float2(0.05, 1.35), float2(0.95, 1.35)));
+    }
+    else if (d < 5.5) {
+        m = min(m, sdseg(q, float2(0.9, 0.05), float2(0.2, 0.05)));
+        m = min(m, sdseg(q, float2(0.2, 0.05), float2(0.12, 0.95)));
+        m = min(m, sdseg(q, float2(0.12, 0.95), float2(0.5, 0.85)));
+        m = min(m, sdseg(q, float2(0.5, 0.85), float2(0.85, 0.95)));
+        m = min(m, sdseg(q, float2(0.85, 0.95), float2(0.92, 1.5)));
+        m = min(m, sdseg(q, float2(0.92, 1.5), float2(0.75, 1.9)));
+        m = min(m, sdseg(q, float2(0.75, 1.9), float2(0.45, 1.97)));
+        m = min(m, sdseg(q, float2(0.45, 1.97), float2(0.1, 1.8)));
+    }
+    else if (d < 6.5) {
+        m = min(m, sdseg(q, float2(0.85, 0.15), float2(0.5, 0.05)));
+        m = min(m, sdseg(q, float2(0.5, 0.05), float2(0.18, 0.35)));
+        m = min(m, sdseg(q, float2(0.18, 0.35), float2(0.1, 1.0)));
+        m = min(m, sdseg(q, float2(0.1, 1.0), float2(0.1, 1.6)));
+        m = min(m, sdseg(q, float2(0.1, 1.6), float2(0.4, 1.95)));
+        m = min(m, sdseg(q, float2(0.4, 1.95), float2(0.75, 1.9)));
+        m = min(m, sdseg(q, float2(0.75, 1.9), float2(0.92, 1.55)));
+        m = min(m, sdseg(q, float2(0.92, 1.55), float2(0.8, 1.15)));
+        m = min(m, sdseg(q, float2(0.8, 1.15), float2(0.45, 1.05)));
+        m = min(m, sdseg(q, float2(0.45, 1.05), float2(0.12, 1.3)));
+    }
+    else if (d < 7.5) {
+        m = min(m, sdseg(q, float2(0.08, 0.05), float2(0.92, 0.05)));
+        m = min(m, sdseg(q, float2(0.92, 0.05), float2(0.4, 1.95)));
+    }
+    else if (d < 8.5) {
+        m = min(m, sdseg(q, float2(0.5, 0.95), float2(0.15, 0.7)));
+        m = min(m, sdseg(q, float2(0.15, 0.7), float2(0.15, 0.3)));
+        m = min(m, sdseg(q, float2(0.15, 0.3), float2(0.5, 0.05)));
+        m = min(m, sdseg(q, float2(0.5, 0.05), float2(0.85, 0.3)));
+        m = min(m, sdseg(q, float2(0.85, 0.3), float2(0.85, 0.7)));
+        m = min(m, sdseg(q, float2(0.85, 0.7), float2(0.5, 0.95)));
+        m = min(m, sdseg(q, float2(0.5, 0.95), float2(0.1, 1.25)));
+        m = min(m, sdseg(q, float2(0.1, 1.25), float2(0.1, 1.7)));
+        m = min(m, sdseg(q, float2(0.1, 1.7), float2(0.5, 1.95)));
+        m = min(m, sdseg(q, float2(0.5, 1.95), float2(0.9, 1.7)));
+        m = min(m, sdseg(q, float2(0.9, 1.7), float2(0.9, 1.25)));
+        m = min(m, sdseg(q, float2(0.9, 1.25), float2(0.5, 0.95)));
+    }
+    else {
+        m = min(m, sdseg(q, float2(0.15, 1.85), float2(0.5, 1.95)));
+        m = min(m, sdseg(q, float2(0.5, 1.95), float2(0.82, 1.65)));
+        m = min(m, sdseg(q, float2(0.82, 1.65), float2(0.9, 1.0)));
+        m = min(m, sdseg(q, float2(0.9, 1.0), float2(0.9, 0.4)));
+        m = min(m, sdseg(q, float2(0.9, 0.4), float2(0.6, 0.05)));
+        m = min(m, sdseg(q, float2(0.6, 0.05), float2(0.25, 0.1)));
+        m = min(m, sdseg(q, float2(0.25, 0.1), float2(0.08, 0.45)));
+        m = min(m, sdseg(q, float2(0.08, 0.45), float2(0.2, 0.85)));
+        m = min(m, sdseg(q, float2(0.2, 0.85), float2(0.55, 0.95)));
+        m = min(m, sdseg(q, float2(0.55, 0.95), float2(0.88, 0.7)));
+    }
+    return 1. - smoothstep(.09, .16, m);
+}
+// Signed number with one decimal (|val| < 100), top-left at o, digit height h.
+float number(float2 p, float2 o, float h, float val) {
+    float w = h * .5;
+    float adv = w * 1.45;
+    float2 s = p - o;
+    float a = abs(val);
+    float t10 = floor(a * 10. + .5);
+    float hund = floor(t10 / 100.);
+    float ones = mod(floor(t10 / 10.), 10.);
+    float tenth = mod(t10, 10.);
+    float lit = 0.;
+    if (val < -.049) lit = 1. - smoothstep(.09, .16, sdseg(s / w, float2(.1, 1.), float2(.8, 1.)));
+    if (val > .049) {
+        float pl = min(sdseg(s / w, float2(.1, 1.), float2(.8, 1.)), sdseg(s / w, float2(.45, .65), float2(.45, 1.35)));
+        lit = 1. - smoothstep(.09, .16, pl);
+    }
+    lit = max(lit, digit((s - float2(adv, 0.)) / w, hund > .5 ? hund : -1.));
+    lit = max(lit, digit((s - float2(2. * adv, 0.)) / w, ones));
+    float dd = length(s - float2(2. * adv + w * 1.25, h * .93));
+    lit = max(lit, 1. - smoothstep(h * .07, h * .11, dd));
+    lit = max(lit, digit((s - float2(2. * adv + w * 1.5, 0.)) / w, tenth));
+    return lit;
+}
+
+
+// Integer centred on cx with its top at y; digit height h.
+float inum(float2 p, float cx, float y, float h, float val) {
+    float w = h * .5;
+    float adv = w * 1.45;
+    float a = floor(abs(val) + .5);
+    float n = 1.;
+    if (a >= 10.) n = 2.;
+    if (a >= 100.) n = 3.;
+    if (a >= 1000.) n = 4.;
+    if (a >= 10000.) n = 5.;
+    float neg = val < -.5 ? 1. : 0.;
+    float x0 = cx - (n + neg) * adv * .5;
+    float2 s = p - float2(x0, y);
+    float lit = 0.;
+    if (neg > .5) lit = 1. - smoothstep(.09, .16, sdseg(s / w, float2(.1, 1.), float2(.8, 1.)));
+    for (int i = 0; i < 5; i++) {
+        float fi = float(i);
+        if (fi < n) {
+            float d = mod(floor(a / pow(10., n - 1. - fi) + .0001), 10.);
+            lit = max(lit, digit((s - float2((fi + neg) * adv, 0.)) / w, d));
+        }
+    }
+    return lit;
+}
+
+// The knob's value in the unit's own scale: x = value, y = mode (0 one decimal, 1 whole number, 2 Hz, 3 off).
+float2 readout(float kind, float row, float p) {
+    if (kind < 1.5) {
+        if (row < .5) return float2(-24. + 48. * p, 0.);
+        if (row < 1.5) return float2(-100. + 200. * p, 1.);
+        return float2(200. * p, 1.);
+    }
+    if (kind < 2.5) {
+        if (row < .5) return p > .995 ? float2(0., 3.) : float2(20. * pow(1000., p), 2.);
+        if (row < 1.5) return p < .005 ? float2(0., 3.) : float2(20. * pow(1000., p), 2.);
+        return float2(6. * p, 0.);
+    }
+    if (kind < 3.5) {
+        if (row < .5) return float2(-60. + 60. * p, 0.);
+        if (row < 1.5) return float2(1. + 19. * p, 0.);
+        return float2(24. * p, 0.);
+    }
+    if (kind < 4.5) {
+        if (row < .5) return float2(36. * p, 0.);
+        if (row < 1.5) return float2(-6. + 12. * p, 0.);
+        return float2(100. * p, 1.);
+    }
+    if (row < .5) return float2(24. * p, 0.);
+    if (row < 1.5) return float2(-12. + 12. * p, 0.);
+    return float2(1. + 999. * p, 1.);
+}
+
 half4 labels(float2 fragCoord) {
     // 19 x 36 grid units: three rows of 12; the knob sits in the upper 9 of each row, its name below.
     float2 p = fragCoord / iResolution.xy * float2(152., 288.);
@@ -229,6 +402,20 @@ half4 labels(float2 fragCoord) {
             else k = word(q, cx, ky, kh, 18., 5., 12., 0., 0., 0.);
         }
         put(col, a, dim * 2.6, k);
+        // The value under the name, in the unit's own scale.
+        float pv = row < .5 ? audioMedium.x : (row < 1.5 ? audioMedium.y : audioMedium.z);
+        float2 ro = readout(kind, row, clamp(pv, 0., 1.));
+        float vl = 0.;
+        float vh = 14.;
+        if (ro.y < .5) vl = number(q, float2(cx - 2.7 * vh * .5, 78.), vh, ro.x);
+        else if (ro.y < 1.5) vl = inum(q, cx, 78., vh, ro.x);
+        else if (ro.y < 2.5) {
+            if (ro.x >= 1000.) {
+                vl = number(q, float2(cx - 2.7 * vh * .5 - 5., 78.), vh, ro.x / 1000.);
+                vl = max(vl, letter((q - float2(cx + 2.7 * vh * .5 - 1., 78.)) / (vh * .5), 11.));
+            } else vl = inum(q, cx, 78., vh, ro.x);
+        } else vl = word(q, cx, 92., 14., 15., 6., 6., 0., 0., 0.);
+        put(col, a, float3(.82, .86, .90), vl);
     }
     return half4(half3(col * a), half(a));
 }

@@ -3,6 +3,9 @@ component eb_tap
     audio_inport in;
     audio_inport prev;
     value_inport i32 kind;
+    audio_inport f32 k1 = 50.0;
+    audio_inport f32 k2 = 50.0;
+    audio_inport f32 k3 = 50.0;
 
     audio_outport out;
     audio_outport f32<4> display;
@@ -25,6 +28,6 @@ component eb_tap
         f32 gr = fmax(0.0, fmin(1.0, 20.0 * log10(fmax(0.000001, in_env) / fmax(0.000001, out_env)) / 24.0));
         f32 kd = cast(kind, f32);
         display = <kd * 0.125, ine, oute, gr>;
-        display2 = <0.0, 0.0, 0.0, 0.0>;
+        display2 = <k1 * 0.01, k2 * 0.01, k3 * 0.01, 0.0>;
     }
 }

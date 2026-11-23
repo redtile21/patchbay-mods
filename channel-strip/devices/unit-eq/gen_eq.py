@@ -18,6 +18,7 @@ w("    value_inport i32 lp_slope;")
 w("    audio_outport out;")
 w("    audio_outport f32<4> display;")
 w("    audio_outport f32<4> display2;")
+w("    audio_outport tap;")
 names = ["hp","hp2","lo","lm","hm","hi","lp","lp2"]
 for n in names:
     for c in ("b0","b1","b2","a1","a2"): w(f"    f32 {c}_{n} = {'1.0' if c=='b0' else '0.0'};")
@@ -142,6 +143,8 @@ for i, n in enumerate(names):
     src = f"y_{n}"
 w(f"        f32<> y = {src};")
 w("        out = y;")
+w("        f32<> boosted = y * 50.0;")
+w("        tap = boosted;")
 w("        f32 sh_lo = 0.0;\n        if (low_shape == 1)\n        {\n            sh_lo = 1.0;\n        }")
 w("        f32 sh_hi = 0.0;\n        if (high_shape == 1)\n        {\n            sh_hi = 1.0;\n        }")
 def fi(f): return f"floor(fmin(4095.0, fmax(0.0, log10(fmax({f}, 20.0) / 20.0) / 3.0 * 4095.0)) + 0.5)"
