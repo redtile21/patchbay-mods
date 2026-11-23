@@ -41,6 +41,11 @@ float letter(float2 q, float c) {
         m = min(m, sdseg(q, float2(0.1, 1.95), float2(0.9, 1.95)));
         m = min(m, sdseg(q, float2(0.1, 1.0), float2(0.7, 1.0)));
     }
+    else if (c > 5.5 && c < 6.5) {
+        m = min(m, sdseg(q, float2(0.1, 0.05), float2(0.1, 1.95)));
+        m = min(m, sdseg(q, float2(0.1, 0.05), float2(0.9, 0.05)));
+        m = min(m, sdseg(q, float2(0.1, 1.0), float2(0.7, 1.0)));
+    }
     else if (c > 6.5 && c < 7.5) {
         m = min(m, sdseg(q, float2(0.95, 0.45), float2(0.7, 0.08)));
         m = min(m, sdseg(q, float2(0.7, 0.08), float2(0.3, 0.08)));
@@ -341,19 +346,19 @@ half4 main(float2 fragCoord) {
         put(col, a, dim, 1. - smoothstep(.8, 1.6, d));
     }
     if (wide) {
-        float l2 = 0.;
-        float2 s = p - float2(60., 34.);
-        float w = 8.;
-        float adv = 10.5;
-        l2 = max(l2, letter(s / w, 12.));
-        l2 = max(l2, letter((s - float2(adv, 0.)) / w, 21.));
-        float2 f = (s - float2(2. * adv, 0.)) / w;
-        l2 = max(l2, 1. - smoothstep(.10, .20, min(sdseg(f, float2(.9, .05), float2(.1, .05)), min(sdseg(f, float2(.1, .05), float2(.1, 1.95)), sdseg(f, float2(.1, 1.), float2(.7, 1.))))));
-        l2 = max(l2, letter((s - float2(3. * adv, 0.)) / w, 19.));
-        put(col, a, dim * 2., l2);
+        float3 lite = float3(.42, .74, .95);
+        // Short-term loudness, large.
+        put(col, a, dim * 2., word(p, 100., 36., 16., 12., 21., 6., 19., 0., 0.));
         float lufs = audioLow.w * 60. - 60.;
-        if (audioLow.w > .002) put(col, a, text, number(p, float2(56., 62.), 24., lufs));
-        else put(col, a, dim, 1. - smoothstep(.8, 1.6, sdseg(p, float2(64., 74.), float2(84., 74.))));
+        if (audioLow.w > .002) put(col, a, lite, number(p, float2(56., 58.), 40., lufs));
+        else put(col, a, dim, 1. - smoothstep(.8, 1.6, sdseg(p, float2(70., 78.), float2(110., 78.))));
+        // True peak (held 5 s), large.
+        put(col, a, dim * 2., word(p, 80., 196., 16., 20., 18., 21., 5., 0., 0.));
+        put(col, a, dim * 2., word(p, 130., 196., 16., 16., 11., 0., 0., 0., 0.));
+        float tpdb = audioMedium.y * 100.;
+        float3 tpc = tpdb > -.05 ? float3(.95, .32, .20) : (tpdb > -1. ? float3(.98, .52, .14) : lite);
+        if (tpdb > -59.) put(col, a, tpc, number(p, float2(56., 218.), 40., tpdb));
+        else put(col, a, dim, 1. - smoothstep(.8, 1.6, sdseg(p, float2(70., 238.), float2(110., 238.))));
     }
     return half4(half3(col * a), half(a));
 }

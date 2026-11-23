@@ -147,12 +147,12 @@ const float MT = 22.;
 const float MB = 170.;
 const float MH = 148.;
 float3 numcol(float v, float lim) {
-    return v > lim ? float3(.95, .42, .26) : float3(.82, .86, .90);
+    return v > lim ? float3(.98, .52, .14) : float3(.80, .82, .84);
 }
 float3 meterpx(float2 p, float3 color, float x0, float x1, float lvl, float pk) {
     if (p.x >= x0 && p.x < x1 && p.y >= MT && p.y <= MB) {
         float lv = (MB - p.y) / MH;
-        color = float3(.030, .036, .043);
+        color = float3(.040, .042, .048);
         if (lv < lvl) color = mix(float3(.24, .62, .17), float3(.96, .56, .12), smoothstep(.55, .85, lv));
         if (lv < lvl && lv > .91) color = float3(.92, .30, .22);
         if (abs(lv - pk) < .006 && pk > .01) color = float3(1., .62, .16);
@@ -163,7 +163,7 @@ float3 meterpx(float2 p, float3 color, float x0, float x1, float lvl, float pk) 
 half4 main(float2 fragCoord) {
     // 56 x 47 grid units -> 224 x 188 design units.
     float2 p = fragCoord / iResolution.xy * float2(224., 188.);
-    float3 color = float3(.060, .070, .082);
+    float3 color = float3(.060, .064, .072);
     float drive = pow(10., audioLow.x * 36. / 20.);
     float bias = (audioLow.y * 2. - 1.) * .5;
     float tm = audioLow.z * 4.;

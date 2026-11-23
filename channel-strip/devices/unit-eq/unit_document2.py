@@ -55,8 +55,14 @@ def vu_meter(connections):
         "settings#6194": settings(connections), "channel_count#607": v("Byte", 0), "scale_style#2075": v("Int32", 0)})
 
 
-def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, display_item=None, expressions=()):
+def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, display_item=None, expressions=(), backdrop_ref=None):
     items = []
+    if backdrop_ref is not None:
+        items.append(obj(5517, "", {
+            "layout_settings#6226": v("Object", grid_layout(0, 0, g["width"], PANEL_HEIGHT)),
+            "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
+            "tooltip_text#6867": v("String", ""), "help_id#10543": v("String", ""),
+            "help_location#10546": v("Byte", 0), "data_model#6220": backdrop_ref}))
     cols = spec["cols"]
     disp_h = spec.get("display_h", PANEL_HEIGHT - 2 * TOP)
     choosers_h = 6 if "chooser_abs" in spec else (0 if (spec.get("layout") == "bar" or "chooser_pos" in spec or "chooser_col" in spec) else 6 * len(spec["choices"]))
@@ -187,6 +193,30 @@ def eq_display(analyser_ref, ref):
     return disp, exprs
 
 
+def backdrop_shader(width, frames):
+    """Flat charcoal panel with thin framed sections (the TDR look); frames are (x0, y0, x1, y1) in grid units."""
+    rects = "\n".join(f"    d = min(d, frame(p, float2({a:.2f}, {b:.2f}), float2({c:.2f}, {e:.2f}), .5));" for a, b, c, e in frames)
+    return f"""float frame(float2 p, float2 lo, float2 hi, float r) {{
+    float2 c = (lo + hi) * .5;
+    float2 h = (hi - lo) * .5;
+    float2 q = abs(p - c) - h + r;
+    return length(max(q, 0.)) + min(max(q.x, q.y), 0.) - r;
+}}
+
+half4 main(float2 fragCoord) {{
+    float2 p = fragCoord / iResolution.xy * float2({float(width):.1f}, {float(PANEL_HEIGHT):.1f});
+    float3 col = float3(.128, .133, .143);
+    float3 well = float3(.082, .087, .096);
+    float3 line = float3(.27, .28, .30);
+    float d = 1000.;
+{rects}
+    if (d < 0.) col = well;
+    col = mix(col, line, 1. - smoothstep(.04, .16, abs(d)));
+    return half4(half3(col), half(1.));
+}}
+"""
+
+
 def document(spec, project, binary, shader):
     bindings = []
 
@@ -253,10 +283,22 @@ def document(spec, project, binary, shader):
     out_vu = vu_meter([wire(dsp, 0)]) if spec["meters"].get("out") else None
     output_proxy = proxy(output=True)
     output_proxy["fields"]["settings#6194"] = settings([wire(dsp, 0)])
+    disp_h = spec.get("display_h", PANEL_HEIGHT - 2 * TOP)
+    frames = [(g["disp_x"] - .2, TOP - .2, g["disp_x"] + g["dw"] + .2, TOP + disp_h + .2)]
+    if spec.get("layout") == "bar":
+        frames.append((g["side_x"] - .5, TOP - .2, g["width"] - 1.5, PANEL_HEIGHT - TOP + .2))
+    else:
+        frames.append((g["knob_x"] - .5, TOP - .2, g["width"] - 1.5, PANEL_HEIGHT - TOP + .2))
+    shader_src = backdrop_shader(g["width"], frames)
+    backdrop = obj(5512, "", {
+        "settings#6194": settings([connection() for _ in range(9)]),
+        "channel_count#607": v("Byte", 0), "name#374": v("String", ""),
+        "prevent_parent_from_sleeping#11002": v("Bool", False),
+        "preset_identifier#701": v("String", "BACKDROP"), "#16316": v("WideString", shader_src)})
     panel = main_panel(spec, g, [ref(p) for p in decs], [ref(c) for c in chs], ref(drawing) if drawing else None,
-                       ref(in_vu) if in_vu else None, ref(out_vu) if out_vu else None, display_item, expressions)
+                       ref(in_vu) if in_vu else None, ref(out_vu) if out_vu else None, display_item, expressions, ref(backdrop))
     identity = project["identity"]
-    children = [audio_source, compensation, *decs, *chs, dsp] + ([drawing] if drawing else []) + ([analyser] if analyser else []) + [m for m in (in_vu, out_vu) if m]
+    children = [backdrop, audio_source, compensation, *decs, *chs, dsp] + ([drawing] if drawing else []) + ([analyser] if analyser else []) + [m for m in (in_vu, out_vu) if m]
     body = obj(151, "device_contents", {
         "child_components#173": v("ObjectList", owned(*children)),
         "panels#6213": v("ObjectList", owned(panel)),

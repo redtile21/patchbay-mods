@@ -133,12 +133,12 @@ const float MT = 22.;
 const float MB = 124.;
 const float MH = 102.;
 float3 numcol(float v, float lim) {
-    return v > lim ? float3(.95, .42, .26) : float3(.82, .86, .90);
+    return v > lim ? float3(.98, .52, .14) : float3(.80, .82, .84);
 }
 float3 meterpx(float2 p, float3 color, float x0, float x1, float lvl, float pk) {
     if (p.x >= x0 && p.x < x1 && p.y >= MT && p.y <= MB) {
         float lv = (MB - p.y) / MH;
-        color = float3(.030, .036, .043);
+        color = float3(.040, .042, .048);
         if (lv < lvl) color = mix(float3(.24, .62, .17), float3(.96, .56, .12), smoothstep(.55, .85, lv));
         if (lv < lvl && lv > .91) color = float3(.92, .30, .22);
         if (abs(mod(lv * 11., 1.)) < .04 && lv > .01 && lv < .99 && lv >= lvl) color = float3(.10, .12, .14);
@@ -150,8 +150,8 @@ float3 meterpx(float2 p, float3 color, float x0, float x1, float lvl, float pk) 
 half4 main(float2 fragCoord) {
     // 44 x 47 grid units -> 176 x 188 design units.
     float2 p = fragCoord / iResolution.xy * float2(176., 188.);
-    float3 color = float3(.060, .070, .082);
-    float3 blue = float3(.33, .60, .96);
+    float3 color = float3(.060, .064, .072);
+    float3 blue = float3(.30, .68, .92);
     float pan = audioMedium.y * 200. - 100.;
 
     color = meterpx(p, color, 14., 70., audioLow.x, audioLow.z);
@@ -163,14 +163,14 @@ half4 main(float2 fragCoord) {
 
     // Pan: centre tick and marker.
     if (p.x >= 14. && p.x <= 162. && p.y >= 138. && p.y <= 148.) {
-        color = float3(.030, .036, .043);
+        color = float3(.040, .042, .048);
         float pos = (p.x - 14.) / 148.;
         if (abs(pos - .5) < .005) color = float3(.2, .23, .26);
         if (abs(pos - (pan + 100.) / 200.) < .012) color = blue;
     }
     // Width: bar from the left, tick at 100 percent.
     if (p.x >= 14. && p.x <= 162. && p.y >= 158. && p.y <= 168.) {
-        color = float3(.030, .036, .043);
+        color = float3(.040, .042, .048);
         float pos = (p.x - 14.) / 148.;
         if (pos < audioMedium.z) color = float3(.36, .66, .59);
         if (abs(pos - .5) < .005) color = float3(.8, .85, .9);

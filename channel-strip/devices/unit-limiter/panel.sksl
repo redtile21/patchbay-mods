@@ -129,29 +129,29 @@ const float MT = 22.;
 const float MB = 170.;
 const float MH = 148.;
 float3 numcol(float v, float lim) {
-    return v > lim ? float3(.95, .42, .26) : float3(.82, .86, .90);
+    return v > lim ? float3(.98, .52, .14) : float3(.80, .82, .84);
 }
 float3 meterpx(float2 p, float3 color, float x0, float x1, float lvl, float pk, float ln) {
     if (p.x >= x0 && p.x < x1 && p.y >= MT && p.y <= MB) {
         float lv = (MB - p.y) / MH;
-        color = float3(.030, .036, .043);
+        color = float3(.040, .042, .048);
         if (lv < lvl) color = mix(float3(.24, .62, .17), float3(.96, .56, .12), smoothstep(.55, .85, lv));
         if (lv < lvl && lv > .83) color = float3(.92, .30, .22);
         if (abs(mod(lv * 6., 1.)) < .03 && lv > .01 && lv < .99 && lv >= lvl) color = float3(.10, .12, .14);
         if (abs(lv - pk) < .006 && pk > .01) color = float3(1., .62, .16);
     }
-    if (ln >= 0. && p.x >= x0 - 3. && p.x < x1 + 3. && abs(p.y - (MB - ln * MH)) < 1.2) color = float3(.33, .60, .96);
+    if (ln >= 0. && p.x >= x0 - 3. && p.x < x1 + 3. && abs(p.y - (MB - ln * MH)) < 1.2) color = float3(.30, .68, .92);
     return color;
 }
 
 half4 main(float2 fragCoord) {
     // 56 x 47 grid units -> 224 x 188 design units.
     float2 p = fragCoord / iResolution.xy * float2(224., 188.);
-    float3 color = float3(.060, .070, .082);
-    float3 grid = float3(.105, .125, .145);
-    float3 blue = float3(.33, .60, .96);
-    float3 red = float3(.95, .42, .26);
-    float3 txt = float3(.82, .86, .90);
+    float3 color = float3(.060, .064, .072);
+    float3 grid = float3(.150, .160, .175);
+    float3 blue = float3(.30, .68, .92);
+    float3 red = float3(.98, .52, .14);
+    float3 txt = float3(.80, .82, .84);
 
     float c = audioLow.x;
     float ceil_db = c * 36. - 30.;
@@ -164,7 +164,7 @@ half4 main(float2 fragCoord) {
     // Gain reduction bar, growing downward from the top.
     if (p.x >= 172. && p.x < 184. && p.y >= MT && p.y <= MB) {
         float lv = (p.y - MT) / MH;
-        color = float3(.030, .036, .043);
+        color = float3(.040, .042, .048);
         if (lv < audioLow.w) color = red;
         if (abs(lv - audioMedium.z) < .008 && audioMedium.z > .01) color = float3(1., .80, .50);
     }
