@@ -340,6 +340,7 @@ final class Strip {
     }
 
     private static java.util.TimerTask watchdog;
+    private static int watchChecks;
 
     /** While the expanded view is open, closes it as soon as its strip is gone from the track (a view of deleted chains crashes Bitwig). */
     private static void watchStrip(Watch w) {
@@ -348,7 +349,11 @@ final class Strip {
             try {
                 if (!StripViews.hasOpen()) { watchdog.cancel(); return; }
                 boolean alive;
-                try { alive = findStrip(w.c) == w.strip; } catch (Throwable t) { alive = false; }
+                try {
+                    alive = false;
+                    for (Hit d : walk(w.c.track.YQe(), utt.class, 10, 20000)) if (d.object == w.strip) { alive = true; break; }
+                    if (!alive && watchChecks++ < 3) MOD.log("watchdog: strip not found among the track's devices");
+                } catch (Throwable t) { alive = true; if (watchChecks++ < 3) MOD.log("watchdog check failed", t); }
                 if (!alive) {
                     MOD.log("strip is gone; closing the expanded view");
                     StripViews.closeAll();
