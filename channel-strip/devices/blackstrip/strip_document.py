@@ -59,8 +59,8 @@ def knob_item(ref, x, y, w, h, size, title, tip):
     })
 
 
-def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_meter_ref, knob_refs):
-    items = []
+def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_meter_ref, knob_refs, backdrop_ref):
+    items = [drawing_item(backdrop_ref, 0, 0, PANEL_WIDTH, PANEL_HEIGHT)]
     items.append(drawing_item(in_meter_ref, 0, METER_Y, X0 - 1, METER_H))
     items.append(obj(1702, "toggle_button_panel_item", {
         "layout_settings#6226": v("Object", grid_layout(0, METER_Y + METER_H + 2, X0 - 1, 4)),
@@ -162,7 +162,7 @@ def meter_atom(binary, connections):
     })
 
 
-def document(project, binary, tap_binary, meter_binary, shader, meter_shader):
+def document(project, binary, tap_binary, meter_binary, shader, meter_shader, backdrop_shader):
     bindings = []
 
     def ref(target, *, list_entry=False):
@@ -199,6 +199,11 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader):
             "prevent_parent_from_sleeping#11002": v("Bool", False),
             "preset_identifier#701": v("String", ident), "#16316": v("WideString", code)})
 
+    backdrop = obj(5512, "", {
+        "settings#6194": settings([connection() for _ in range(9)]),
+        "channel_count#607": v("Byte", 0), "name#374": v("String", ""),
+        "prevent_parent_from_sleeping#11002": v("Bool", False),
+        "preset_identifier#701": v("String", "BACKDROP"), "#16316": v("WideString", backdrop_shader)})
     meter_in = meter_atom(meter_binary, [wire(compensation)])
     in_drawing = drawing_atom(meter_in, "IN_METER", meter_shader)
     previous = meter_in
@@ -224,9 +229,9 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader):
     out_drawing = drawing_atom(meter_out, "OUT_METER", meter_shader)
     output_proxy["fields"]["settings#6194"] = settings([wire(meter_out, 0)])
     panel = main_panel([ref(d) for d in drawings], ref(out_gain), [ref(t) for t in types], ref(view),
-                       ref(in_drawing), ref(out_drawing), [[ref(k) for k in row] for row in knobs])
+                       ref(in_drawing), ref(out_drawing), [[ref(k) for k in row] for row in knobs], ref(backdrop))
     identity = project["identity"]
-    children = [audio_source, compensation, out_gain, *types, *[k for row in knobs for k in row], view, meter_in, in_drawing]
+    children = [backdrop, audio_source, compensation, out_gain, *types, *[k for row in knobs for k in row], view, meter_in, in_drawing]
     for ph, sl, tp, dr in zip(placeholders, slots, taps, drawings):
         children += [ph, sl, tp, dr]
     children += [stage_out, meter_out, out_drawing]
@@ -252,7 +257,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader):
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v12".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v14".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,

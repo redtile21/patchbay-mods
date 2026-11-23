@@ -371,7 +371,7 @@ half4 labels(float2 fragCoord) {
     float kind = floor(audioLow.x * 8. + .5);
     float3 col = float3(0.);
     float a = 0.;
-    float3 dim = float3(.21, .24, .28);
+    float3 dim = float3(.30, .31, .33);
     bool thru = kind < .5;
     float row = floor(p.y / 96.);
     float2 q = float2(p.x, p.y - row * 96.);
@@ -406,16 +406,16 @@ half4 labels(float2 fragCoord) {
         float pv = row < .5 ? audioMedium.x : (row < 1.5 ? audioMedium.y : audioMedium.z);
         float2 ro = readout(kind, row, clamp(pv, 0., 1.));
         float vl = 0.;
-        float vh = 14.;
-        if (ro.y < .5) vl = number(q, float2(cx - 2.7 * vh * .5, 78.), vh, ro.x);
-        else if (ro.y < 1.5) vl = inum(q, cx, 78., vh, ro.x);
+        float vh = 11.;
+        if (ro.y < .5) vl = number(q, float2(cx - 2.7 * vh * .5, 80.), vh, ro.x);
+        else if (ro.y < 1.5) vl = inum(q, cx, 80., vh, ro.x);
         else if (ro.y < 2.5) {
             if (ro.x >= 1000.) {
-                vl = number(q, float2(cx - 2.7 * vh * .5 - 5., 78.), vh, ro.x / 1000.);
-                vl = max(vl, letter((q - float2(cx + 2.7 * vh * .5 - 1., 78.)) / (vh * .5), 11.));
-            } else vl = inum(q, cx, 78., vh, ro.x);
-        } else vl = word(q, cx, 92., 14., 15., 6., 6., 0., 0., 0.);
-        put(col, a, float3(.82, .86, .90), vl);
+                vl = number(q, float2(cx - 2.7 * vh * .5 - 4., 80.), vh, ro.x / 1000.);
+                vl = max(vl, letter((q - float2(cx + 2.7 * vh * .5 - 1., 80.)) / (vh * .5), 11.));
+            } else vl = inum(q, cx, 80., vh, ro.x);
+        } else vl = word(q, cx, 91., 11., 15., 6., 6., 0., 0., 0.);
+        put(col, a, float3(.42, .74, .95), vl);
     }
     return half4(half3(col * a), half(a));
 }
@@ -430,12 +430,12 @@ half4 main(float2 fragCoord) {
     float gr = audioLow.w;
     float3 col = float3(0.);
     float a = 0.;
-    float3 blue = float3(.33, .60, .96);   // the units' accent
-    float3 red = float3(.95, .42, .26);
-    float3 dim = float3(.21, .24, .28);
-    float3 track = float3(.030, .036, .043); // meter wells, as the units'
-    float3 face = float3(.060, .070, .082);  // panel face, as the units'
-    float3 text = float3(.82, .86, .90);     // as the units'
+    float3 blue = float3(.30, .68, .92);   // the units' accent
+    float3 red = float3(.98, .52, .14);
+    float3 dim = float3(.30, .31, .33);
+    float3 track = float3(.040, .042, .048); // meter wells, as the units'
+    float3 face = float3(.060, .064, .072);  // panel face, as the units'
+    float3 text = float3(.80, .82, .84);     // as the units'
     bool thru = kind < .5;
     float3 sig = thru ? dim : blue;
 

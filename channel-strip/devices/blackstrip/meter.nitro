@@ -27,6 +27,11 @@ component eb_meter
     f32 k_s = 0.0;
     f32 hold = 0.0;
     f32 hold_n = 0.0;
+    f32 tp_hold = 0.0;
+    f32 tp_n = 0.0;
+    f32<2> h1 = 0.0;
+    f32<2> h2 = 0.0;
+    f32<2> h3 = 0.0;
 
     reset
     {
@@ -85,6 +90,23 @@ component eb_meter
         f32 pk = fmax(fabs(x[0]), fabs(x[1]));
         if (pk >= hold) { hold = pk; hold_n = 3.0 * sr; }
         else { hold_n = hold_n - 1.0; if (hold_n < 0.0) { hold = hold * 0.9999; } }
-        display2 = <fmax(-100.0, 20.0 * log10(fmax(0.00001, hold))) / 100.0, 0.0, 0.0, 0.0>;
+        // True peak: Catmull-Rom interpolation at a quarter, half and three quarters between the last two samples.
+        f32<> pa = h3;
+        f32<> pb = h2;
+        f32<> pc = h1;
+        f32<> pd = x;
+        f32<> c1 = 0.5 * (pc - pa);
+        f32<> c2 = pa - 2.5 * pb + 2.0 * pc - 0.5 * pd;
+        f32<> c3 = 0.5 * (pd - pa) + 1.5 * (pb - pc);
+        f32<> q1 = pb + 0.25 * (c1 + 0.25 * (c2 + 0.25 * c3));
+        f32<> q2 = pb + 0.5 * (c1 + 0.5 * (c2 + 0.5 * c3));
+        f32<> q3 = pb + 0.75 * (c1 + 0.75 * (c2 + 0.75 * c3));
+        f32 tp = fmax(fmax(fabs(q1[0]), fabs(q1[1])), fmax(fmax(fabs(q2[0]), fabs(q2[1])), fmax(fmax(fabs(q3[0]), fabs(q3[1])), fmax(fabs(pc[0]), fabs(pc[1])))));
+        h3 = h2;
+        h2 = h1;
+        h1 = x;
+        if (tp >= tp_hold) { tp_hold = tp; tp_n = 5.0 * sr; }
+        else { tp_n = tp_n - 1.0; if (tp_n < 0.0) { tp_hold = tp_hold * 0.9999; } }
+        display2 = <fmax(-100.0, 20.0 * log10(fmax(0.00001, hold))) / 100.0, fmax(-100.0, 20.0 * log10(fmax(0.00001, tp_hold))) / 100.0, 0.0, 0.0>;
     }
 }

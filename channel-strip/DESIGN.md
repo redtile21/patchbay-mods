@@ -39,15 +39,14 @@ EB BlackStrip (container .bwdevice)
   reduction and the unit kind, plus the three macro knob values, to that slot's drawing.
 - The dropdown `SLOTn_TYPE` (Bypass, Gain, EQ, Compressor, Saturation, Limiter) chooses the unit. The strip itself
   cannot insert devices; the **companion mod** does (§2.3).
-- The container device keeps UUID `4f1e9a37…`/`5d0c6a52…` (see `STRIP_UUIDS` in the mod). Both containers
-  (EB BlackStrip and the TDR-style EB BlackStrip TDR) are recognised by the mod.
+- The container device keeps UUID `4f1e9a37…`/`5d0c6a52…` (see `STRIP_UUIDS` in the mod). The old
+  first-plan strip UUID is also recognised.
 
 ### 2.2 Devices
 
 | Folder | Device | Notes |
 |---|---|---|
-| `devices/blackstrip/` | EB BlackStrip (container) | sources mirrored from the blueprint checkout (`devices/eb-strip`), see §4 |
-| `devices/blackstrip-tdr/` | EB BlackStrip TDR (container) | same device and mod behaviour, flat charcoal look with a shader backdrop and framed sections (blueprint `devices/eb-strip-tdr`); own UUID |
+| `devices/blackstrip/` | EB BlackStrip (container) | sources mirrored from the blueprint checkout (`devices/eb-strip`), see §4; flat charcoal "TDR" look with a shader backdrop (`backdrop.sksl`) and framed sections |
 | `devices/unit-gain/` | EB Gain | gain, pan, width, polarity, mono |
 | `devices/unit-eq/` | EB EQ | native spectrum (output boosted +34 dB by the `tap` outport so it fills the display), band lines and points, shader response curve |
 | `devices/unit-compressor/` | EB Compressor | transfer-curve shader, meters |
@@ -139,6 +138,6 @@ Mod: `channel-strip/mod/build.sh` (needs JDK 25 and the Patchbay folder), then c
 
 - Docking the expanded view in Bitwig's detail panel (needs an anchor in a device header; not a priority).
 - Container icon, presets and a release zip. The older "EB Blackstar Strip" device (first plan) can be deleted from the Patchbay device folder.
-- A distinctive Elodea Blackstar / TDR-style look using Nitro and SkSL (version 2).
+- A scrolling level and gain-reduction history graph like TDR's (needs a packed history in the drawing data).
 - Version 2 ideas: character modes (console EQ, VCA/opto/FET compression), more saturation models, curated strip presets.
 - Remove the small build digit some unit displays draw in a corner before release.

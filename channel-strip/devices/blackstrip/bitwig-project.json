@@ -13,7 +13,7 @@
     "type": "audio-fx",
     "description": "Six swappable unit slots (Gain, EQ, Compressor, Saturation, Limiter) with macro knobs, meters and an expanded view."
   },
-  "sources": {"nitro": ["gain_stage.nitro", "tap.nitro", "meter.nitro"], "sksl": ["flow.sksl", "meter.sksl"]},
+  "sources": {"nitro": ["gain_stage.nitro", "tap.nitro", "meter.nitro"], "sksl": ["flow.sksl", "meter.sksl", "backdrop.sksl"]},
   "adapter": {
     "type": "external-builder",
     "argv": ["python", "{workspace}/build.py", "--out", "{output}"]
