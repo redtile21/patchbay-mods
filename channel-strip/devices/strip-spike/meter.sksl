@@ -319,23 +319,23 @@ void bar(inout float3 col, inout float a, float2 p, float x0, float x1, float y0
 half4 main(float2 fragCoord) {
     float2 uv = fragCoord / iResolution.xy;
     bool wide = iResolution.x / iResolution.y > .5;
-    // 8 design units per grid unit; both meters are 136 tall so their bars match.
-    float2 p = uv * float2(wide ? 168. : 56., 136.);
+    // 8 design units per grid unit; both meters are 232 tall so their bars match.
+    float2 p = uv * float2(wide ? 168. : 48., 232.);
     float3 col = float3(0.);
     float a = 0.;
     float3 text = float3(.82, .86, .90);
     float3 dim = float3(.21, .24, .28);
     float3 warn = float3(.95, .42, .26);
-    bar(col, a, p, 8., 26., 28., 132., audioLow.x);
-    bar(col, a, p, 30., 48., 28., 132., audioLow.y);
+    bar(col, a, p, 6., 22., 28., 228., audioLow.x);
+    bar(col, a, p, 26., 42., 28., 228., audioLow.y);
     // Peak-hold number above the bars.
     float pkdb = audioMedium.x * 100.;
     float lit = 0.;
     if (pkdb > -59.) {
-        lit = number(p, float2(9., 6.), 14., pkdb);
+        lit = number(p, float2(5., 6.), 14., pkdb);
         put(col, a, pkdb > -.05 ? warn : text, lit);
     } else {
-        float d = sdseg(p, float2(22., 13.), float2(34., 13.));
+        float d = sdseg(p, float2(18., 13.), float2(30., 13.));
         put(col, a, dim, 1. - smoothstep(.8, 1.6, d));
     }
     if (wide) {

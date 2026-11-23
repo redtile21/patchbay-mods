@@ -19,15 +19,15 @@ boolean_parameter = _gain.boolean_parameter
 KINDS = ("Bypass", "Gain", "EQ", "Compressor", "Saturation", "Limiter")
 
 SLOTS = 6
-SLOT_W, SLOT_H, GAP = 19, 11, 1
+SLOT_W, SLOT_H, GAP = 19, 8, 1
 X0 = 7                      # slots start after the input meter
 RIGHT_X = X0 + SLOTS * SLOT_W + (SLOTS - 1) * GAP + 1
 RIGHT_W = 21
 PANEL_WIDTH = RIGHT_X + RIGHT_W + 1
-KNOB_Y, KNOB_H = 17, 9
-METER_Y = 10
-METER_H = 17
-PANEL_HEIGHT = METER_Y + METER_H
+KNOB_Y = 15
+METER_Y = 0
+METER_H = 29
+PANEL_HEIGHT = 40
 
 
 def chooser(tip, ref, x, y, w):
@@ -61,22 +61,23 @@ def knob_item(ref, x, y, w, h, size, title, tip):
 
 def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_meter_ref, knob_refs):
     items = []
+    items.append(drawing_item(in_meter_ref, 0, METER_Y, X0 - 1, METER_H))
     items.append(obj(1702, "toggle_button_panel_item", {
-        "layout_settings#6226": v("Object", grid_layout(0, 1, X0 - 1, 4)),
+        "layout_settings#6226": v("Object", grid_layout(0, METER_Y + METER_H + 1, X0 - 1, 4)),
         "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
         "tooltip_text#6867": v("String", "Open or close the expanded view"), "data_model#6220": view_ref,
         "title#6241": v("String", "View"), "icon_name#6239": v("String", ""), "style#6240": v("Byte", 0),
         "label_style#6267": v("Byte", 0), "color#7527": v("Int16", 6)}))
-    items.append(drawing_item(in_meter_ref, 0, METER_Y, X0 - 1, METER_H))
     for i, tref in enumerate(type_refs):
         items.append(chooser(f"Slot {i + 1} unit", tref, X0 + i * (SLOT_W + GAP), 0, SLOT_W))
     for i, dref in enumerate(drawing_refs):
-        items.append(drawing_item(dref, X0 + i * (SLOT_W + GAP), 6, SLOT_W, SLOT_H))
+        sx = X0 + i * (SLOT_W + GAP)
+        items.append(drawing_item(dref, sx, 6, SLOT_W, 8))
+        items.append(drawing_item(dref, sx, KNOB_Y, 9, 24))   # the same drawing, narrow: the knob names
         for k in range(3):
-            items.append(knob_item(knob_refs[i][k], X0 + i * (SLOT_W + GAP) + 6 * k, KNOB_Y, 6, KNOB_H, 0, "",
-                                   f"Slot {i + 1} knob {k + 1}"))
-    items.append(knob_item(out_ref, RIGHT_X + 6, 0, 9, 9, 1, "Out", "Output gain in dB"))
+            items.append(knob_item(knob_refs[i][k], sx + 9, KNOB_Y + 8 * k, 9, 8, 1, "", f"Slot {i + 1} knob {k + 1}"))
     items.append(drawing_item(out_meter_ref, RIGHT_X, METER_Y, RIGHT_W, METER_H))
+    items.append(knob_item(out_ref, RIGHT_X, METER_Y + METER_H + 1, 9, 9, 1, "Out", "Output gain in dB"))
     grid = obj(1681, "grid_panel_item", {
         "layout_settings#6226": v("NullObject"), "items#6221": v("ObjectList", owned(*items)),
         "border_style#6228": v("Byte", 0), "title#6242": v("String", ""),
@@ -249,7 +250,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader):
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v8".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v9".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,

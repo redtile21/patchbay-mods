@@ -192,9 +192,51 @@ float box(float2 p, float2 lo, float2 hi) {
     return (p.x >= lo.x && p.x <= hi.x && p.y >= lo.y && p.y <= hi.y) ? 1. : 0.;
 }
 
+half4 labels(float2 fragCoord) {
+    // 9 x 24 grid units: three rows of 8, one per knob beside it.
+    float2 p = fragCoord / iResolution.xy * float2(72., 192.);
+    float kind = floor(audioLow.x * 8. + .5);
+    float3 col = float3(0.);
+    float a = 0.;
+    float3 dim = float3(.21, .24, .28);
+    bool thru = kind < .5;
+    float row = floor(p.y / 64.);
+    float2 q = float2(p.x, p.y - row * 64.);
+    float k = 0.;
+    float ky = 38.;
+    float kh = 10.;
+    float cx = 36.;
+    if (!thru) {
+        if (kind < 1.5) {
+            if (row < .5) k = word(q, cx, ky, kh, 7., 1., 9., 14., 0., 0.);
+            else if (row < 1.5) k = word(q, cx, ky, kh, 16., 1., 14., 0., 0., 0.);
+            else k = word(q, cx, ky, kh, 23., 9., 4., 20., 8., 0.);
+        } else if (kind < 2.5) {
+            if (row < .5) k = word(q, cx, ky, kh, 12., 16., 6., 0., 0., 0.);
+            else if (row < 1.5) k = word(q, cx, ky, kh, 8., 16., 6., 0., 0., 0.);
+            else k = word(q, cx, ky, kh, 5., 14., 8., 0., 0., 0.);
+        } else if (kind < 3.5) {
+            if (row < .5) k = word(q, cx, ky, kh, 20., 8., 18., 5., 19., 8.);
+            else if (row < 1.5) k = word(q, cx, ky, kh, 18., 1., 20., 9., 15., 0.);
+            else k = word(q, cx, ky, kh, 13., 1., 11., 5., 21., 16.);
+        } else if (kind < 4.5) {
+            if (row < .5) k = word(q, cx, ky, kh, 4., 18., 9., 22., 5., 0.);
+            else if (row < 1.5) k = word(q, cx, ky, kh, 20., 15., 14., 5., 0., 0.);
+            else k = word(q, cx, ky, kh, 13., 9., 24., 0., 0., 0.);
+        } else {
+            if (row < .5) k = word(q, cx, ky, kh, 9., 14., 16., 21., 20., 0.);
+            else if (row < 1.5) k = word(q, cx, ky, kh, 3., 5., 9., 12., 0., 0.);
+            else k = word(q, cx, ky, kh, 18., 5., 12., 0., 0., 0.);
+        }
+        put(col, a, dim * 2.6, k);
+    }
+    return half4(half3(col * a), half(a));
+}
+
 half4 main(float2 fragCoord) {
+    if (iResolution.x / iResolution.y < 1.) return labels(fragCoord);
     // 19 x 8 grid units -> 152 x 64 design units.
-    float2 p = fragCoord / iResolution.xy * float2(152., 88.);
+    float2 p = fragCoord / iResolution.xy * float2(152., 64.);
     float kind = floor(audioLow.x * 8. + .5);
     float inlv = audioLow.y;
     float outlv = audioLow.z;
@@ -259,33 +301,5 @@ half4 main(float2 fragCoord) {
     else lit = word(p, cx, ly, h, 12., 9., 13., 9., 20., 0.);                                  // LIMIT
     put(col, a, thru ? dim : text, lit);
 
-    // Names of the three knobs below, per unit. Letters: A=1 ... Y=25; columns at 24, 72 and 120.
-    if (!thru) {
-        float k = 0.;
-        float ky = 82.;
-        float kh = 9.;
-        if (kind < 1.5) {                       // GAIN, PAN, WIDTH
-            k = max(k, word(p, 24., ky, kh, 7., 1., 9., 14., 0., 0.));
-            k = max(k, word(p, 72., ky, kh, 16., 1., 14., 0., 0., 0.));
-            k = max(k, word(p, 120., ky, kh, 23., 9., 4., 20., 8., 0.));
-        } else if (kind < 2.5) {                // LPF, HPF, ENH
-            k = max(k, word(p, 24., ky, kh, 12., 16., 6., 0., 0., 0.));
-            k = max(k, word(p, 72., ky, kh, 8., 16., 6., 0., 0., 0.));
-            k = max(k, word(p, 120., ky, kh, 5., 14., 8., 0., 0., 0.));
-        } else if (kind < 3.5) {                // THRESH, RATIO, MAKEUP
-            k = max(k, word(p, 24., ky, kh, 20., 8., 18., 5., 19., 8.));
-            k = max(k, word(p, 72., ky, kh, 18., 1., 20., 9., 15., 0.));
-            k = max(k, word(p, 120., ky, kh, 13., 1., 11., 5., 21., 16.));
-        } else if (kind < 4.5) {                // DRIVE, TONE, MIX
-            k = max(k, word(p, 24., ky, kh, 4., 18., 9., 22., 5., 0.));
-            k = max(k, word(p, 72., ky, kh, 20., 15., 14., 5., 0., 0.));
-            k = max(k, word(p, 120., ky, kh, 13., 9., 24., 0., 0., 0.));
-        } else {                                // INPUT, CEIL, REL
-            k = max(k, word(p, 24., ky, kh, 9., 14., 16., 21., 20., 0.));
-            k = max(k, word(p, 72., ky, kh, 3., 5., 9., 12., 0., 0.));
-            k = max(k, word(p, 120., ky, kh, 18., 5., 12., 0., 0., 0.));
-        }
-        put(col, a, dim * 2.6, k);
-    }
     return half4(half3(col * a), half(a));
 }

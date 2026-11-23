@@ -497,12 +497,12 @@ final class Strip {
         for (Watch w : copy) {
             for (int n = 1; n <= 6; n++) for (int k = 0; k < 3; k++) {
                 if (w.knobs[n][k] == atom && w.units[n][k] != null) {
-                    if (knobCalls++ < 60) MOD.log("strip knob " + n + "." + (k + 1) + " moved via " + via);
+                    if (knobCalls++ < 150) MOD.log("strip knob " + n + "." + (k + 1) + " moved via " + via + " to " + atom.GwM());
                     knobToUnit(w, n, k);
                     return;
                 }
                 if (w.units[n][k] == atom || (k == 2 && w.enhanceHigh[n] == atom && w.units[n][k] != null)) {
-                    if (knobCalls++ < 60) MOD.log("unit parameter " + n + "." + (k + 1) + " moved via " + via);
+                    if (knobCalls++ < 150) MOD.log("unit parameter " + n + "." + (k + 1) + " moved via " + via);
                     unitToKnob(w, n, k, (bitwig.obf.xdh) atom);
                     return;
                 }
@@ -518,10 +518,10 @@ final class Strip {
         try {
             if (isEnhance(w, n, k)) {
                 double db = Math.max(0, Math.min(1, pct / 100.0)) * ENHANCE_DB;
-                w.units[n][k].GwM(db);
-                w.enhanceHigh[n].GwM(db);
+                w.units[n][k].d_(db);
+                w.enhanceHigh[n].d_(db);
             } else {
-                w.units[n][k].GwM(w.lo[n][k] + Math.max(0, Math.min(1, pct / 100.0)) * (w.hi[n][k] - w.lo[n][k]));
+                w.units[n][k].d_(w.lo[n][k] + Math.max(0, Math.min(1, pct / 100.0)) * (w.hi[n][k] - w.lo[n][k]));
             }
         } catch (Throwable t) {
             MOD.log("could not drive the unit from knob " + n + "." + (k + 1), t);
@@ -540,7 +540,7 @@ final class Strip {
         }
         SYNCING.set(true);
         try {
-            w.knobs[n][k].GwM(pct);
+            w.knobs[n][k].d_(pct);
         } catch (Throwable t) {
             MOD.log("could not move knob " + n + "." + (k + 1), t);
         } finally {
