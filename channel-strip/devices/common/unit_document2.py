@@ -11,7 +11,7 @@ from pathlib import Path
 
 from devices.common.document_graph import iter_owned_objects
 from devices.common.panel_helpers import connection, grid_layout, obj, value as v
-from devices.common.texture import background_item
+from devices.common.metal_knob import knob_overlay
 
 _spec = importlib.util.spec_from_file_location("eb_gain_doc", Path(__file__).resolve().parents[1] / "eb-gain" / "demo_document.py")
 _g = importlib.util.module_from_spec(_spec)
@@ -22,6 +22,7 @@ owned, settings, proxy, parameter, indexed_parameter, nitro_port, value_port, me
 PANEL_HEIGHT = 53
 KNOB_W, KNOB_H, PITCH_X, PITCH_Y = 19, 14, 20, 16
 METER_W = 6
+CAP_CY, CAP_R = 3.66, 2.17      # the native knob's cap inside its rectangle (measured on a screenshot), grid units
 TOP = 3
 
 
@@ -56,8 +57,9 @@ def vu_meter(connections):
         "settings#6194": settings(connections), "channel_count#607": v("Byte", 0), "scale_style#2075": v("Int32", 0)})
 
 
-def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, display_item=None, expressions=(), backdrop_ref=None):
-    items = [background_item(g["width"], PANEL_HEIGHT)]
+def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, display_item=None, expressions=(), backdrop_ref=None, overlay=None):
+    items = []
+    knob_rects = []
     if backdrop_ref is not None:
         items.append(obj(5517, "", {
             "layout_settings#6226": v("Object", grid_layout(0, 0, g["width"], PANEL_HEIGHT)),
@@ -101,6 +103,7 @@ def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, disp
             kx, ky = g["knob_x"] + kp[i][0] * spec.get("pitch_x", PITCH_X), TOP + spec.get("row0", 0) + int(kp[i][1] * spec.get("pitch_y", PITCH_Y))
         else:
             kx, ky = g["knob_x"] + (i % cols) * PITCH_X, TOP + (i // cols) * PITCH_Y
+        knob_rects.append((kx, ky, spec.get("knob_w", KNOB_W), spec.get("knob_h", KNOB_H), dec))
         items.append(obj(1687, "knob_panel_item", {
             "layout_settings#6226": v("Object", grid_layout(kx, ky, spec.get("knob_w", KNOB_W), spec.get("knob_h", KNOB_H))),
             "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
@@ -145,6 +148,10 @@ def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, disp
             "tooltip_text#6867": v("String", ch[4]), "data_model#6220": ref,
             "attribute_id#11012": v("Int16", 457), "label_style#6262": v("Byte", 0),
             "style#6266": v("Byte", spec.get("chooser_style", 7)), "color#7528": v("Int16", 6)}))
+    if overlay is not None:
+        extra_items, extra_exprs = overlay(knob_rects)
+        items.extend(extra_items)
+        expressions = list(expressions) + list(extra_exprs)
     grid = obj(1681, "grid_panel_item", {
         "layout_settings#6226": v("NullObject"), "items#6221": v("ObjectList", owned(*items)),
         "border_style#6228": v("Byte", 0), "title#6242": v("String", ""),
@@ -206,13 +213,13 @@ def backdrop_shader(width, frames):
 
 half4 main(float2 fragCoord) {{
     float2 p = fragCoord / iResolution.xy * float2({float(width):.1f}, {float(PANEL_HEIGHT):.1f});
-    float3 col = float3(0.);
-    float a = 0.;
+    float3 col = float3(.128, .133, .143);
+    float a = 1.;
     float3 well = float3(.082, .087, .096);
     float3 line = float3(.27, .28, .30);
     float d = 1000.;
 {rects}
-    if (d < 0.) {{ col = well; a = .80; }}
+    if (d < 0.) {{ col = well; a = 1.; }}
     float l = 1. - smoothstep(.04, .16, abs(d));
     col = mix(col, line, l);
     a = max(a, l);
@@ -299,8 +306,16 @@ def document(spec, project, binary, shader):
         "channel_count#607": v("Byte", 0), "name#374": v("String", ""),
         "prevent_parent_from_sleeping#11002": v("Bool", False),
         "preset_identifier#701": v("String", "BACKDROP"), "#16316": v("WideString", shader_src)})
+    def overlay(rects):
+        items, exprs = [], []
+        for kx, ky, kw, kh, dec in rects:
+            its, rules = knob_overlay((kx, ky, kw, kh), (kw / 2.0, CAP_CY), CAP_R, dec[1], dec[2], dec[3])
+            items += its
+            exprs += [obj(1728, "panel_expression", {"expression#6274": v("String", e), "panel_item#6275": ref(t),
+                       "attribute_id#6316": v("Int16", 6309)}) for e, t in rules]
+        return items, exprs
     panel = main_panel(spec, g, [ref(p) for p in decs], [ref(c) for c in chs], ref(drawing) if drawing else None,
-                       ref(in_vu) if in_vu else None, ref(out_vu) if out_vu else None, display_item, expressions, ref(backdrop))
+                       ref(in_vu) if in_vu else None, ref(out_vu) if out_vu else None, display_item, expressions, ref(backdrop), overlay)
     identity = project["identity"]
     children = [backdrop, audio_source, compensation, *decs, *chs, dsp] + ([drawing] if drawing else []) + ([analyser] if analyser else []) + [m for m in (in_vu, out_vu) if m]
     body = obj(151, "device_contents", {

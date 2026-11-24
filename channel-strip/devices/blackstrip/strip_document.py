@@ -7,7 +7,7 @@ from pathlib import Path
 
 from devices.common.document_graph import iter_owned_objects
 from devices.common.panel_helpers import connection, grid_layout, obj, value as v
-from devices.common.texture import background_item
+from devices.common.metal_knob import knob_overlay
 
 # Reuse the verified helpers from the EB Gain builder.
 _spec = importlib.util.spec_from_file_location("eb_gain_doc", Path(__file__).resolve().parents[1] / "eb-gain" / "demo_document.py")
@@ -60,8 +60,8 @@ def knob_item(ref, x, y, w, h, size, title, tip):
     })
 
 
-def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_meter_ref, knob_refs, backdrop_ref):
-    items = [background_item(PANEL_WIDTH, PANEL_HEIGHT), drawing_item(backdrop_ref, 0, 0, PANEL_WIDTH, PANEL_HEIGHT)]
+def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_meter_ref, knob_refs, backdrop_ref, ref=None):
+    items = [drawing_item(backdrop_ref, 0, 0, PANEL_WIDTH, PANEL_HEIGHT)]
     items.append(drawing_item(in_meter_ref, 0, METER_Y, X0 - 1, METER_H))
     items.append(obj(1702, "toggle_button_panel_item", {
         "layout_settings#6226": v("Object", grid_layout(0, METER_Y + METER_H + 2, X0 - 1, 4)),
@@ -79,6 +79,15 @@ def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_met
             items.append(knob_item(knob_refs[i][k], sx + 5, KNOB_Y + 12 * k, 9, 9, 1, "", f"Slot {i + 1} knob {k + 1}"))
     items.append(drawing_item(out_meter_ref, RIGHT_X, METER_Y, RIGHT_W, METER_H))
     items.append(knob_item(out_ref, RIGHT_X, METER_Y + METER_H + 1, 9, 9, 1, "Out", "Output gain in dB"))
+    exprs = []
+    caps = [(sx0 + 5, KNOB_Y + 12 * k, f"SLOT{i + 1}_K{k + 1}", 0.0, 100.0)
+            for i in range(SLOTS) for k in range(3) for sx0 in (X0 + i * (SLOT_W + GAP),)]
+    caps.append((RIGHT_X, METER_Y + METER_H + 1, "OUTPUT_GAIN", -24.0, 24.0))
+    for kx, ky, ident, lo, hi in caps:
+        its, rules = knob_overlay((kx, ky, 9, 9), (4.5, 3.55), 2.05, ident, lo, hi)
+        items += its
+        exprs += [obj(1728, "panel_expression", {"expression#6274": v("String", e), "panel_item#6275": ref(t),
+                   "attribute_id#6316": v("Int16", 6309)}) for e, t in rules]
     grid = obj(1681, "grid_panel_item", {
         "layout_settings#6226": v("NullObject"), "items#6221": v("ObjectList", owned(*items)),
         "border_style#6228": v("Byte", 0), "title#6242": v("String", ""),
@@ -88,7 +97,7 @@ def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_met
     return obj(1680, "panel", {
         "name#6211": v("String", "Main"), "root_item#6212": v("Object", grid),
         "width#6232": v("Int16", PANEL_WIDTH), "height#6233": v("Byte", PANEL_HEIGHT),
-        "expressions#6277": v("ObjectList", []),
+        "expressions#6277": v("ObjectList", owned(*exprs)),
     })
 
 
@@ -230,7 +239,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     out_drawing = drawing_atom(meter_out, "OUT_METER", meter_shader)
     output_proxy["fields"]["settings#6194"] = settings([wire(meter_out, 0)])
     panel = main_panel([ref(d) for d in drawings], ref(out_gain), [ref(t) for t in types], ref(view),
-                       ref(in_drawing), ref(out_drawing), [[ref(k) for k in row] for row in knobs], ref(backdrop))
+                       ref(in_drawing), ref(out_drawing), [[ref(k) for k in row] for row in knobs], ref(backdrop), ref)
     identity = project["identity"]
     children = [backdrop, audio_source, compensation, out_gain, *types, *[k for row in knobs for k in row], view, meter_in, in_drawing]
     for ph, sl, tp, dr in zip(placeholders, slots, taps, drawings):
@@ -258,7 +267,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v15".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v16".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,
