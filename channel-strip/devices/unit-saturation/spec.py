@@ -11,7 +11,7 @@ SPEC = {
     "cols": 2, "display_w": 56,
     "knob_pos": [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1)],
     "chooser_col": [(1, 28), (1, 34), (1, 40)],
-    "knob_size": 1, "knob_w": 15, "knob_h": 12, "pitch_x": 16, "pitch_y": 12, "row0": 0, "chooser_style": 0, "revision": 11,
+    "knob_size": 1, "knob_w": 15, "knob_h": 12, "pitch_x": 16, "pitch_y": 12, "row0": 0, "chooser_style": 0, "revision": 12,
     "meters": {}, "vectors": 2, "display_h": 47,
     "choices": [
         ("Type", "TYPE", ("Tape", "Tube", "Soft Clip", "Hard Clip"), 0, "Saturation curve", "sat_type"),

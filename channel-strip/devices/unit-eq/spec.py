@@ -25,7 +25,7 @@ SPEC = {
     "chooser_style": 0,
     "section_labels": [(0, "FILTERS"), (1, "LOW"), (2, "LOW-MID"), (3, "HIGH-MID"), (4, "HIGH")],
     "meters": {},
-    "revision": 17,
+    "revision": 18,
     "vectors": 2,
     "display_w": 78,
     "display_h": 47,

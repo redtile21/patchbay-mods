@@ -16,6 +16,7 @@ from PIL import Image, ImageFilter
 
 from devices.common.panel_helpers import grid_layout, obj, value as v
 
+UNIT_PX = 4            # screen px per grid unit at 1x
 PX = 16                 # image pixels per grid unit
 STEPS = 35              # pointer positions (odd: a step sits on the centre)
 SWEEP = 270.0
@@ -67,9 +68,11 @@ def cap_png(r_units):
 
 
 def _wrap(w_units, h_units, inner):
+    # Bitwig draws an SVG at its own pixel size (one grid unit is 4 px), so width/height are 4 px per unit and the
+    # viewBox carries the finer drawing coordinates
     pw, ph = int(w_units * PX), int(h_units * PX)
-    return (f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{pw}" height="{ph}" '
-            f'viewBox="0 0 {pw} {ph}">{inner}</svg>')
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{w_units * UNIT_PX}" '
+            f'height="{h_units * UNIT_PX}" viewBox="0 0 {pw} {ph}">{inner}</svg>')
 
 
 def cap_svg(w_units, h_units, cx, cy, r):
