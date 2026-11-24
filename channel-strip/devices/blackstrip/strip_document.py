@@ -7,6 +7,7 @@ from pathlib import Path
 
 from devices.common.document_graph import iter_owned_objects
 from devices.common.panel_helpers import connection, grid_layout, obj, value as v
+from devices.common.texture import background_item
 
 # Reuse the verified helpers from the EB Gain builder.
 _spec = importlib.util.spec_from_file_location("eb_gain_doc", Path(__file__).resolve().parents[1] / "eb-gain" / "demo_document.py")
@@ -60,7 +61,7 @@ def knob_item(ref, x, y, w, h, size, title, tip):
 
 
 def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_meter_ref, knob_refs, backdrop_ref):
-    items = [drawing_item(backdrop_ref, 0, 0, PANEL_WIDTH, PANEL_HEIGHT)]
+    items = [background_item(PANEL_WIDTH, PANEL_HEIGHT), drawing_item(backdrop_ref, 0, 0, PANEL_WIDTH, PANEL_HEIGHT)]
     items.append(drawing_item(in_meter_ref, 0, METER_Y, X0 - 1, METER_H))
     items.append(obj(1702, "toggle_button_panel_item", {
         "layout_settings#6226": v("Object", grid_layout(0, METER_Y + METER_H + 2, X0 - 1, 4)),
@@ -257,7 +258,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v14".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v15".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,
