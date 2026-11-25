@@ -37,8 +37,9 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
 
 ## 3. Strip-wide character
 
-- [ ] Character switch on the strip: Clean, Analog, Tube, Tape, as a gentle stage before and after the slots (soft
-      saturation, slight high-frequency rolloff, low-end bump for Tape).
+- [x] Character switch on the strip: Clean, Analog, Tube, Tape, as a gentle stage after the slots, before Match
+      and Out (soft saturation, slight high-frequency rolloff, low-end bump for Tape).
+- [ ] Character amount knob, and a matching stage before the slots.
 - [ ] Oversampling as one strip setting, passed by the mod to each unit.
 
 ## 4. Workflow
