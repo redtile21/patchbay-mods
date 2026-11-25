@@ -41,15 +41,15 @@ def cap_png(r_units):
     ring = rings[np.clip((d * PX * ss / 1.6).astype(int), 0, 399)]
     # top face: brushed concentric grooves under a two-lobed anisotropic highlight
     lobe = np.cos(2 * (th - 0.9))
-    face = 0.50 + 0.30 * lobe + 0.045 * ring - 0.10 * np.clip((rho - 0.5) / 0.3, 0, 1) ** 2
+    face = 0.50 + 0.17 * lobe + 0.03 * ring - 0.10 * np.clip((rho - 0.5) / 0.3, 0, 1) ** 2
     # knurled edge: ridges around the rim, lit like the face
     rim_pos = np.clip((rho - 0.84) / 0.16, 0, 1)
     ridge = np.cos(th * 64)
-    rim = 0.46 + 0.24 * np.cos(th - 0.9) + 0.16 * ridge * (0.6 + 0.4 * np.cos(th - 0.9)) - 0.28 * np.clip((rim_pos - 0.82) / 0.18, 0, 1)
+    rim = 0.46 + 0.14 * np.cos(th - 0.9) + 0.10 * ridge * (0.6 + 0.4 * np.cos(th - 0.9)) - 0.28 * np.clip((rim_pos - 0.82) / 0.18, 0, 1)
     # chamfer between face and rim: bright where it faces the light, dark opposite
-    cham = 0.50 + 0.42 * np.cos(th + 0.9 + math.pi)
+    cham = 0.50 + 0.26 * np.cos(th + 0.9 + math.pi)
     b = np.where(rho < 0.80, face, np.where(rho < 0.84, cham, rim))
-    lum = np.clip(0.16 + 0.78 * b, 0, 1)
+    lum = np.clip(0.22 + 0.64 * b, 0, 1)
     tint = np.array([0.96, 1.0, 1.06])
     rgb = np.clip(lum[..., None] * tint, 0, 1)
     edge = np.clip((1.0 - rho) * r_units * PX * ss / 1.4 + 0.5, 0, 1)         # anti-aliased disc edge

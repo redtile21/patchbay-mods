@@ -10,7 +10,7 @@ SPEC = {
     "knob_pos": [(0, 0), (0, 1), (0, 2)],
     "chooser_col": [(1, 9), (1, 25)],
     "free_labels": [(1, 3, 20, "POLARITY"), (1, 19, 20, "MONO")],
-    "knob_size": 1, "knob_w": 15, "knob_h": 12, "pitch_x": 16, "pitch_y": 12, "row0": 0, "chooser_style": 0, "revision": 18,
+    "knob_size": 1, "knob_w": 15, "knob_h": 12, "pitch_x": 16, "pitch_y": 12, "row0": 0, "chooser_style": 0, "revision": 19,
     "meters": {}, "vectors": 2, "display_h": 47,
     "choices": [
         ("Polarity", "POLARITY", ("Off", "L", "R", "Both"), 0, "Invert polarity", "polarity"),
