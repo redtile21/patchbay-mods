@@ -40,11 +40,11 @@ component eb_compressor
     {
         return fmax(lo, fmin(hi, x));
     }
-    // Rational soft clip (Nitro has no hyperbolic tangent built in).
+    // Exact hyperbolic tangent from exp (Nitro folds tanh only on constants); clamped so exp cannot overflow.
     f32 soft(f32 v)
     {
-        f32 u = fmax(-3.0, fmin(3.0, v));
-        return u * (27.0 + u * u) / (27.0 + 9.0 * u * u);
+        f32 e = exp(2.0 * fmax(-10.0, fmin(10.0, v)));
+        return (e - 1.0) / (e + 1.0);
     }
 
     reset
