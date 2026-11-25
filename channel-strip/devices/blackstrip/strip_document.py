@@ -81,8 +81,12 @@ def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_met
     items.append(drawing_item(out_meter_ref, RIGHT_X, METER_Y, RIGHT_W, METER_H))
     items.append(knob_item(out_ref, RIGHT_X, METER_Y + METER_H + 1, 9, 9, 1, "Out", "Output gain in dB"))
     if match_ref is not None:
-        items.append(chooser("Auto gain match: keep the output as loud as the input, for honest A/B (Out trims on top)",
-                             match_ref, RIGHT_X + 10, METER_Y + METER_H + 3, RIGHT_W - 10))
+        items.append(obj(1702, "toggle_button_panel_item", {
+            "layout_settings#6226": v("Object", grid_layout(RIGHT_X + 10, METER_Y + METER_H + 3, RIGHT_W - 10, 4)),
+            "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
+            "tooltip_text#6867": v("String", "Auto gain match: keep the output as loud as the input, for honest A/B (Out trims on top)"),
+            "data_model#6220": match_ref, "title#6241": v("String", "Match"), "icon_name#6239": v("String", ""),
+            "style#6240": v("Byte", 0), "label_style#6267": v("Byte", 0), "color#7527": v("Int16", 6)}))
     exprs = []
     caps = [(sx0 + 5, KNOB_Y + 12 * k, f"SLOT{i + 1}_K{k + 1}", 0.0, 100.0)
             for i in range(SLOTS) for k in range(3) for sx0 in (X0 + i * (SLOT_W + GAP),)]
@@ -142,7 +146,7 @@ def stage(binary, connections):
         "use_code_path#11360": v("Bool", False), "code_path#11357": v("String", ""),
         "nitro_inputs#15756": v("ObjectList", owned(
             nitro_port("in", 0, 2, output=False), nitro_port("ref", 1, 2, output=False),
-            nitro_port("gain_db", 2, 1, output=False), value_port("match", 3, boolean=False))),
+            nitro_port("gain_db", 2, 1, output=False), value_port("match", 3, boolean=True))),
         "nitro_outputs#15757": v("ObjectList", owned(nitro_port("out", 0, 2, output=True))),
     })
 
@@ -204,7 +208,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
         "oversampling#608": v("Byte", 0),
     })
     out_gain = parameter("Output Gain", "OUTPUT_GAIN", -24.0, 24.0, 0.0, 1)
-    match = indexed_parameter("Match", "MATCH", ("Match Off", "Match On"), 0)
+    match = boolean_parameter("Match", "MATCH", False)
     view = boolean_parameter("Expanded View", "VIEW", False)
     knobs = [[parameter(f"Slot {i} Knob {k}", f"SLOT{i}_K{k}", 0.0, 100.0, 50.0, 0) for k in (1, 2, 3)] for i in range(1, SLOTS + 1)]
     # the default chain a new strip loads (the mod inserts the units)
@@ -276,7 +280,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v25".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v26".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,

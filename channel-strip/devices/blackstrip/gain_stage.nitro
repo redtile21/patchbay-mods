@@ -3,7 +3,7 @@ component eb_gain_stage
     audio_inport in;
     audio_inport ref;
     audio_inport f32 gain_db = 0.0;
-    value_inport i32 match;
+    value_inport bool match;
 
     audio_outport out;
 
@@ -79,7 +79,7 @@ component eb_gain_stage
 
         // Match: move toward the loudness difference while both sides have signal (above about -60 LUFS); hold in silence.
         f32 target = 0.0;
-        if (match == 1)
+        if (match)
         {
             target = match_db;
             if (ms_in > 0.000001 && ms_out > 0.000001)
