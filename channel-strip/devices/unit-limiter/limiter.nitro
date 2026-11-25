@@ -6,6 +6,7 @@ component eb_limiter
     audio_inport f32 release = 100.0;
     audio_inport f32 lookahead = 2.0;
     audio_inport f32 stereo_link = 100.0;
+    value_inport i32 true_peak;
 
     audio_outport out;
     audio_outport f32<4> display;
@@ -27,6 +28,8 @@ component eb_limiter
     f32 t_gr = 0.0;
     f32 t_disp = 0.0;
     f32 disp_gr = 0.0;
+    f32<2> h1 = 0.0;
+    f32<2> h2 = 0.0;
 
     f32 dbgain(f32 v)
     {
@@ -35,6 +38,23 @@ component eb_limiter
     f32 bound(f32 v, f32 lo, f32 hi)
     {
         return fmax(lo, fmin(hi, v));
+    }
+    // Catmull-Rom between p1 and p2 at t (0 .. 1).
+    f32 cr(f32 p0, f32 p1, f32 p2, f32 p3, f32 t)
+    {
+        f32 t2 = t * t;
+        f32 t3 = t2 * t;
+        return 0.5 * (2.0 * p1 + (p2 - p0) * t + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2 + (3.0 * p1 - p0 - 3.0 * p2 + p3) * t3);
+    }
+    // Largest of the sample and three points between the previous sample and this one.
+    f32 tpeak(f32 m2, f32 m1, f32 c)
+    {
+        f32 nx = 2.0 * c - m1;
+        f32 pk = fabs(c);
+        pk = fmax(pk, fabs(cr(m2, m1, c, nx, 0.25)));
+        pk = fmax(pk, fabs(cr(m2, m1, c, nx, 0.5)));
+        pk = fmax(pk, fabs(cr(m2, m1, c, nx, 0.75)));
+        return pk;
     }
 
     reset
@@ -60,6 +80,8 @@ component eb_limiter
             t_gr = 0.0;
             t_disp = 0.0;
             disp_gr = 0.0;
+            h1 = 0.0;
+            h2 = 0.0;
             i32 j = 0;
             while (j < 1024)
             {
@@ -75,6 +97,14 @@ component eb_limiter
         // Detector with stereo link.
         f32 a = fabs(x[0]);
         f32 b = fabs(x[1]);
+        if (true_peak == 1)
+        {
+            // True peak: also catch the overs between samples (about 4x oversampled).
+            a = tpeak(h2[0], h1[0], x[0]);
+            b = tpeak(h2[1], h1[1], x[1]);
+        }
+        h2 = h1;
+        h1 = x;
         f32 lk = bound(stereo_link, 0.0, 100.0) * 0.01;
         f32 peak = lk * fmax(a, b) + (1.0 - lk) * (a + b) * 0.5;
         f32 gt = 1.0;

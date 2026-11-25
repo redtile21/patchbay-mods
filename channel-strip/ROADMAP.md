@@ -15,24 +15,25 @@ outports each), the companion mod that swaps units, and panel expressions for in
 
 ## 1. Consistency and polish
 
-- [ ] One meter style everywhere: the strip's blue → amber → red bars and light-blue numbers. Units still use their
+- [x] One meter style everywhere: the strip's blue → amber → red bars and light-blue numbers. Units still use their
       own colours (for example the teal-green bar on Gain). Write meter colours and number style once in a shared
       source that every shader takes.
 - [ ] Shared unit frame: the same header, frames, label case and spacing on every unit.
-- [ ] Remove the build digit in the corner of the unit displays.
-- [ ] Clearer slot states on the strip: a dimmed box for a bypassed slot, a gain-reduction bar on Compressor and
-      Limiter slots.
+- [x] Remove the build digit in the corner of the unit displays.
+- [x] Clearer slot states on the strip: a dimmed box for a bypassed slot, a gain-reduction bar on Compressor and
+      Limiter slots (already in place; the slot output bar now uses the shared ramp).
 
 ## 2. Modes inside the existing units
 
 Each mode is a chooser inside the same unit; knobs and automation stay the same, only the maths changes.
 
-- [ ] Compressor: VCA (clean, fast, hard knee), Opto (two-stage, program-dependent release), FET (very fast attack,
+- [x] Compressor: VCA (clean, fast, hard knee), Opto (two-stage, program-dependent release), FET (very fast attack,
       aggressive, "all buttons" option), Vari-Mu (soft knee, ratio rises with level).
 - [ ] EQ: Clean (current), Console (proportional Q, British-style curves), Passive (Pultec-style simultaneous low boost
       and cut); optional air shelf.
 - [ ] Saturation: add Transformer, Console and Exciter (harmonics on the highs only) to Tape, Tube and Clip.
-- [ ] Limiter: Transparent, Punchy (soft-clip first), Loud; true-peak ceiling; auto release.
+- [ ] Limiter: Transparent, Punchy (soft-clip first), Loud; auto release.
+- [x] Limiter true-peak ceiling (True Peak chooser, on by default).
 
 ## 3. Strip-wide character
 

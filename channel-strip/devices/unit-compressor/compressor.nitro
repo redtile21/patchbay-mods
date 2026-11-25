@@ -11,6 +11,7 @@ component eb_compressor
     audio_inport f32 sc_hpf = 0.0;
     audio_inport f32 stereo_link = 100.0;
     value_inport i32 detector;
+    value_inport i32 mode;
 
     audio_outport out;
     audio_outport f32<4> display;
@@ -29,6 +30,7 @@ component eb_compressor
     f32 t_gr = 0.0;
     f32 t_disp = 0.0;
     f32 disp_gr = 0.0;
+    f32 opto_mem = 0.0;
 
     f32 dbgain(f32 x)
     {
@@ -54,6 +56,7 @@ component eb_compressor
         t_gr = 0.0;
         t_disp = 0.0;
         disp_gr = 0.0;
+        opto_mem = 0.0;
     }
 
     process
@@ -71,7 +74,7 @@ component eb_compressor
         }
         f32 a = fabs(det[0]);
         f32 b = fabs(det[1]);
-        if (detector == 1)
+        if (detector == 1 || mode == 1 || mode == 3)
         {
             f32 rk = 1.0 - exp(-1.0 / (0.01 * sr));
             rms_pw = rms_pw + rk * (det * det - rms_pw);
@@ -83,10 +86,25 @@ component eb_compressor
         f32 x_db = 20.0 * log10(fmax(0.000001, level));
 
         // Gain computer: soft knee, downward compression. gr_target <= 0 dB.
+        // Modes: 0 VCA (clean, as set), 1 Opto (soft knee, slow attack, release slows the longer it works),
+        // 2 FET (fast attack, harder knee, quicker release, some grit), 3 Vari-Mu (wide knee, ratio rises with level).
         f32 t = bound(threshold, -60.0, 0.0);
         f32 r = bound(ratio, 1.0, 20.0);
         f32 w = bound(knee, 0.0, 24.0);
         f32 over = x_db - t;
+        if (mode == 1)
+        {
+            w = fmax(w, 12.0);
+        }
+        if (mode == 2)
+        {
+            w = w * 0.25;
+        }
+        if (mode == 3)
+        {
+            w = fmax(w, 18.0);
+            r = 1.0 + (r - 1.0) * bound(0.2 + over / 15.0, 0.2, 1.0);
+        }
         f32 gr_target = 0.0;
         if (2.0 * over > w)
         {
@@ -102,8 +120,32 @@ component eb_compressor
         }
 
         // Ballistics on the gain reduction in dB.
-        f32 att = exp(-1.0 / (bound(attack, 0.1, 100.0) * 0.001 * sr));
-        f32 rel = exp(-1.0 / (bound(release, 10.0, 2000.0) * 0.001 * sr));
+        f32 att_ms = bound(attack, 0.1, 100.0);
+        f32 rel_ms = bound(release, 10.0, 2000.0);
+        // Opto memory: a slow average of how hard the cell is working (0 .. 1).
+        f32 om_k = 1.0 - exp(-1.0 / (1.5 * sr));
+        opto_mem = opto_mem + om_k * (bound(-gr_db / 12.0, 0.0, 1.0) - opto_mem);
+        if (mode == 1)
+        {
+            att_ms = fmax(att_ms, 10.0);
+            rel_ms = rel_ms * (0.4 + 2.6 * opto_mem);
+            if (gr_db > -2.0)
+            {
+                rel_ms = rel_ms * 2.5;
+            }
+        }
+        if (mode == 2)
+        {
+            att_ms = fmax(0.02, att_ms * 0.2);
+            rel_ms = rel_ms * 0.6;
+        }
+        if (mode == 3)
+        {
+            att_ms = fmax(att_ms, 5.0);
+            rel_ms = rel_ms * 1.5;
+        }
+        f32 att = exp(-1.0 / (att_ms * 0.001 * sr));
+        f32 rel = exp(-1.0 / (rel_ms * 0.001 * sr));
         if (gr_target < gr_db)
         {
             gr_db = att * gr_db + (1.0 - att) * gr_target;
@@ -116,6 +158,21 @@ component eb_compressor
         f32 gain = dbgain(gr_db + bound(makeup, 0.0, 24.0));
         f32 m = bound(mix, 0.0, 100.0) * 0.01;
         f32<> wet = x * gain;
+        if (mode == 2 || mode == 3)
+        {
+            // colour: a little soft saturation that grows with the gain reduction
+            f32 c0 = 0.06;
+            f32 c1 = 0.12;
+            if (mode == 2)
+            {
+                c0 = 0.12;
+                c1 = 0.25;
+            }
+            f32 c = c0 + bound(-gr_db / 20.0, 0.0, 1.0) * c1;
+            f32 wl = wet[0];
+            f32 wr = wet[1];
+            wet = <wl * (1.0 - c) + tanh(wl) * c, wr * (1.0 - c) + tanh(wr) * c>;
+        }
         f32<> y = x * (1.0 - m) + wet * m;
         out = y;
 

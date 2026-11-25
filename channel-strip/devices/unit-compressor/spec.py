@@ -15,10 +15,11 @@ SPEC = {
     "cols": 3, "display_w": 80,
     "knob_pos": [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (2, 0), (2, 1), (2, 2), (2, 3)],
     "titles": {"SC_HPF": "SC HPF", "STEREO_LINK": "Link"},
-    "chooser_col": [(1, 28)],
-    "knob_size": 1, "knob_w": 15, "knob_h": 12, "pitch_x": 16, "pitch_y": 12, "row0": 0, "chooser_style": 0, "revision": 19,
+    "chooser_col": [(1, 36), (1, 29)],
+    "knob_size": 1, "knob_w": 15, "knob_h": 12, "pitch_x": 16, "pitch_y": 12, "row0": 0, "chooser_style": 0, "revision": 20,
     "meters": {}, "vectors": 2, "display_h": 47,
     "choices": [
-        ("Detector", "DETECTOR", ("Peak", "RMS"), 0, "Detector type", "detector"),
+        ("Detector", "DETECTOR", ("Peak", "RMS"), 0, "Detector type (Opto and Vari-Mu always use RMS)", "detector"),
+        ("Mode", "MODE", ("VCA", "Opto", "FET", "Vari-Mu"), 0, "Compressor character: VCA clean, Opto smooth, FET fast and gritty, Vari-Mu gentle", "mode"),
     ],
 }
