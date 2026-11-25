@@ -25,7 +25,7 @@ X0 = 9                      # slots start after the input meter
 RIGHT_X = X0 + SLOTS * SLOT_W + (SLOTS - 1) * GAP + 1
 RIGHT_W = 21
 CHAR_X = RIGHT_X + RIGHT_W + 1   # the Character column
-CHAR_W = 10
+CHAR_W = 14
 PANEL_WIDTH = CHAR_X + CHAR_W + 1
 KNOB_Y = 16
 METER_Y = 0
@@ -97,7 +97,7 @@ def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_met
         items.append(chooser("Strip character: Clean, Analog (light console), Tube (even harmonics), Tape (soft highs, low bump). "
                              "Always after the slots; with Input on, also before them", character_ref, CHAR_X, 6, CHAR_W))
     if amount_ref is not None:
-        items.append(knob_item(amount_ref, CHAR_X, 13, 9, 9, 1, "Amount", "Character amount: 50 % is the standard voicing, 0 % clean, 100 % twice the drive"))
+        items.append(knob_item(amount_ref, CHAR_X + 2, 13, 9, 9, 1, "Amount", "Character amount: 50 % is the standard voicing, 0 % clean, 100 % twice the drive"))
     if char_input_ref is not None:
         items.append(obj(1702, "toggle_button_panel_item", {
             "layout_settings#6226": v("Object", grid_layout(CHAR_X, 25, CHAR_W, 4)),
@@ -110,7 +110,7 @@ def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_met
             for i in range(SLOTS) for k in range(3) for sx0 in (X0 + i * (SLOT_W + GAP),)]
     caps.append((RIGHT_X, METER_Y + METER_H + 1, "OUTPUT_GAIN", -24.0, 24.0))
     if amount_ref is not None:
-        caps.append((CHAR_X, 13, "CHARACTER_AMOUNT", 0.0, 100.0))
+        caps.append((CHAR_X + 2, 13, "CHARACTER_AMOUNT", 0.0, 100.0))
     for kx, ky, ident, lo, hi in caps:
         its, rules = knob_overlay((kx, ky, 9, 9), (4.5, 3.55), 2.05, ident, lo, hi)
         items += its
@@ -322,7 +322,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v32".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v33".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,
