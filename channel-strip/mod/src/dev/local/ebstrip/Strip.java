@@ -294,6 +294,7 @@ final class Strip {
         final bitwig.obf.xdh[][] units = new bitwig.obf.xdh[7][3];   // the loaded unit's parameters they drive
         final bitwig.obf.xdh[] enhanceHigh = new bitwig.obf.xdh[7];  // the EQ's high band, driven with its low band by Enhance
         final double[][] lo = new double[7][3], hi = new double[7][3];
+        final Object[] linked = new Object[7];  // the unit the knobs were last linked to
         Watch(Ctx c, utt strip) { this.c = c; this.strip = strip; }
     }
 
@@ -475,6 +476,7 @@ final class Strip {
             int row = -1;
             for (int i = 0; i < KNOB_KINDS.length; i++) if (KNOB_KINDS[i].equals(kind)) row = i;
             List<?> devices = new ArrayList<>(w.chains[n].qJX());
+            w.linked[n] = devices.isEmpty() ? null : devices.get(0);
             if (row < 0 || devices.isEmpty()) return;
             Object device = devices.get(0);
             for (int k = 0; k < 3; k++) {
@@ -675,8 +677,12 @@ final class Strip {
                             have = names.getOrDefault(((utt) devices.get(0)).beI(), "?");
                         }
                         String wantDevice = "Bypass".equals(want) ? "Bypass" : "EB " + want;
-                        if (wantDevice.equalsIgnoreCase(have)) continue;
-                        swap(w, n, devices, wantDevice);
+                        if (wantDevice.equalsIgnoreCase(have)) {
+                            Object first = devices.isEmpty() ? null : devices.get(0);
+                            if (first != w.linked[n]) relink(w, n, false);
+                            continue;
+                        }
+                        swap(w, n, devices, have, wantDevice);
                     }
                 } catch (Throwable t) {
                     MOD.log("watch dropped (strip gone or changed)", t);
@@ -688,7 +694,7 @@ final class Strip {
         }
     }
 
-    private static void swap(Watch w, int n, List<?> devices, String wantDevice) {
+    private static void swap(Watch w, int n, List<?> devices, String haveDevice, String wantDevice) {
         odK unit = null;
         if (!"Bypass".equals(wantDevice)) {
             for (Object candidate : SJF.beI()) {
@@ -700,14 +706,103 @@ final class Strip {
         CmH changes = w.c.root.cc_();
         changes.beI("Slot " + n + ": " + wantDevice, false);
         try {
+            if (!devices.isEmpty()) remember(w, n, haveDevice, (utt) devices.get(0));
             for (Object d : devices) if (chain.qJX().contains(d)) chain.MgQ((utt) d);
-            if (unit != null) chain.Gef(utt.byf(unit.beI()), chain.qJX().size(), false, null);
+            if (unit != null) {
+                chain.Gef(utt.byf(unit.beI()), chain.qJX().size(), false, null);
+                List<?> now = new ArrayList<>(chain.qJX());
+                if (!now.isEmpty()) recall(w, n, wantDevice, (utt) now.get(now.size() - 1));
+            }
         } finally {
             changes.beI(false);
         }
         MOD.log("slot " + n + " now " + wantDevice);
         relink(w, n, true);
         StripViews.refreshAll();
+    }
+
+    // ---- remember each slot's settings per unit type, so swapping away and back keeps them ----
+
+    private static final Map<String, Set<String>> UNIT_PARAMS = Map.of(
+        "eb gain", Set.of("GAIN", "PAN", "WIDTH", "POLARITY", "MONO"),
+        "eb eq", Set.of("HPF", "LOW_GAIN", "LOW_FREQ", "LOW_Q", "LM_GAIN", "LM_FREQ", "LM_Q", "HM_GAIN", "HM_FREQ", "HM_Q",
+                        "HIGH_GAIN", "HIGH_FREQ", "HIGH_Q", "LPF", "LOW_SHAPE", "HIGH_SHAPE", "HP_SLOPE", "LP_SLOPE"),
+        "eb compressor", Set.of("THRESHOLD", "RATIO", "ATTACK", "RELEASE", "MAKEUP", "KNEE", "MIX", "SC_HPF", "STEREO_LINK",
+                                "DETECTOR", "MODE"),
+        "eb saturation", Set.of("DRIVE", "BIAS", "TONE", "MIX", "OUTPUT", "TYPE", "AUTO_GAIN", "OVERSAMPLING"),
+        "eb limiter", Set.of("INPUT_GAIN", "CEILING", "RELEASE", "LOOKAHEAD", "STEREO_LINK", "TRUE_PEAK"));
+
+    /** strip -> "slot|unit" -> identifier -> value (Double for knobs, String for choices). Lives for the session. */
+    private static final Map<Object, Map<String, Map<String, Object>>> MEMORY =
+        Collections.synchronizedMap(new java.util.WeakHashMap<>());
+
+    /** The unit's knob and choice atoms by identifier, found in one walk. */
+    private static Map<String, Object> params(utt device, Set<String> ids) {
+        Map<String, Object> found = new LinkedHashMap<>();
+        Map<Object, Boolean> seen = new IdentityHashMap<>();
+        List<Hit> level = new ArrayList<>();
+        level.add(new Hit(device, ""));
+        seen.put(device, true);
+        int nodes = 0;
+        for (int depth = 0; depth <= 9 && !level.isEmpty() && nodes < 40000 && found.size() < ids.size(); depth++) {
+            List<Hit> next = new ArrayList<>();
+            for (Hit hit : level) {
+                if (++nodes > 40000) break;
+                Object o = hit.object;
+                if (o != device && o instanceof utt) continue;
+                if (o instanceof bitwig.obf.xdh || o instanceof lpr) {
+                    String id = identifierOf(o, ids::contains);
+                    if (id != null && !found.containsKey(id)) found.put(id, o);
+                }
+                for (Hit child : children(hit)) {
+                    if (child.object == null || seen.put(child.object, true) != null) continue;
+                    next.add(child);
+                }
+            }
+            level = next;
+        }
+        return found;
+    }
+
+    private static void remember(Watch w, int n, String unitName, utt device) {
+        try {
+            Set<String> ids = UNIT_PARAMS.get(unitName.toLowerCase());
+            if (ids == null) return;
+            Map<String, Object> values = new LinkedHashMap<>();
+            for (Map.Entry<String, Object> e : params(device, ids).entrySet()) {
+                if (e.getValue() instanceof bitwig.obf.xdh x) values.put(e.getKey(), x.GwM());
+                else if (e.getValue() instanceof lpr c) values.put(e.getKey(), c.sSO());
+            }
+            MEMORY.computeIfAbsent(w.strip, k -> new java.util.concurrent.ConcurrentHashMap<>()).put(n + "|" + unitName.toLowerCase(), values);
+            MOD.log("slot " + n + ": remembered " + values.size() + " settings of " + unitName);
+        } catch (Throwable t) {
+            MOD.log("could not remember slot " + n + " settings", t);
+        }
+    }
+
+    private static void recall(Watch w, int n, String unitName, utt device) {
+        try {
+            Map<String, Map<String, Object>> byStrip = MEMORY.get(w.strip);
+            Map<String, Object> values = byStrip == null ? null : byStrip.get(n + "|" + unitName.toLowerCase());
+            if (values == null) return;
+            int set = 0;
+            for (Map.Entry<String, Object> e : params(device, values.keySet()).entrySet()) {
+                Object saved = values.get(e.getKey());
+                try {
+                    if (e.getValue() instanceof bitwig.obf.xdh x && saved instanceof Double d) { x.d_(d); set++; }
+                    else if (e.getValue() instanceof lpr c && saved instanceof String text) {
+                        // choices are set by index; step through until the label matches
+                        for (int i = 0; i < 16 && !text.equals(c.sSO()); i++) c.MgQ(i);
+                        if (text.equals(c.sSO())) set++;
+                    }
+                } catch (Throwable t) {
+                    MOD.log("slot " + n + ": could not restore " + e.getKey(), t);
+                }
+            }
+            MOD.log("slot " + n + ": restored " + set + " of " + values.size() + " settings of " + unitName);
+        } catch (Throwable t) {
+            MOD.log("could not restore slot " + n + " settings", t);
+        }
     }
 
     private static Map<UUID, String> registry() {
