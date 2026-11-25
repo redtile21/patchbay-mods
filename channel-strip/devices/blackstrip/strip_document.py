@@ -17,7 +17,7 @@ owned, settings, proxy, parameter, indexed_parameter, nitro_port, metadata = (
     _gain.owned, _gain.settings, _gain.proxy, _gain.parameter, _gain.indexed_parameter, _gain.nitro_port, _gain.metadata)
 value_port = _gain.value_port
 boolean_parameter = _gain.boolean_parameter
-KINDS = ("Bypass", "Gain", "EQ", "Compressor", "Saturation", "Limiter")
+KINDS = ("Bypass", "Gain", "EQ", "Compressor", "Saturation", "Limiter", "Gate", "De-esser", "Transient", "Clipper")
 
 SLOTS = 6
 SLOT_W, SLOT_H, GAP = 19, 8, 1
@@ -284,7 +284,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v28".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v29".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,

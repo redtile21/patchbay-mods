@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "projectId": "elodea-blackstar.clipper",
+  "name": "EB Clipper",
+  "surface": "device",
+  "target": {
+    "bitwigVersion": "6.1.3",
+    "platform": "windows-x86_64"
+  },
+  "identity": {
+    "uuid": "4d430c5f-63d0-4947-ba45-68cf3de9ab9b",
+    "creator": "Elodea Blackstar",
+    "category": "Audio FX"
+  },
+  "presentation": {
+    "type": "audio-fx",
+    "description": "Elodea Blackstar clipper: catches peaks at a ceiling, from hard to soft."
+  },
+  "sources": {
+    "nitro": [
+      "clipper.nitro"
+    ],
+    "sksl": [
+      "panel.sksl"
+    ]
+  },
+  "adapter": {
+    "type": "external-builder",
+    "argv": [
+      "python",
+      "{workspace}/build.py",
+      "--out",
+      "{output}"
+    ]
+  },
+  "output": {
+    "path": "build/windows-6.1.3/EB Clipper.bwdevice",
+    "libraryPath": "EB Clipper.bwdevice"
+  },
+  "preflight": {
+    "profile": "bitwig-6.1.3-hybrid",
+    "expectedNitroInputs": 4,
+    "expectedNitroOutputs": 3,
+    "maxDrawingVectors": 2,
+    "requiredAudioInputSourceClassId": 1371,
+    "requiredDelayCompensationInputSourceClassId": 154,
+    "requiredProxyInputCount": 2,
+    "requireSkiaCompiler": true,
+    "recallSafety": {
+      "canary": "runtime_magic",
+      "arrays": []
+    },
+    "controlContract": {
+      "schema": 1,
+      "shaderRole": "non-interactive-display",
+      "controls": [
+        {
+          "parameter": "INPUT_GAIN",
+          "widgetClass": 1687,
+          "drawOwners": [
+            "native"
+          ],
+          "inputOwner": "native",
+          "knobSize": 1,
+          "gestures": [
+            "drag",
+            "reset"
+          ],
+          "defaultNormalized": 0.0
+        },
+        {
+          "parameter": "CEILING",
+          "widgetClass": 1687,
+          "drawOwners": [
+            "native"
+          ],
+          "inputOwner": "native",
+          "knobSize": 1,
+          "gestures": [
+            "drag",
+            "reset"
+          ],
+          "defaultNormalized": 0.9166666666666666
+        },
+        {
+          "parameter": "SOFTNESS",
+          "widgetClass": 1687,
+          "drawOwners": [
+            "native"
+          ],
+          "inputOwner": "native",
+          "knobSize": 1,
+          "gestures": [
+            "drag",
+            "reset"
+          ],
+          "defaultNormalized": 0.3
+        }
+      ]
+    }
+  }
+}

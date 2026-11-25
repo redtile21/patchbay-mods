@@ -1,0 +1,5 @@
+NAME = "EB Transient"
+PROJECT_ID = "elodea-blackstar.transient"
+UUID = "79fad898-0c0c-4997-b820-2abb7a68b2d9"
+DESCRIPTION = "Elodea Blackstar transient shaper: more or less attack and sustain, independent of level."
+NITRO = "transient.nitro"

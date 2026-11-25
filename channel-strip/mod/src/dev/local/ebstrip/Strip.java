@@ -462,8 +462,12 @@ final class Strip {
         {"THRESHOLD", "RATIO", "MAKEUP"},               // Compressor
         {"DRIVE", "TONE", "MIX"},                       // Saturation
         {"INPUT_GAIN", "CEILING", "RELEASE"},           // Limiter
+        {"THRESHOLD", "RANGE", "RELEASE"},              // Gate
+        {"FREQ", "THRESHOLD", "RANGE"},                 // De-esser
+        {"ATTACK", "SUSTAIN", "OUTPUT"},                // Transient
+        {"INPUT_GAIN", "CEILING", "SOFTNESS"},          // Clipper
     };
-    private static final String[] KNOB_KINDS = {"Gain", "EQ", "Compressor", "Saturation", "Limiter"};
+    private static final String[] KNOB_KINDS = {"Gain", "EQ", "Compressor", "Saturation", "Limiter", "Gate", "De-esser", "Transient", "Clipper"};
     private static final double ENHANCE_DB = 6.0;
     private static final ThreadLocal<Boolean> SYNCING = ThreadLocal.withInitial(() -> false);
 
@@ -791,7 +795,11 @@ final class Strip {
         "eb compressor", Set.of("THRESHOLD", "RATIO", "ATTACK", "RELEASE", "MAKEUP", "KNEE", "MIX", "SC_HPF", "STEREO_LINK",
                                 "DETECTOR", "MODE"),
         "eb saturation", Set.of("DRIVE", "BIAS", "TONE", "MIX", "OUTPUT", "TYPE", "AUTO_GAIN", "OVERSAMPLING"),
-        "eb limiter", Set.of("INPUT_GAIN", "CEILING", "RELEASE", "LOOKAHEAD", "STEREO_LINK", "TRUE_PEAK"));
+        "eb limiter", Set.of("INPUT_GAIN", "CEILING", "RELEASE", "LOOKAHEAD", "STEREO_LINK", "TRUE_PEAK"),
+        "eb gate", Set.of("THRESHOLD", "RANGE", "HYSTERESIS", "ATTACK", "HOLD", "RELEASE", "SC_HPF", "MODE"),
+        "eb de-esser", Set.of("FREQ", "THRESHOLD", "RANGE", "RELEASE", "MODE"),
+        "eb transient", Set.of("ATTACK", "SUSTAIN", "OUTPUT", "MIX", "SPEED"),
+        "eb clipper", Set.of("INPUT_GAIN", "CEILING", "SOFTNESS"));
 
     /** strip -> "slot|unit" -> identifier -> value (Double for knobs, String for choices). Lives for the session. */
     private static final Map<Object, Map<String, Map<String, Object>>> MEMORY =

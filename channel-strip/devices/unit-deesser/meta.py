@@ -1,0 +1,5 @@
+NAME = "EB De-esser"
+PROJECT_ID = "elodea-blackstar.deesser"
+UUID = "a28d5e79-7c1a-42b5-8fee-3f5533ae2bca"
+DESCRIPTION = "Elodea Blackstar de-esser: turns down sibilance above a frequency, as a split band or the whole signal."
+NITRO = "deesser.nitro"

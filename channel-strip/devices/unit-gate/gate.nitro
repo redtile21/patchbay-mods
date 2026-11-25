@@ -1,0 +1,213 @@
+component eb_gate
+{
+    audio_inport in;
+    audio_inport f32 threshold = -50.0;
+    audio_inport f32 range_db = 40.0;
+    audio_inport f32 hysteresis = 3.0;
+    audio_inport f32 attack = 0.5;
+    audio_inport f32 hold = 50.0;
+    audio_inport f32 release = 150.0;
+    audio_inport f32 sc_hpf = 0.0;
+    value_inport i32 mode;
+
+    audio_outport out;
+    audio_outport f32<4> display;
+    audio_outport f32<4> display2;
+
+    i32 runtime_magic = 0;
+    f32 in_env = 0.0;
+    f32 out_env = 0.0;
+    f32 in_pk = 0.0;
+    f32 out_pk = 0.0;
+    f32 t_in = 0.0;
+    f32 t_out = 0.0;
+    f32 gr_pk = 0.0;
+    f32 t_gr = 0.0;
+    f32 t_disp = 0.0;
+    f32 disp_gr = 0.0;
+
+    f32 env = 0.0;
+    f32 g_db = 0.0;
+    i32 is_open = 0;
+    f32 hold_n = 0.0;
+    f32 hp1 = 0.0;
+    f32 hp1x = 0.0;
+    f32 hp2 = 0.0;
+    f32 hp2x = 0.0;
+
+    f32 dbgain(f32 v)
+    {
+        return exp(v * 0.11512925464970229);
+    }
+    f32 bound(f32 v, f32 lo, f32 hi)
+    {
+        return fmax(lo, fmin(hi, v));
+    }
+    f32 todb(f32 v)
+    {
+        return 20.0 * log10(fmax(0.000001, v));
+    }
+
+    reset
+    {
+        runtime_magic = 0;
+    }
+
+    process
+    {
+        if (runtime_magic != 715311)
+        {
+            runtime_magic = 715311;
+            in_env = 0.0;
+            out_env = 0.0;
+            in_pk = 0.0;
+            out_pk = 0.0;
+            t_in = 0.0;
+            t_out = 0.0;
+            gr_pk = 0.0;
+            t_gr = 0.0;
+            t_disp = 0.0;
+            disp_gr = 0.0;
+            env = 0.0;
+            g_db = 0.0;
+            is_open = 0;
+            hold_n = 0.0;
+            hp1 = 0.0;
+            hp1x = 0.0;
+            hp2 = 0.0;
+            hp2x = 0.0;
+        }
+        f32 sr = EC.samplerate;
+        f32<> x = in;
+
+        // Detector: linked peak, or the mono sum through two one-pole high-passes.
+        f32 det = fmax(fabs(x[0]), fabs(x[1]));
+        if (sc_hpf >= 20.0)
+        {
+            f32 m = 0.5 * (x[0] + x[1]);
+            f32 a = exp(-6.283185307 * bound(sc_hpf, 20.0, 500.0) / sr);
+            hp1 = a * (hp1 + m - hp1x);
+            hp1x = m;
+            hp2 = a * (hp2 + hp1 - hp2x);
+            hp2x = hp1;
+            det = fabs(hp2);
+        }
+        env = fmax(det, env * exp(-1.0 / (0.005 * sr)));
+        f32 lvl = todb(env);
+        f32 thr = bound(threshold, -80.0, 0.0);
+        f32 rng = bound(range_db, 0.0, 80.0);
+
+        f32 target = 0.0;
+        if (mode == 1)
+        {
+            // Expander 1:2 below the threshold, at most the range.
+            target = bound(lvl - thr, 0.0 - rng, 0.0);
+        }
+        else
+        {
+            // Gate: opens above the threshold, closes below threshold minus hysteresis once the hold has run out.
+            if (lvl > thr)
+            {
+                is_open = 1;
+                hold_n = bound(hold, 0.0, 500.0) * 0.001 * sr;
+            }
+            else
+            {
+                if (hold_n > 0.0)
+                {
+                    hold_n = hold_n - 1.0;
+                }
+                else
+                {
+                    if (lvl < thr - bound(hysteresis, 0.0, 12.0))
+                    {
+                        is_open = 0;
+                    }
+                }
+            }
+            if (is_open == 0)
+            {
+                target = 0.0 - rng;
+            }
+        }
+        f32 att = exp(-1.0 / (bound(attack, 0.05, 50.0) * 0.001 * sr));
+        f32 rel = exp(-1.0 / (bound(release, 5.0, 2000.0) * 0.001 * sr));
+        if (target > g_db)
+        {
+            g_db = att * g_db + (1.0 - att) * target;
+        }
+        else
+        {
+            g_db = rel * g_db + (1.0 - rel) * target;
+        }
+        f32<> y = x * dbgain(g_db);
+        out = y;
+
+        f32 pin = fmax(fabs(x[0]), fabs(x[1]));
+        f32 pout = fmax(fabs(y[0]), fabs(y[1]));
+        f32 gr_now = 0.0 - g_db;
+
+        // Meters: decaying envelopes, five-second peak holds, gain change held for the number.
+        in_env = fmax(pin, in_env * 0.9998);
+        out_env = fmax(pout, out_env * 0.9998);
+        f32 hold_len = 5.0 * sr;
+        if (pin >= in_pk)
+        {
+            in_pk = pin;
+            t_in = 0.0;
+        }
+        else
+        {
+            t_in = t_in + 1.0;
+            if (t_in > hold_len)
+            {
+                in_pk = pin;
+                t_in = 0.0;
+            }
+        }
+        if (pout >= out_pk)
+        {
+            out_pk = pout;
+            t_out = 0.0;
+        }
+        else
+        {
+            t_out = t_out + 1.0;
+            if (t_out > hold_len)
+            {
+                out_pk = pout;
+                t_out = 0.0;
+            }
+        }
+        if (gr_now >= gr_pk)
+        {
+            gr_pk = gr_now;
+            t_gr = 0.0;
+        }
+        else
+        {
+            t_gr = t_gr + 1.0;
+            if (t_gr > hold_len)
+            {
+                gr_pk = gr_now;
+                t_gr = 0.0;
+            }
+        }
+        t_disp = t_disp + 1.0;
+        if (t_disp > 1.0 * sr)
+        {
+            disp_gr = gr_pk;
+            t_disp = 0.0;
+        }
+        f32 gr_i = floor(bound(gr_now / 80.0, 0.0, 1.0) * 240.0 + 0.5);
+        f32 gh_i = floor(bound(disp_gr / 80.0, 0.0, 1.0) * 240.0 + 0.5);
+        f32 gr_code = (gr_i * 256.0 + gh_i) / 65536.0;
+
+        f32 ine = bound((todb(in_env) + 80.0) / 80.0, 0.0, 1.0);
+        f32 oute = bound((todb(out_env) + 80.0) / 80.0, 0.0, 1.0);
+        f32 inp = bound((todb(in_pk) + 80.0) / 80.0, 0.0, 1.0);
+        f32 outp = bound((todb(out_pk) + 80.0) / 80.0, 0.0, 1.0);
+        display = <(thr + 80.0) / 80.0, rng / 80.0, cast(mode, f32), ine>;
+        display2 = <gr_code, oute, inp, outp>;
+    }
+}

@@ -62,7 +62,8 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
 
 ## 5. New units
 
-- [ ] Gate/Expander, De-esser, Transient Shaper, Clipper.
+- [x] Gate/Expander, De-esser, Transient Shaper, Clipper (EB Gate, EB De-esser, EB Transient, EB Clipper; scaffolded by
+      `devices/common/new_units.py`).
 - [ ] Dynamic EQ (later).
 - [ ] External sidechain into a nested unit: uncertain, needs a test of whether the container can expose a sidechain
       input. The compressor's internal sidechain filter already works.

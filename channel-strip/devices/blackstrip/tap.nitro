@@ -27,7 +27,7 @@ component eb_tap
         f32 oute = fmax(0.0, fmin(1.0, (20.0 * log10(fmax(0.000001, out_env)) + 60.0) / 66.0));
         f32 gr = fmax(0.0, fmin(1.0, 20.0 * log10(fmax(0.000001, in_env) / fmax(0.000001, out_env)) / 24.0));
         f32 kd = cast(kind, f32);
-        display = <kd * 0.125, ine, oute, gr>;
+        display = <kd * 0.0625, ine, oute, gr>;
         display2 = <k1 * 0.01, k2 * 0.01, k3 * 0.01, 0.0>;
     }
 }

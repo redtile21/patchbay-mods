@@ -1,0 +1,5 @@
+NAME = "EB Clipper"
+PROJECT_ID = "elodea-blackstar.clipper"
+UUID = "4d430c5f-63d0-4947-ba45-68cf3de9ab9b"
+DESCRIPTION = "Elodea Blackstar clipper: catches peaks at a ceiling, from hard to soft."
+NITRO = "clipper.nitro"
