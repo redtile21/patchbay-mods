@@ -24,7 +24,9 @@ SLOT_W, SLOT_H, GAP = 19, 8, 1
 X0 = 9                      # slots start after the input meter
 RIGHT_X = X0 + SLOTS * SLOT_W + (SLOTS - 1) * GAP + 1
 RIGHT_W = 21
-PANEL_WIDTH = RIGHT_X + RIGHT_W + 1
+CHAR_X = RIGHT_X + RIGHT_W + 1   # the Character column
+CHAR_W = 10
+PANEL_WIDTH = CHAR_X + CHAR_W + 1
 KNOB_Y = 16
 METER_Y = 0
 METER_H = 42
@@ -61,7 +63,7 @@ def knob_item(ref, x, y, w, h, size, title, tip):
 
 
 def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_meter_ref, knob_refs, backdrop_ref, ref=None,
-               match_ref=None, character_ref=None):
+               match_ref=None, character_ref=None, amount_ref=None, char_input_ref=None):
     items = [drawing_item(backdrop_ref, 0, 0, PANEL_WIDTH, PANEL_HEIGHT)]
     items.append(drawing_item(in_meter_ref, 0, METER_Y, X0 - 1, METER_H))
     items.append(obj(1702, "toggle_button_panel_item", {
@@ -88,12 +90,27 @@ def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_met
             "data_model#6220": match_ref, "title#6241": v("String", "Match"), "icon_name#6239": v("String", ""),
             "style#6240": v("Byte", 0), "label_style#6267": v("Byte", 0), "color#7527": v("Int16", 6)}))
     if character_ref is not None:
-        items.append(chooser("Strip character after the slots: Clean, Analog (light console), Tube (even harmonics), "
-                             "Tape (soft highs, low bump)", character_ref, RIGHT_X + 10, METER_Y + METER_H + 6, RIGHT_W - 10))
+        items.append(obj(1683, "label_panel_item", {
+            "layout_settings#6226": v("Object", grid_layout(CHAR_X, 1, CHAR_W, 4)),
+            "text#6219": v("String", "CHAR"), "color#6520": v("Int16", 6),
+            "horizontal_alignment#6400": v("Byte", 1), "vertical_alignment#6401": v("Byte", 1)}))
+        items.append(chooser("Strip character: Clean, Analog (light console), Tube (even harmonics), Tape (soft highs, low bump). "
+                             "Always after the slots; with Input on, also before them", character_ref, CHAR_X, 6, CHAR_W))
+    if amount_ref is not None:
+        items.append(knob_item(amount_ref, CHAR_X, 13, 9, 9, 1, "Amount", "Character amount: 50 % is the standard voicing, 0 % clean, 100 % twice the drive"))
+    if char_input_ref is not None:
+        items.append(obj(1702, "toggle_button_panel_item", {
+            "layout_settings#6226": v("Object", grid_layout(CHAR_X, 25, CHAR_W, 4)),
+            "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
+            "tooltip_text#6867": v("String", "Also add the character on the way in, before the slots (like a console's input and output stages)"),
+            "data_model#6220": char_input_ref, "title#6241": v("String", "Input"), "icon_name#6239": v("String", ""),
+            "style#6240": v("Byte", 0), "label_style#6267": v("Byte", 0), "color#7527": v("Int16", 6)}))
     exprs = []
     caps = [(sx0 + 5, KNOB_Y + 12 * k, f"SLOT{i + 1}_K{k + 1}", 0.0, 100.0)
             for i in range(SLOTS) for k in range(3) for sx0 in (X0 + i * (SLOT_W + GAP),)]
     caps.append((RIGHT_X, METER_Y + METER_H + 1, "OUTPUT_GAIN", -24.0, 24.0))
+    if amount_ref is not None:
+        caps.append((CHAR_X, 13, "CHARACTER_AMOUNT", 0.0, 100.0))
     for kx, ky, ident, lo, hi in caps:
         its, rules = knob_overlay((kx, ky, 9, 9), (4.5, 3.55), 2.05, ident, lo, hi)
         items += its
@@ -149,8 +166,23 @@ def stage(binary, connections):
         "use_code_path#11360": v("Bool", False), "code_path#11357": v("String", ""),
         "nitro_inputs#15756": v("ObjectList", owned(
             nitro_port("in", 0, 2, output=False), nitro_port("ref", 1, 2, output=False),
-            nitro_port("gain_db", 2, 1, output=False), value_port("match", 3, boolean=True), value_port("character", 4, boolean=False))),
+            nitro_port("gain_db", 2, 1, output=False), value_port("match", 3, boolean=True))),
         "nitro_outputs#15757": v("ObjectList", owned(nitro_port("out", 0, 2, output=True), nitro_port("display", 1, 4, output=True))),
+    })
+
+
+def character_atom(binary, connections, switchable):
+    inputs = [nitro_port("in", 0, 2, output=False), nitro_port("amount", 1, 1, output=False), value_port("character", 2, boolean=False)]
+    if switchable:
+        inputs.append(value_port("enabled", 3, boolean=True))
+    return obj(1721, "nitro_atom", {
+        "settings#6194": settings(connections),
+        "channel_count#607": v("Byte", 0), "oversampling#608": v("Byte", 0),
+        "fft_order#6567": v("Byte", 0), "code_storage#10421": v("ByteArray", [0, *binary]),
+        "is_code_storage_binary_ast#14616": v("Bool", True),
+        "use_code_path#11360": v("Bool", False), "code_path#11357": v("String", ""),
+        "nitro_inputs#15756": v("ObjectList", owned(*inputs)),
+        "nitro_outputs#15757": v("ObjectList", owned(nitro_port("out", 0, 2, output=True))),
     })
 
 
@@ -184,7 +216,8 @@ def meter_atom(binary, connections):
     })
 
 
-def document(project, binary, tap_binary, meter_binary, shader, meter_shader, backdrop_shader):
+def document(project, binary, tap_binary, meter_binary, shader, meter_shader, backdrop_shader, char_binaries=None):
+    char_in_binary, char_out_binary = char_binaries
     bindings = []
 
     def ref(target, *, list_entry=False):
@@ -213,6 +246,8 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     out_gain = parameter("Output Gain", "OUTPUT_GAIN", -24.0, 24.0, 0.0, 1)
     match = boolean_parameter("Match", "MATCH", False)
     character = indexed_parameter("Character", "CHARACTER", ("Clean", "Analog", "Tube", "Tape"), 0)
+    char_amount = parameter("Character Amount", "CHARACTER_AMOUNT", 0.0, 100.0, 50.0, 0)
+    char_input = boolean_parameter("Character Input", "CHARACTER_INPUT", False)
     view = boolean_parameter("Expanded View", "VIEW", False)
     knobs = [[parameter(f"Slot {i} Knob {k}", f"SLOT{i}_K{k}", 0.0, 100.0, 50.0, 0) for k in (1, 2, 3)] for i in range(1, SLOTS + 1)]
     # the default chain a new strip loads (the mod inserts the units)
@@ -233,7 +268,8 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
         "preset_identifier#701": v("String", "BACKDROP"), "#16316": v("WideString", backdrop_shader)})
     meter_in = meter_atom(meter_binary, [wire(compensation)])
     in_drawing = drawing_atom(meter_in, "IN_METER", meter_shader)
-    previous = meter_in
+    char_in = character_atom(char_in_binary, [wire(meter_in), wire(char_amount), wire(character), wire(char_input)], True)
+    previous = char_in
     placeholders, slots, taps, drawings = [], [], [], []
     for index in range(1, SLOTS + 1):
         ph = placeholder([wire(previous), connection()])
@@ -249,7 +285,8 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
         taps.append(tp)
         drawings.append(drawing)
         previous = tp
-    stage_out = stage(binary, [wire(previous), wire(meter_in), wire(out_gain), wire(match), wire(character)])
+    char_out = character_atom(char_out_binary, [wire(previous), wire(char_amount), wire(character)], False)
+    stage_out = stage(binary, [wire(char_out), wire(meter_in), wire(out_gain), wire(match)])
 
     output_proxy = proxy(output=True)
     meter_out = meter_atom(meter_binary, [wire(stage_out)])
@@ -257,12 +294,12 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     output_proxy["fields"]["settings#6194"] = settings([wire(meter_out, 0)])
     panel = main_panel([ref(d) for d in drawings], ref(out_gain), [ref(t) for t in types], ref(view),
                        ref(in_drawing), ref(out_drawing), [[ref(k) for k in row] for row in knobs], ref(backdrop), ref,
-                       ref(match), ref(character))
+                       ref(match), ref(character), ref(char_amount), ref(char_input))
     identity = project["identity"]
-    children = [backdrop, audio_source, compensation, out_gain, match, character, *types, *[k for row in knobs for k in row], view, meter_in, in_drawing]
+    children = [backdrop, audio_source, compensation, out_gain, match, character, char_amount, char_input, *types, *[k for row in knobs for k in row], view, meter_in, in_drawing, char_in]
     for ph, sl, tp, dr in zip(placeholders, slots, taps, drawings):
         children += [ph, sl, tp, dr]
-    children += [stage_out, meter_out, out_drawing]
+    children += [char_out, stage_out, meter_out, out_drawing]
     # Field order matters: the loader resolves references as it reads, so the
     # proxies must be owned (and read) before any component that points at them.
     body = obj(151, "device_contents", {
@@ -285,7 +322,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v31".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v32".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,

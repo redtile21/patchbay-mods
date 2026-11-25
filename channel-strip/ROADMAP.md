@@ -40,7 +40,7 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
 - [x] Character switch on the strip: Clean, Analog, Tube, Tape, as a gentle stage after the slots, before Match
       and Out (soft saturation, slight high-frequency rolloff, low-end bump for Tape).
 - [x] Exact tanh (from exp) for Character and the compressor's drive.
-- [ ] Character amount knob, and a matching stage before the slots.
+- [x] Character amount knob, and a matching stage before the slots (Character column: chooser, Amount, Input switch).
 - [ ] Oversampling as one strip setting, passed by the mod to each unit.
 
 ## 4. Workflow

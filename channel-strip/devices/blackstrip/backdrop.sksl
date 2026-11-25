@@ -7,7 +7,7 @@ float frame(float2 p, float2 lo, float2 hi, float r) {
 }
 
 half4 main(float2 fragCoord) {
-    float2 p = fragCoord / iResolution.xy * float2(151., 53.);
+    float2 p = fragCoord / iResolution.xy * float2(162., 53.);
     float3 col = float3(.128, .133, .143);
     float a = 1.;
     float3 well = float3(.082, .087, .096);
@@ -19,6 +19,7 @@ half4 main(float2 fragCoord) {
     }
     d = min(d, frame(p, float2(.3, .3), float2(8.2, 42.2), .5));
     d = min(d, frame(p, float2(128.8, .3), float2(150.4, 42.2), .5));
+    d = min(d, frame(p, float2(150.8, .3), float2(161.4, 30.2), .5));
     if (d < 0.) { col = well; a = 1.; }
     float l = 1. - smoothstep(.04, .16, abs(d));
     col = mix(col, line, l);

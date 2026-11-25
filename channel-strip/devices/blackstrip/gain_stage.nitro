@@ -4,7 +4,6 @@ component eb_gain_stage
     audio_inport ref;
     audio_inport f32 gain_db = 0.0;
     value_inport bool match;
-    value_inport i32 character;
 
     audio_outport out;
     audio_outport f32<4> display;
@@ -32,24 +31,6 @@ component eb_gain_stage
     f32 match_db = 0.0;
     f32 applied = 1.0;
     f32 shown_db = 0.0;
-    // character: one-pole high cut, tape low bump, DC blocker
-    f32<2> hc = 0.0;
-    f32<2> lb = 0.0;
-    f32<2> dc_x = 0.0;
-    f32<2> dc_y = 0.0;
-    f32 k_hc_an = 0.0;
-    f32 k_hc_tu = 0.0;
-    f32 k_hc_ta = 0.0;
-    f32 k_lb = 0.0;
-    f32 k_dc = 0.0;
-
-    // Exact hyperbolic tangent from exp (Nitro folds tanh only on constants); clamped so exp cannot overflow.
-    f32 soft(f32 v)
-    {
-        f32 e = exp(2.0 * fmax(-10.0, fmin(10.0, v)));
-        return (e - 1.0) / (e + 1.0);
-    }
-
     process
     {
         f32 sr = EC.samplerate;
@@ -77,38 +58,9 @@ component eb_gain_stage
             // Loudness over about 3 s (short-term); the correction follows over about 1.5 s.
             k_s = 1.0 - exp(-1.0 / (1.5 * sr));
             k_g = 1.0 - exp(-1.0 / (1.5 * sr));
-            k_hc_an = 1.0 - exp(-6.283185307 * fmin(20000.0, 0.45 * sr) / sr);
-            k_hc_tu = 1.0 - exp(-6.283185307 * fmin(16000.0, 0.45 * sr) / sr);
-            k_hc_ta = 1.0 - exp(-6.283185307 * 12000.0 / sr);
-            k_lb = 1.0 - exp(-6.283185307 * 90.0 / sr);
-            k_dc = exp(-6.283185307 * 8.0 / sr);
         }
         f32<> x = in;
 
-        // Character (0 Clean, 1 Analog, 2 Tube, 3 Tape): gentle saturation with level kept at low levels.
-        if (character > 0)
-        {
-            f32 drive = 1.4;
-            f32 bias = 0.03;
-            f32 khc = k_hc_an;
-            if (character == 2) { drive = 1.8; bias = 0.15; khc = k_hc_tu; }
-            if (character == 3) { drive = 1.6; bias = 0.05; khc = k_hc_ta; }
-            f32 sb = soft(bias);
-            f32<> d = x * drive;
-            f32<> y = <(soft(d[0] + bias) - sb) / drive, (soft(d[1] + bias) - sb) / drive>;
-            // DC blocker (the bias adds a little offset)
-            f32<> yb = y - dc_x + dc_y * k_dc;
-            dc_x = y;
-            dc_y = yb;
-            hc = hc + khc * (yb - hc);
-            y = hc;
-            if (character == 3)
-            {
-                lb = lb + k_lb * (y - lb);
-                y = y + lb * 0.19;          // about +1.5 dB below 90 Hz
-            }
-            x = y;
-        }
         f32<> r = ref;
 
         // K-weighted mean square of the strip's input (ref) and of its output before this stage (x).

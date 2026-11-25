@@ -39,8 +39,15 @@ def main() -> int:
         compiler_profiles.compile_source(HERE / meter_nitro, meter_compiled, args.compiler_inputs)
         tap_compiled = staging / "tap.nitrobin"
         compiler_profiles.compile_source(HERE / tap_nitro, tap_compiled, args.compiler_inputs)
+        # Character: one source, two builds (the input copy has an on/off switch, the output copy is always on)
+        char_src = (HERE / "character.nitro").read_text(encoding="utf-8")
+        char_bins = []
+        for name, text in (("char_in", char_src), ("char_out", char_src.replace("    value_inport bool enabled;\n", "").replace(" && enabled", ""))):
+            (staging / f"{name}.nitro").write_text(text, encoding="utf-8")
+            compiler_profiles.compile_source(staging / f"{name}.nitro", staging / f"{name}.nitrobin", args.compiler_inputs)
+            char_bins.append((staging / f"{name}.nitrobin").read_bytes())
         source = staging / "device.json"
-        source.write_text(json.dumps(document(project, compiled.read_bytes(), tap_compiled.read_bytes(), meter_compiled.read_bytes(), shader, meter_shader, backdrop_shader), ensure_ascii=False), encoding="utf-8")
+        source.write_text(json.dumps(document(project, compiled.read_bytes(), tap_compiled.read_bytes(), meter_compiled.read_bytes(), shader, meter_shader, backdrop_shader, char_bins), ensure_ascii=False), encoding="utf-8")
         candidate = staging / output.name
         run([str(codec), "from-json", str(source), str(candidate)])
         candidate.replace(output)
