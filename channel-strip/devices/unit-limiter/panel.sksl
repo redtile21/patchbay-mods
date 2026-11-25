@@ -128,15 +128,20 @@ float number(float2 p, float2 o, float h, float val) {
 const float MT = 22.;
 const float MB = 170.;
 const float MH = 148.;
+// Meter fill shared with the EB BlackStrip meters: blue, light blue, amber near the top, red at the very top.
+float3 ramp(float t) {
+    float3 c = mix(float3(.22, .52, .82), float3(.42, .74, .95), smoothstep(0., .75, t));
+    c = mix(c, float3(.98, .60, .16), smoothstep(.78, .88, t));
+    return t > .93 ? float3(.95, .32, .20) : c;
+}
 float3 numcol(float v, float lim) {
-    return v > lim ? float3(.98, .52, .14) : float3(.80, .82, .84);
+    return v > lim ? float3(.98, .52, .14) : float3(.42, .74, .95);
 }
 float3 meterpx(float2 p, float3 color, float x0, float x1, float lvl, float pk, float ln) {
     if (p.x >= x0 && p.x < x1 && p.y >= MT && p.y <= MB) {
         float lv = (MB - p.y) / MH;
         color = float3(.040, .042, .048);
-        if (lv < lvl) color = mix(float3(.24, .62, .17), float3(.96, .56, .12), smoothstep(.55, .85, lv));
-        if (lv < lvl && lv > .83) color = float3(.92, .30, .22);
+        if (lv < lvl) color = ramp(lv);
         if (abs(mod(lv * 6., 1.)) < .03 && lv > .01 && lv < .99 && lv >= lvl) color = float3(.10, .12, .14);
         if (abs(lv - pk) < .006 && pk > .01) color = float3(1., .62, .16);
     }
@@ -193,6 +198,5 @@ half4 main(float2 fragCoord) {
     if (number(p, float2(196., 7.), 8., opk) > .5) color = numcol(opk, .05);
     if (number(p, float2(158., 7.), 8., -gr) > .5) color = gr > .05 ? red : txt;
     if (number(p, float2(62., 7.), 8., ceil_db) > .5) color = blue;
-    if (digit((p - float2(217., 177.)) / 3., 9.) > .5) color = float3(.45, .5, .55);
     return half4(half3(color), 1.);
 }
