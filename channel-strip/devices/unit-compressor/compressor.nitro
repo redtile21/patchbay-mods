@@ -40,6 +40,12 @@ component eb_compressor
     {
         return fmax(lo, fmin(hi, x));
     }
+    // Rational soft clip (Nitro has no hyperbolic tangent built in).
+    f32 soft(f32 v)
+    {
+        f32 u = fmax(-3.0, fmin(3.0, v));
+        return u * (27.0 + u * u) / (27.0 + 9.0 * u * u);
+    }
 
     reset
     {
@@ -171,7 +177,7 @@ component eb_compressor
             f32 c = c0 + bound(-gr_db / 20.0, 0.0, 1.0) * c1;
             f32 wl = wet[0];
             f32 wr = wet[1];
-            wet = <wl * (1.0 - c) + tanh(wl) * c, wr * (1.0 - c) + tanh(wr) * c>;
+            wet = <wl * (1.0 - c) + soft(wl) * c, wr * (1.0 - c) + soft(wr) * c>;
         }
         f32<> y = x * (1.0 - m) + wet * m;
         out = y;
