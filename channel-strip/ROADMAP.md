@@ -43,10 +43,12 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
 
 ## 4. Workflow
 
-- [ ] Presets: check that Bitwig's own container presets store the nested units and that the mod re-arms and the
+- [x] Presets: check that Bitwig's own container presets store the nested units and that the mod re-arms and the
       dropdowns match after a preset loads. (The mod now re-links the macro knobs when a slot's unit is replaced from
       outside, such as by a preset load.) Then a curated set: Vocal, Drum Bus, Bass, Acoustic, Mix Bus, Master.
-- [ ] Default settings: a default chain on insert, tuned starting values per unit. "Save as default" would be a mod
+- [x] Default chain on insert: Gain, EQ, Compressor, Saturation, Limiter (the mod loads the units into a new,
+      empty strip).
+- [ ] Default settings: tuned starting values per unit. "Save as default" would be a mod
       feature (Bitwig has no per-device default preset).
 - [x] Remember settings on swap: the mod keeps each slot's last values per unit type (for the session; not yet
       saved with the project).

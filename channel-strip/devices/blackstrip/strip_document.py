@@ -201,7 +201,9 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     out_gain = parameter("Output Gain", "OUTPUT_GAIN", -24.0, 24.0, 0.0, 1)
     view = boolean_parameter("Expanded View", "VIEW", False)
     knobs = [[parameter(f"Slot {i} Knob {k}", f"SLOT{i}_K{k}", 0.0, 100.0, 50.0, 0) for k in (1, 2, 3)] for i in range(1, SLOTS + 1)]
-    types = [indexed_parameter(f"Slot {i}", f"SLOT{i}_TYPE", KINDS, 0) for i in range(1, SLOTS + 1)]
+    # the default chain a new strip loads (the mod inserts the units)
+    default_chain = ("Gain", "EQ", "Compressor", "Saturation", "Limiter", "Bypass")
+    types = [indexed_parameter(f"Slot {i}", f"SLOT{i}_TYPE", KINDS, KINDS.index(default_chain[i - 1])) for i in range(1, SLOTS + 1)]
     def drawing_atom(meter, ident, code):
         return obj(5512, "", {
             "settings#6194": settings([wire(meter, 1), wire(meter, 2)] + [connection() for _ in range(7)]),
@@ -267,7 +269,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v23".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v24".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,

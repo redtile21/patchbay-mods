@@ -3,6 +3,7 @@ package dev.local.ebstrip;
 import bitwig.obf.cbF;
 import bitwig.obf.kh;
 import bitwig.obf.lpr;
+import bml.api.Arg;
 import bml.api.At;
 import bml.api.Hook;
 import bml.api.This;
@@ -82,4 +83,14 @@ public final class StripHooks {
         }
     }
 
+
+    @Hook(target = com.bitwig.flt.document.core.master.device.vP2.class,
+          method = "Gef(Lcom/bitwig/flt/document/core/master/device/sgH;I)V", at = At.ENTRY, id = "device-added")
+    public static void deviceAdded(@Arg(0) Object device) {
+        try {
+            Strip.deviceAdded(device);
+        } catch (Throwable t) {
+            // never let the watcher reach Bitwig's code
+        }
+    }
 }

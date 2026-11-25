@@ -603,38 +603,73 @@ final class Strip {
             String id = identifierOf(atom);
             if (id == null || !id.matches("SLOT[1-6]_TYPE|VIEW|SLOT[1-6]_K[1-3]")) return false;
             utt strip = (utt) findUp(atom, o -> o instanceof utt u && STRIP_UUIDS.contains(String.valueOf(u.beI())), 8, 6000);
-            PiT track = strip == null ? null : (PiT) findUp(strip, o -> o instanceof PiT, 8, 6000);
-            GJy root = track == null ? null : (GJy) findUp(track, o -> o instanceof GJy, 8, 6000);
-            if (strip == null || track == null || root == null) {
-                MOD.log("auto-arm: strip=" + (strip != null) + " track=" + (track != null) + " root=" + (root != null));
-                AUTO_FAILED.add(atom);
-                return false;
-            }
-            Watch w = new Watch(new Ctx(null, root, track), strip);
-            for (int n = 1; n <= 6; n++) {
-                Object a = findByIdentifier(strip, "SLOT" + n + "_TYPE");
-                Hit chain = slotChain(strip, n);
-                if (!(a instanceof lpr) || chain == null) { AUTO_FAILED.add(atom); MOD.log("auto-arm: slot " + n + " incomplete"); return false; }
-                w.types[n] = (lpr) a;
-                w.chains[n] = (k3K) chain.object;
-            }
-            Object viewAtom = findByIdentifier(strip, "VIEW");
-            if (viewAtom != null) w.view = viewAtom;
-            for (int n = 1; n <= 6; n++) for (int k = 1; k <= 3; k++) {
-                Object a = findByIdentifier(strip, "SLOT" + n + "_K" + k);
-                if (a instanceof bitwig.obf.xdh x) w.knobs[n][k - 1] = x;
-            }
-            synchronized (WATCHES) {
-                WATCHES.removeIf(o -> o.strip == strip);
-                WATCHES.add(w);
-            }
-            for (int n = 1; n <= 6; n++) relink(w, n, false);
+            if (strip == null || armStrip(strip) == null) { AUTO_FAILED.add(atom); return false; }
             return true;
         } catch (Throwable t) {
             AUTO_FAILED.add(atom);
             MOD.log("auto-arm failed", t);
             return false;
         }
+    }
+
+    /** Starts watching this strip (found without a menu selection); null if its track, project or slots can't be found. */
+    private static Watch armStrip(utt strip) {
+        PiT track = (PiT) findUp(strip, o -> o instanceof PiT, 8, 6000);
+        GJy root = track == null ? null : (GJy) findUp(track, o -> o instanceof GJy, 8, 6000);
+        if (track == null || root == null) {
+            MOD.log("arm: track=" + (track != null) + " root=" + (root != null));
+            return null;
+        }
+        Watch w = new Watch(new Ctx(null, root, track), strip);
+        for (int n = 1; n <= 6; n++) {
+            Object a = findByIdentifier(strip, "SLOT" + n + "_TYPE");
+            Hit chain = slotChain(strip, n);
+            if (!(a instanceof lpr) || chain == null) { MOD.log("arm: slot " + n + " incomplete"); return null; }
+            w.types[n] = (lpr) a;
+            w.chains[n] = (k3K) chain.object;
+        }
+        Object viewAtom = findByIdentifier(strip, "VIEW");
+        if (viewAtom != null) w.view = viewAtom;
+        for (int n = 1; n <= 6; n++) for (int k = 1; k <= 3; k++) {
+            Object a = findByIdentifier(strip, "SLOT" + n + "_K" + k);
+            if (a instanceof bitwig.obf.xdh x) w.knobs[n][k - 1] = x;
+        }
+        synchronized (WATCHES) {
+            WATCHES.removeIf(o -> o.strip == strip);
+            WATCHES.add(w);
+        }
+        for (int n = 1; n <= 6; n++) relink(w, n, false);
+        return w;
+    }
+
+    // ---- default chain: a newly inserted strip gets the units its dropdowns name ----
+
+    /** Called (by the hook) when any device is about to be added to a chain. */
+    static void deviceAdded(Object device) {
+        if (!(device instanceof utt strip) || !STRIP_UUIDS.contains(String.valueOf(strip.beI()))) return;
+        // wait until the insert (or a project load) has finished, then look
+        drf.EO().beI(() -> {
+            try {
+                fillNew(strip);
+            } catch (Throwable t) {
+                MOD.log("default chain failed", t);
+            }
+        }, 400L);
+    }
+
+    private static void fillNew(utt strip) {
+        synchronized (WATCHES) {
+            for (Watch w : WATCHES) if (w.strip == strip) return;
+        }
+        for (int n = 1; n <= 6; n++) {
+            Hit chain = slotChain(strip, n);
+            if (chain == null) return;                                   // not (or no longer) a whole strip
+            if (!((k3K) chain.object).qJX().isEmpty()) return;          // loaded, duplicated or undone: has its units
+        }
+        Watch w = armStrip(strip);
+        if (w == null) return;
+        MOD.log("new strip: loading its default chain");
+        onChangesEnded();
     }
 
     /** Breadth-first search along Bitwig's references, in any direction, for the first object the test accepts. */
