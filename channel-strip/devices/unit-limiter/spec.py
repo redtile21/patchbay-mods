@@ -11,7 +11,7 @@ SPEC = {
     "cols": 2, "display_w": 56,
     "titles": {"STEREO_LINK": "Link"},
     "knob_pos": [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1)],
-    "knob_size": 1, "knob_w": 15, "knob_h": 12, "pitch_x": 16, "pitch_y": 12, "row0": 0, "chooser_style": 0, "revision": 13,
+    "knob_size": 1, "knob_w": 15, "knob_h": 12, "pitch_x": 16, "pitch_y": 12, "row0": 0, "chooser_style": 0, "revision": 14,
     "meters": {}, "vectors": 2, "display_h": 47,
     "choices": [],
     "preflight_extra": {"recallSafety": {"canary": "runtime_magic", "arrays": []}},

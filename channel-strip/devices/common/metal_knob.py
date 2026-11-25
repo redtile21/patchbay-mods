@@ -68,18 +68,18 @@ def cap_png(r_units):
 
 
 def _wrap(w_units, h_units, inner):
-    # Bitwig draws an SVG at its own pixel size (one grid unit is 4 px), so width/height are 4 px per unit and the
-    # viewBox carries the finer drawing coordinates
-    pw, ph = int(w_units * PX), int(h_units * PX)
-    return (f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{w_units * UNIT_PX}" '
-            f'height="{h_units * UNIT_PX}" viewBox="0 0 {pw} {ph}">{inner}</svg>')
+    # Bitwig maps one SVG user unit to one interface pixel (a quarter grid unit) whatever width/height say, so all
+    # drawing coordinates are in UNIT_PX per grid unit; the cap PNG inside keeps its finer PX resolution
+    pw, ph = w_units * UNIT_PX, h_units * UNIT_PX
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{pw}" '
+            f'height="{ph}" viewBox="0 0 {pw} {ph}">{inner}</svg>')
 
 
 def cap_svg(w_units, h_units, cx, cy, r):
     png, margin = cap_png(round(r, 3))
     uri = "data:image/png;base64," + base64.b64encode(png).decode()
-    side = 2 * (r + margin) * PX
-    x, y = cx * PX - side / 2, cy * PX - side / 2
+    side = 2 * (r + margin) * UNIT_PX
+    x, y = cx * UNIT_PX - side / 2, cy * UNIT_PX - side / 2
     return _wrap(w_units, h_units, f'<image x="{x:.2f}" y="{y:.2f}" width="{side:.2f}" height="{side:.2f}" href="{uri}" xlink:href="{uri}"/>')
 
 
@@ -87,8 +87,8 @@ def pointer_svg(w_units, h_units, cx, cy, r, step):
     a = math.radians(-SWEEP / 2 + SWEEP * step / (STEPS - 1))
     sx, sy = math.sin(a), -math.cos(a)
     r0, r1 = 0.30 * r, 0.80 * r
-    x0, y0, x1, y1 = (cx + r0 * sx) * PX, (cy + r0 * sy) * PX, (cx + r1 * sx) * PX, (cy + r1 * sy) * PX
-    wd = 0.30 * PX
+    x0, y0, x1, y1 = (cx + r0 * sx) * UNIT_PX, (cy + r0 * sy) * UNIT_PX, (cx + r1 * sx) * UNIT_PX, (cy + r1 * sy) * UNIT_PX
+    wd = 0.30 * UNIT_PX
     return _wrap(w_units, h_units,
                  f'<line x1="{x0:.2f}" y1="{y0:.2f}" x2="{x1:.2f}" y2="{y1:.2f}" stroke="{POINTER}" stroke-width="{wd:.2f}" stroke-linecap="round"/>')
 
