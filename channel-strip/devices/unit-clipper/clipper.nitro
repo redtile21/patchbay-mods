@@ -105,7 +105,7 @@ component eb_clipper
             f32 gh = dbgain(0.5 * tl);
             f32 pp = dbgain(0.5 * tl);
             f32 qq = 1.0 / pp;
-            f32 kk = tan(3.141592654 * 1000.0 / sr);
+            f32 kk = sin(3.141592654 * 1000.0 / sr) / cos(3.141592654 * 1000.0 / sr);
             f32 dp = 1.0 + pp * kk;
             f32 dq = 1.0 + qq * kk;
             pb0 = gh * dq / dp;
