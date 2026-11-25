@@ -4,6 +4,9 @@ component eb_clipper
     audio_inport f32 input_gain = 0.0;
     audio_inport f32 ceiling = -1.0;
     audio_inport f32 softness = 30.0;
+    audio_inport f32 tilt = 0.0;
+    value_inport bool delta;
+    value_inport bool auto_gain;
 
     audio_outport out;
     audio_outport f32<4> display;
@@ -20,6 +23,18 @@ component eb_clipper
     f32 t_gr = 0.0;
     f32 t_disp = 0.0;
     f32 disp_gr = 0.0;
+
+    // Tilt: a first-order shelf around 1 kHz before the clipper and its exact inverse after it.
+    f32 p_tilt = -999.0;
+    f32 p_sr = 0.0;
+    f32 pb0 = 1.0;
+    f32 pb1 = 0.0;
+    f32 pa1 = 0.0;
+    f32 qb0 = 1.0;
+    f32 qb1 = 0.0;
+    f32 qa1 = 0.0;
+    f32<2> zpre = 0.0;
+    f32<2> zpost = 0.0;
 
     f32 dbgain(f32 v)
     {
@@ -71,6 +86,9 @@ component eb_clipper
             t_gr = 0.0;
             t_disp = 0.0;
             disp_gr = 0.0;
+            zpre = 0.0;
+            zpost = 0.0;
+            p_tilt = -999.0;
         }
         f32 sr = EC.samplerate;
         f32 ing = bound(input_gain, 0.0, 24.0);
@@ -78,13 +96,46 @@ component eb_clipper
         f32 c = dbgain(cdb);
         f32 k = bound(softness, 0.0, 100.0) * 0.01;
         f32 t = c * (1.0 - 0.75 * k);
+        f32 tl = bound(tilt, -12.0, 12.0);
+        if (tl != p_tilt || sr != p_sr)
+        {
+            p_tilt = tl;
+            p_sr = sr;
+            // H(s) = gh (s + q) / (s + p) with s in units of 1 kHz, p = sqrt(gh / gl), q = 1 / p; bilinear transform.
+            f32 gh = dbgain(0.5 * tl);
+            f32 pp = dbgain(0.5 * tl);
+            f32 qq = 1.0 / pp;
+            f32 kk = tan(3.141592654 * 1000.0 / sr);
+            f32 dp = 1.0 + pp * kk;
+            f32 dq = 1.0 + qq * kk;
+            pb0 = gh * dq / dp;
+            pb1 = gh * (qq * kk - 1.0) / dp;
+            pa1 = (pp * kk - 1.0) / dp;
+            qb0 = dp / (gh * dq);
+            qb1 = (pp * kk - 1.0) / (gh * dq);
+            qa1 = (qq * kk - 1.0) / dq;
+        }
         f32<> v = in * dbgain(ing);
-        f32<> y = <clipv(v[0], c, t), clipv(v[1], c, t)>;
-        out = y;
+        f32<> vt = pb0 * v + zpre;
+        zpre = pb1 * v - pa1 * vt;
+        f32<> yc = <clipv(vt[0], c, t), clipv(vt[1], c, t)>;
+        f32<> y = qb0 * yc + zpost;
+        zpost = qb1 * yc - qa1 * y;
+        f32 mk = 1.0;
+        if (auto_gain)
+        {
+            mk = dbgain(0.0 - ing);
+        }
+        f32<> o = y * mk;
+        if (delta)
+        {
+            o = (v - y) * mk;
+        }
+        out = o;
 
         f32 pin = fmax(fabs(v[0]), fabs(v[1]));
-        f32 pout = fmax(fabs(y[0]), fabs(y[1]));
-        f32 gr_now = fmax(0.0, todb(pin) - todb(pout));
+        f32 pout = fmax(fabs(o[0]), fabs(o[1]));
+        f32 gr_now = fmax(0.0, todb(fmax(fabs(vt[0]), fabs(vt[1]))) - todb(fmax(fabs(yc[0]), fabs(yc[1]))));
 
         // Meters: decaying envelopes, five-second peak holds, gain change held for the number.
         in_env = fmax(pin, in_env * 0.9998);

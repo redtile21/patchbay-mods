@@ -18,6 +18,7 @@ _g = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_g)
 owned, settings, proxy, parameter, indexed_parameter, nitro_port, value_port, metadata = (
     _g.owned, _g.settings, _g.proxy, _g.parameter, _g.indexed_parameter, _g.nitro_port, _g.value_port, _g.metadata)
+boolean_parameter = _g.boolean_parameter
 
 PANEL_HEIGHT = 53
 KNOB_W, KNOB_H, PITCH_X, PITCH_Y = 19, 14, 20, 16
@@ -57,7 +58,7 @@ def vu_meter(connections):
         "settings#6194": settings(connections), "channel_count#607": v("Byte", 0), "scale_style#2075": v("Int32", 0)})
 
 
-def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, display_item=None, expressions=(), backdrop_ref=None, overlay=None):
+def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, display_item=None, expressions=(), backdrop_ref=None, overlay=None, toggle_refs=()):
     items = []
     knob_rects = []
     if backdrop_ref is not None:
@@ -83,7 +84,8 @@ def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, disp
             "tooltip_text#6867": v("String", ""), "help_id#10543": v("String", ""),
             "help_location#10546": v("Byte", 0), "data_model#6220": drawing_ref})
     if display_item is not None:
-        display_item["fields"]["layout_settings#6226"] = v("Object", grid_layout(g["disp_x"], TOP, g["dw"], disp_h - choosers_h))
+        nx, ny, nw, nh = spec.get("native_rect", (0, 0, g["dw"], disp_h - choosers_h))
+        display_item["fields"]["layout_settings#6226"] = v("Object", grid_layout(g["disp_x"] + nx, TOP + ny, nw, nh))
         items.append(display_item)
         if drawing_ref is not None:
             items.append(shader_item())
@@ -148,6 +150,14 @@ def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, disp
             "tooltip_text#6867": v("String", ch[4]), "data_model#6220": ref,
             "attribute_id#11012": v("Int16", 457), "label_style#6262": v("Byte", 0),
             "style#6266": v("Byte", spec.get("chooser_style", 7)), "color#7528": v("Int16", 6)}))
+    for tg, ref in zip(spec.get("toggles", []), toggle_refs):
+        col, ty, tw = tg[5]
+        items.append(obj(1702, "toggle_button_panel_item", {
+            "layout_settings#6226": v("Object", grid_layout(g["knob_x"] + col * spec.get("pitch_x", PITCH_X), TOP + ty, tw, 5)),
+            "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
+            "tooltip_text#6867": v("String", tg[3]), "data_model#6220": ref, "title#6241": v("String", tg[0]),
+            "icon_name#6239": v("String", ""), "style#6240": v("Byte", 0), "label_style#6267": v("Byte", 0),
+            "color#7527": v("Int16", 6)}))
     if overlay is not None:
         extra_items, extra_exprs = overlay(knob_rects)
         items.extend(extra_items)
@@ -228,6 +238,25 @@ half4 main(float2 fragCoord) {{
 """
 
 
+def spectrum_display(analyser_ref, x_range, y_range=(-42.0, 18.0)):
+    """Native display with only the spectrum and axes; the unit's shader draws its curves on top."""
+    def stack():
+        return v("Object", obj(1803, "stack_panel_item_layout_settings", {"width#6217": v("Byte", 1), "height#6218": v("Byte", 1)}))
+    common = lambda: {"layout_settings#6226": stack(), "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True)}
+    spectrum = obj(1852, "display_spectrum_panel_item", {**common(), "analyzer_component#6574": analyser_ref,
+                   "graph_style#6575": v("Byte", 1), "color#6577": v("Byte", 0), "tilt_spectrum#11093": v("Double", 4.5)})
+    axes = obj(1805, "display_axes_panel_item", {**common(), "show_x_axis#6888": v("Bool", True), "show_y_axis#6889": v("Bool", True),
+               "clip_x_axis_lines#6890": v("Bool", False), "clip_y_axis_lines#6891": v("Bool", False),
+               "show_x_axis_label#6516": v("Bool", True), "show_y_axis_label#6517": v("Bool", False),
+               "show_info_on_hover#6714": v("Bool", True)})
+    return obj(1804, "display_panel_item", {**common(), "items#6221": v("ObjectList", owned(spectrum, axes)),
+               "brightness#6245": v("Byte", 3), "x_min#6504": v("Double", x_range[0]), "x_max#6505": v("Double", x_range[1]),
+               "x_domain#6506": v("Byte", 2), "x_unit#6507": v("Byte", 4), "y_min#6508": v("Double", y_range[0]),
+               "y_max#6509": v("Double", y_range[1]), "y_domain#6510": v("Byte", 1), "y_unit#6511": v("Byte", 2),
+               "left_margin_visible#10289": v("Bool", False), "right_margin_visible#10290": v("Bool", False),
+               "top_margin_visible#10291": v("Bool", False), "bottom_margin_visible#10292": v("Bool", False)})
+
+
 def document(spec, project, binary, shader):
     bindings = []
 
@@ -257,16 +286,18 @@ def document(spec, project, binary, shader):
         if d[1] in spec.get("log_params", ()):
             atom["fields"]["value_type#702"]["value"]["fields"]["domain#294"] = v("Byte", spec.get("log_domain", 1))
     chs = [indexed_parameter(c[0], c[1], c[2], c[3]) for c in spec["choices"]]
+    tgs = [boolean_parameter(t[0], t[1], t[2]) for t in spec.get("toggles", [])]
     n_dec = len(decs)
     inputs = [nitro_port("in", 0, 2, output=False)]
     inputs += [nitro_port(d[7], 1 + i, 1, output=False) for i, d in enumerate(spec["decimals"])]
     inputs += [value_port(c[5], 1 + n_dec + i, boolean=False) for i, c in enumerate(spec["choices"])]
+    inputs += [value_port(t[4], 1 + n_dec + len(chs) + i, boolean=True) for i, t in enumerate(spec.get("toggles", []))]
     vectors = spec.get("vectors", 1)
     outputs = [nitro_port("out", 0, 2, output=True)] + [nitro_port("display" if i == 0 else f"display{i + 1}", 1 + i, 4, output=True) for i in range(vectors)]
-    if spec.get("native_display") == "eq":
+    if spec.get("native_display") in ("eq", "spectrum"):
         outputs.append(nitro_port("tap", 1 + vectors, 2, output=True))   # the output lifted 34 dB, for the spectrum display
     dsp = obj(1721, "nitro_atom", {
-        "settings#6194": settings([wire(compensation), *(wire(p) for p in decs), *(wire(c) for c in chs)]),
+        "settings#6194": settings([wire(compensation), *(wire(p) for p in decs), *(wire(c) for c in chs), *(wire(t) for t in tgs)]),
         "channel_count#607": v("Byte", 0), "oversampling#608": v("Byte", 0),
         "fft_order#6567": v("Byte", 0), "code_storage#10421": v("ByteArray", [0, *binary]),
         "is_code_storage_binary_ast#14616": v("Bool", True),
@@ -274,6 +305,7 @@ def document(spec, project, binary, shader):
         "nitro_inputs#15756": v("ObjectList", owned(*inputs)),
         "nitro_outputs#15757": v("ObjectList", owned(*outputs))})
     native_eq = spec.get("native_display") == "eq"
+    native = spec.get("native_display") in ("eq", "spectrum")
     drawing_inputs = [wire(dsp, 1 + i) for i in range(vectors)] + [connection() for _ in range(9 - vectors)]
     drawing = obj(5512, "", {
         "settings#6194": settings(drawing_inputs),
@@ -282,14 +314,17 @@ def document(spec, project, binary, shader):
         "preset_identifier#701": v("String", "PANEL_DRAWING"), "#16316": v("WideString", shader)})
     analyser = None
     display_item, expressions = None, ()
-    if native_eq:
+    if native:
         analyser = obj(1851, "spectrum_analyser_component", {
             "settings#6194": settings([wire(dsp, 1 + vectors)]), "channel_count#607": v("Byte", 0), "name#374": v("String", "Output"),
             "prevent_parent_from_sleeping#11002": v("Bool", False), "oversampling#13595": v("Byte", 0),
             "overlap#6571": v("Double", 0.5), "window_function#6573": v("Byte", 12)})
-        display_item, raw = eq_display(ref(analyser), ref)
-        expressions = [obj(1728, "panel_expression", {"expression#6274": v("String", e), "panel_item#6275": ref(t),
-                           "attribute_id#6316": v("Int16", a)}) for e, t, a in raw]
+        if native_eq:
+            display_item, raw = eq_display(ref(analyser), ref)
+            expressions = [obj(1728, "panel_expression", {"expression#6274": v("String", e), "panel_item#6275": ref(t),
+                               "attribute_id#6316": v("Int16", a)}) for e, t, a in raw]
+        else:
+            display_item = spectrum_display(ref(analyser), spec["native_x"])
     in_vu = vu_meter([wire(compensation)]) if spec["meters"].get("in") else None
     out_vu = vu_meter([wire(dsp, 0)]) if spec["meters"].get("out") else None
     output_proxy = proxy(output=True)
@@ -315,9 +350,9 @@ def document(spec, project, binary, shader):
                        "attribute_id#6316": v("Int16", 6309)}) for e, t in rules]
         return items, exprs
     panel = main_panel(spec, g, [ref(p) for p in decs], [ref(c) for c in chs], ref(drawing) if drawing else None,
-                       ref(in_vu) if in_vu else None, ref(out_vu) if out_vu else None, display_item, expressions, ref(backdrop), overlay)
+                       ref(in_vu) if in_vu else None, ref(out_vu) if out_vu else None, display_item, expressions, ref(backdrop), overlay, [ref(t) for t in tgs])
     identity = project["identity"]
-    children = [backdrop, audio_source, compensation, *decs, *chs, dsp] + ([drawing] if drawing else []) + ([analyser] if analyser else []) + [m for m in (in_vu, out_vu) if m]
+    children = [backdrop, audio_source, compensation, *decs, *chs, *tgs, dsp] + ([drawing] if drawing else []) + ([analyser] if analyser else []) + [m for m in (in_vu, out_vu) if m]
     body = obj(151, "device_contents", {
         "child_components#173": v("ObjectList", owned(*children)),
         "panels#6213": v("ObjectList", owned(panel)),

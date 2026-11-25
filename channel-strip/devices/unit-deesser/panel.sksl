@@ -172,7 +172,6 @@ half4 main(float2 fragCoord) {
     // 56 x 47 grid units -> 224 x 188 design units.
     float2 p = fragCoord / iResolution.xy * float2(224., 188.);
     float3 color = float3(.060, .064, .072);
-    float3 grid = float3(.150, .160, .175);
     float3 blue = float3(.30, .68, .92);
     float3 red = float3(.98, .52, .14);
     float3 txt = float3(.80, .82, .84);
@@ -188,29 +187,29 @@ half4 main(float2 fragCoord) {
     float gr = ghi / 240. * 24.0;
     float grlive = gri / 240. * 24.0;
 
+    // Response over the native spectrum (36..164 x 20..172 design units = the display item's rect):
+    // 100 Hz .. 20 kHz across, +18 dB at the top to -42 dB at the bottom, as the spectrum is drawn.
+    if (p.x >= 36. && p.x < 164. && p.y >= 20. && p.y < 172.) {
+        float gx = (p.x - 36.) / 128.;
+        float fx = 100. * pow(200., gx);
+        float yz = 20. + 18. / 60. * 152.;
+        float yr = 20. + (18. - splitdb(fx, f, dbg(-rng), wide)) / 60. * 152.;
+        float yl = 20. + (18. - splitdb(fx, f, dbg(-grlive), wide)) / 60. * 152.;
+        float fl = log(f / 100.) / log(200.) * 128. + 36.;
+        float a = 0.;
+        float3 c = float3(0.);
+        if (abs(p.x - fl) < .6) { a = .45; c = blue; }
+        if (abs(p.y - yr) < .8) { a = .55; c = blue * .8; }
+        if (p.y > yz && p.y < yl) { a = max(a, .22); c = a > .3 ? c : float3(.98, .52, .14); }
+        float dl = abs(p.y - yl);
+        if (dl < 1.6) { a = 1.; c = grlive > .3 ? red : float3(1., .86, .45); }
+        else if (dl < 2.6) { a = max(a, 2.6 - dl); c = grlive > .3 ? red : float3(1., .86, .45); }
+        return half4(half3(c * a), half(a));
+    }
+
     color = meterpx(p, color, 6., 30., audioLow.w, -1., audioLow.y);
     color = meterpx(p, color, 194., 218., audioMedium.y, audioMedium.w, -1.);
     color = grbarpx(p, color, 172., 184., grbar, grpk, red);
-
-    // Response: 500 Hz .. 20 kHz across, -24 .. +6 dB up; the range dimmed, the live reduction bright.
-    if (p.x >= 36. && p.x <= 166. && p.y >= MT && p.y <= MB) {
-        color = float3(.038, .046, .056);
-        float gx = (p.x - 36.) / 130.;
-        float gy = (MB - p.y) / MH;
-        float fx = 500. * pow(40., gx);
-        for (int i = 1; i < 5; i++) {
-            if (abs(gy - float(i) / 5.) < .004) color = grid;
-        }
-        float fl = log(f / 500.) / log(40.);
-        if (abs(gx - fl) < .004) color = blue * .55;
-        float y0 = 24. / 30.;
-        if (abs(gy - y0) < .004) color = grid * 1.6;
-        float yr = (splitdb(fx, f, dbg(-rng), wide) + 24.) / 30.;
-        if (abs(gy - yr) < .006) color = blue * .45;
-        float yl = (splitdb(fx, f, dbg(-grlive), wide) + 24.) / 30.;
-        if (gy < yl) color = color * .65 + float3(.05, .10, .16) * .55;
-        if (abs(gy - yl) < .011) color = grlive > .3 ? red : float3(.50, .76, 1.);
-    }
 
     float opk = audioMedium.w * 60. - 60.;
     if (number(p, float2(196., 7.), 8., opk) > .5) color = numcol(opk, -.1);

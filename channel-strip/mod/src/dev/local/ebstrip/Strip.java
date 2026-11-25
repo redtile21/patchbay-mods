@@ -799,7 +799,7 @@ final class Strip {
         "eb gate", Set.of("THRESHOLD", "RANGE", "HYSTERESIS", "ATTACK", "HOLD", "RELEASE", "SC_HPF", "MODE"),
         "eb de-esser", Set.of("FREQ", "THRESHOLD", "RANGE", "RELEASE", "MODE"),
         "eb transient", Set.of("ATTACK", "SUSTAIN", "OUTPUT", "MIX", "SPEED"),
-        "eb clipper", Set.of("INPUT_GAIN", "CEILING", "SOFTNESS"));
+        "eb clipper", Set.of("INPUT_GAIN", "CEILING", "SOFTNESS", "TILT"));
 
     /** strip -> "slot|unit" -> identifier -> value (Double for knobs, String for choices). Lives for the session. */
     private static final Map<Object, Map<String, Map<String, Object>>> MEMORY =

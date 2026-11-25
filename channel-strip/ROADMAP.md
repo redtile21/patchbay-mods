@@ -64,6 +64,10 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
 
 - [x] Gate/Expander, De-esser, Transient Shaper, Clipper (EB Gate, EB De-esser, EB Transient, EB Clipper; scaffolded by
       `devices/common/new_units.py`).
+- [x] De-esser: output spectrum behind the response curve (native display, as on the EQ).
+- [x] Clipper: Tilt (shelf around 1 kHz before the clipper, undone after), Delta (hear only what is removed), Auto Gain
+      (output down by the input gain).
+- [ ] Remember the Clipper's Delta and Auto Gain toggles on swap (the mod only reads knobs and choosers so far).
 - [ ] Dynamic EQ (later).
 - [ ] External sidechain into a nested unit: uncertain, needs a test of whether the container can expose a sidechain
       input. The compressor's internal sidechain filter already works.

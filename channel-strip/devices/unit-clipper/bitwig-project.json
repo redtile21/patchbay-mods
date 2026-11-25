@@ -39,7 +39,7 @@
   },
   "preflight": {
     "profile": "bitwig-6.1.3-hybrid",
-    "expectedNitroInputs": 4,
+    "expectedNitroInputs": 5,
     "expectedNitroOutputs": 3,
     "maxDrawingVectors": 2,
     "requiredAudioInputSourceClassId": 1371,
@@ -95,6 +95,20 @@
             "reset"
           ],
           "defaultNormalized": 0.3
+        },
+        {
+          "parameter": "TILT",
+          "widgetClass": 1687,
+          "drawOwners": [
+            "native"
+          ],
+          "inputOwner": "native",
+          "knobSize": 1,
+          "gestures": [
+            "drag",
+            "reset"
+          ],
+          "defaultNormalized": 0.5
         }
       ]
     }

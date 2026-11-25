@@ -10,12 +10,14 @@ SPEC = {
     "cols": 2, "display_w": 56,
     "titles": {"FREQ": "Freq"},
     "knob_pos": [(0, 0), (0, 1), (0, 2), (1, 0)],
-    "knob_size": 1, "knob_w": 15, "knob_h": 12, "pitch_x": 16, "pitch_y": 12, "row0": 0, "chooser_style": 0, "revision": 1,
+    "knob_size": 1, "knob_w": 15, "knob_h": 12, "pitch_x": 16, "pitch_y": 12, "row0": 0, "chooser_style": 0, "revision": 2,
     "meters": {}, "vectors": 2, "display_h": 47,
     "chooser_col": [(1, 30)],
     "free_labels": [(1, 25, 15, "MODE")],
     "choices": [
         ("Mode", "MODE", ("Split", "Wide"), 0, "Split: turn down only above the frequency. Wide: turn down the whole signal", "mode"),
     ],
+    # Output spectrum behind the response: 100 Hz .. 20 kHz (semitones, A4 = 69), -42 .. +18 dB, inside the display
+    "native_display": "spectrum", "native_x": (43.35, 135.08), "native_rect": (9, 5, 32, 38),
     "preflight_extra": {"recallSafety": {"canary": "runtime_magic", "arrays": []}},
 }

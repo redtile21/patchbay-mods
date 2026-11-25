@@ -10,6 +10,7 @@ component eb_deesser
     audio_outport out;
     audio_outport f32<4> display;
     audio_outport f32<4> display2;
+    audio_outport tap;
 
     i32 runtime_magic = 0;
     f32 in_env = 0.0;
@@ -124,6 +125,7 @@ component eb_deesser
             y = lp + (x - lp) * g;
         }
         out = y;
+        tap = y * 50.0;
 
         sib_env = fmax(det, sib_env * 0.9995);
         f32 pin = fmax(fabs(x[0]), fabs(x[1]));
