@@ -48,13 +48,14 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
       outside, such as by a preset load.) Then a curated set: Vocal, Drum Bus, Bass, Acoustic, Mix Bus, Master.
 - [x] Default chain on insert: Gain, EQ, Compressor, Saturation, Limiter (the mod loads the units into a new,
       empty strip).
-- [ ] Default settings: tuned starting values per unit. "Save as default" would be a mod
+- [ ] Default settings: tuned starting values per unit; "Save as default" in the mod. "Save as default" would be a mod
       feature (Bitwig has no per-device default preset).
 - [x] Remember settings on swap: the mod keeps each slot's last values per unit type (for the session; not yet
       saved with the project).
 - [ ] Reorder slots (drag or move left/right action, in the mod).
-- [ ] Auto gain match: a Match button or mode that uses the measured input and output loudness to set Out to unity
-      loudness, for honest A/B.
+- [x] Auto gain match: a Match chooser by Out; the output stage follows the K-weighted short-term loudness
+      difference between the strip's input and output (up to 24 dB, held in silence), with Out as a trim on top.
+- [ ] Show the applied match gain on the output meter.
 - [ ] A/B snapshots of the whole strip.
 - [ ] Remote control pages for hardware controllers (macro knobs plus Out); check blueprint support.
 

@@ -60,7 +60,8 @@ def knob_item(ref, x, y, w, h, size, title, tip):
     })
 
 
-def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_meter_ref, knob_refs, backdrop_ref, ref=None):
+def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_meter_ref, knob_refs, backdrop_ref, ref=None,
+               match_ref=None):
     items = [drawing_item(backdrop_ref, 0, 0, PANEL_WIDTH, PANEL_HEIGHT)]
     items.append(drawing_item(in_meter_ref, 0, METER_Y, X0 - 1, METER_H))
     items.append(obj(1702, "toggle_button_panel_item", {
@@ -79,6 +80,9 @@ def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_met
             items.append(knob_item(knob_refs[i][k], sx + 5, KNOB_Y + 12 * k, 9, 9, 1, "", f"Slot {i + 1} knob {k + 1}"))
     items.append(drawing_item(out_meter_ref, RIGHT_X, METER_Y, RIGHT_W, METER_H))
     items.append(knob_item(out_ref, RIGHT_X, METER_Y + METER_H + 1, 9, 9, 1, "Out", "Output gain in dB"))
+    if match_ref is not None:
+        items.append(chooser("Auto gain match: keep the output as loud as the input, for honest A/B (Out trims on top)",
+                             match_ref, RIGHT_X + 10, METER_Y + METER_H + 3, RIGHT_W - 10))
     exprs = []
     caps = [(sx0 + 5, KNOB_Y + 12 * k, f"SLOT{i + 1}_K{k + 1}", 0.0, 100.0)
             for i in range(SLOTS) for k in range(3) for sx0 in (X0 + i * (SLOT_W + GAP),)]
@@ -137,7 +141,8 @@ def stage(binary, connections):
         "is_code_storage_binary_ast#14616": v("Bool", True),
         "use_code_path#11360": v("Bool", False), "code_path#11357": v("String", ""),
         "nitro_inputs#15756": v("ObjectList", owned(
-            nitro_port("in", 0, 2, output=False), nitro_port("gain_db", 1, 1, output=False))),
+            nitro_port("in", 0, 2, output=False), nitro_port("ref", 1, 2, output=False),
+            nitro_port("gain_db", 2, 1, output=False), value_port("match", 3, boolean=False))),
         "nitro_outputs#15757": v("ObjectList", owned(nitro_port("out", 0, 2, output=True))),
     })
 
@@ -199,6 +204,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
         "oversampling#608": v("Byte", 0),
     })
     out_gain = parameter("Output Gain", "OUTPUT_GAIN", -24.0, 24.0, 0.0, 1)
+    match = indexed_parameter("Match", "MATCH", ("Match Off", "Match On"), 0)
     view = boolean_parameter("Expanded View", "VIEW", False)
     knobs = [[parameter(f"Slot {i} Knob {k}", f"SLOT{i}_K{k}", 0.0, 100.0, 50.0, 0) for k in (1, 2, 3)] for i in range(1, SLOTS + 1)]
     # the default chain a new strip loads (the mod inserts the units)
@@ -234,16 +240,17 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
         taps.append(tp)
         drawings.append(drawing)
         previous = tp
-    stage_out = stage(binary, [wire(previous), wire(out_gain)])
+    stage_out = stage(binary, [wire(previous), wire(meter_in), wire(out_gain), wire(match)])
 
     output_proxy = proxy(output=True)
     meter_out = meter_atom(meter_binary, [wire(stage_out)])
     out_drawing = drawing_atom(meter_out, "OUT_METER", meter_shader)
     output_proxy["fields"]["settings#6194"] = settings([wire(meter_out, 0)])
     panel = main_panel([ref(d) for d in drawings], ref(out_gain), [ref(t) for t in types], ref(view),
-                       ref(in_drawing), ref(out_drawing), [[ref(k) for k in row] for row in knobs], ref(backdrop), ref)
+                       ref(in_drawing), ref(out_drawing), [[ref(k) for k in row] for row in knobs], ref(backdrop), ref,
+                       ref(match))
     identity = project["identity"]
-    children = [backdrop, audio_source, compensation, out_gain, *types, *[k for row in knobs for k in row], view, meter_in, in_drawing]
+    children = [backdrop, audio_source, compensation, out_gain, match, *types, *[k for row in knobs for k in row], view, meter_in, in_drawing]
     for ph, sl, tp, dr in zip(placeholders, slots, taps, drawings):
         children += [ph, sl, tp, dr]
     children += [stage_out, meter_out, out_drawing]
@@ -269,7 +276,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v24".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v25".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,
