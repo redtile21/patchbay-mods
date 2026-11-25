@@ -7,6 +7,7 @@ component eb_gain_stage
     value_inport i32 character;
 
     audio_outport out;
+    audio_outport f32<4> display;
 
     f32 p_sr = 0.0;
     f32 b0 = 1.0;
@@ -30,6 +31,7 @@ component eb_gain_stage
     f32 ms_out = 0.0;
     f32 match_db = 0.0;
     f32 applied = 1.0;
+    f32 shown_db = 0.0;
     // character: one-pole high cut, tape low bump, DC blocker
     f32<2> hc = 0.0;
     f32<2> lb = 0.0;
@@ -140,5 +142,13 @@ component eb_gain_stage
         f32 lin = exp(g * 0.11512925);
         applied = applied + k_g * (lin - applied);
         out = x * applied;
+        // For the output meter: Match on/off and the match gain (smoothed like the gain itself), -24..+24 dB as 0..1.
+        shown_db = shown_db + k_g * (match_db - shown_db);
+        f32 on = 0.0;
+        if (match)
+        {
+            on = 1.0;
+        }
+        display = <on, (fmin(24.0, fmax(-24.0, shown_db)) + 24.0) / 48.0, 0.0, 0.0>;
     }
 }

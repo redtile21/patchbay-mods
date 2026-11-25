@@ -799,7 +799,7 @@ final class Strip {
         "eb gate", Set.of("THRESHOLD", "RANGE", "HYSTERESIS", "ATTACK", "HOLD", "RELEASE", "SC_HPF", "MODE"),
         "eb de-esser", Set.of("FREQ", "THRESHOLD", "RANGE", "RELEASE", "MODE"),
         "eb transient", Set.of("ATTACK", "SUSTAIN", "OUTPUT", "MIX", "SPEED"),
-        "eb clipper", Set.of("INPUT_GAIN", "CEILING", "SOFTNESS", "TILT"));
+        "eb clipper", Set.of("INPUT_GAIN", "CEILING", "SOFTNESS", "TILT", "DELTA", "AUTO_GAIN"));
 
     /** strip -> "slot|unit" -> identifier -> value (Double for knobs, String for choices). Lives for the session. */
     private static final Map<Object, Map<String, Map<String, Object>>> MEMORY =
@@ -819,7 +819,7 @@ final class Strip {
                 if (++nodes > 40000) break;
                 Object o = hit.object;
                 if (o != device && o instanceof utt) continue;
-                if (o instanceof bitwig.obf.xdh || o instanceof lpr) {
+                if (o instanceof bitwig.obf.xdh || o instanceof lpr || o instanceof bitwig.obf.cbF) {
                     String id = identifierOf(o, ids::contains);
                     if (id != null && !found.containsKey(id)) found.put(id, o);
                 }
@@ -841,6 +841,7 @@ final class Strip {
             for (Map.Entry<String, Object> e : params(device, ids).entrySet()) {
                 if (e.getValue() instanceof bitwig.obf.xdh x) values.put(e.getKey(), x.GwM());
                 else if (e.getValue() instanceof lpr c) values.put(e.getKey(), c.sSO());
+                else if (e.getValue() instanceof bitwig.obf.cbF b) values.put(e.getKey(), b.Anf());   // on/off switch
             }
             MEMORY.computeIfAbsent(w.strip, k -> new java.util.concurrent.ConcurrentHashMap<>()).put(n + "|" + unitName.toLowerCase(), values);
             MOD.log("slot " + n + ": remembered " + values.size() + " settings of " + unitName);
@@ -864,6 +865,7 @@ final class Strip {
                         for (int i = 0; i < 16 && !text.equals(c.sSO()); i++) c.MgQ(i);
                         if (text.equals(c.sSO())) set++;
                     }
+                    else if (e.getValue() instanceof bitwig.obf.cbF b && saved instanceof Boolean on) { b.Gef(on.booleanValue()); set++; }
                 } catch (Throwable t) {
                     MOD.log("slot " + n + ": could not restore " + e.getKey(), t);
                 }

@@ -39,6 +39,7 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
 
 - [x] Character switch on the strip: Clean, Analog, Tube, Tape, as a gentle stage after the slots, before Match
       and Out (soft saturation, slight high-frequency rolloff, low-end bump for Tape).
+- [x] Exact tanh (from exp) for Character and the compressor's drive.
 - [ ] Character amount knob, and a matching stage before the slots.
 - [ ] Oversampling as one strip setting, passed by the mod to each unit.
 
@@ -56,7 +57,7 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
 - [ ] Reorder slots (drag or move left/right action, in the mod).
 - [x] Auto gain match: a Match toggle by Out; the output stage follows the K-weighted short-term loudness
       difference between the strip's input and output (up to 24 dB, held in silence), with Out as a trim on top.
-- [ ] Show the applied match gain on the output meter.
+- [x] Show the applied match gain on the output meter (MATCH and the gain under True Peak, while Match is on).
 - [ ] A/B snapshots of the whole strip.
 - [ ] Remote control pages for hardware controllers (macro knobs plus Out); check blueprint support.
 
@@ -67,7 +68,7 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
 - [x] De-esser: output spectrum behind the response curve (native display, as on the EQ).
 - [x] Clipper: Tilt (shelf around 1 kHz before the clipper, undone after), Delta (hear only what is removed), Auto Gain
       (output down by the input gain).
-- [ ] Remember the Clipper's Delta and Auto Gain toggles on swap (the mod only reads knobs and choosers so far).
+- [x] Remember on/off switches on swap too (Clipper Delta and Auto Gain; Bitwig's boolean atom is `cbF`).
 - [ ] Dynamic EQ (later).
 - [ ] External sidechain into a nested unit: uncertain, needs a test of whether the container can expose a sidechain
       input. The compressor's internal sidechain filter already works.

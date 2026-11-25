@@ -2,6 +2,8 @@
 // audioLow: peak L, peak R (-60..+6 dB), momentary loudness, short-term loudness (-60..0 LUFS), each 0..1
 uniform float4 audioLow;
 uniform float4 audioMedium;
+// audioHigh (output meter only): Match on (1) or off, match gain (0..1 = -24..+24 dB)
+uniform float4 audioHigh;
 
 float sdseg(float2 p, float2 a, float2 b) {
     float2 pa = p - a;
@@ -359,6 +361,12 @@ half4 main(float2 fragCoord) {
         float3 tpc = tpdb > -.05 ? float3(.95, .32, .20) : (tpdb > -1. ? float3(.98, .52, .14) : lite);
         if (tpdb > -59.) put(col, a, tpc, number(p, float2(56., 218.), 40., tpdb));
         else put(col, a, dim, 1. - smoothstep(.8, 1.6, sdseg(p, float2(70., 238.), float2(110., 238.))));
+        // Match gain, while Match is on.
+        if (audioHigh.x > .5) {
+            put(col, a, dim * 2., word(p, 105., 284., 16., 13., 1., 20., 3., 8., 0.));
+            float mdb = audioHigh.y * 48. - 24.;
+            put(col, a, lite, number(p, float2(56., 306.), 32., mdb));
+        }
     }
     return half4(half3(col * a), half(a));
 }
