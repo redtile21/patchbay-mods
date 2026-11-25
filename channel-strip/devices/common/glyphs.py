@@ -127,7 +127,7 @@ def _replace_func(text, name, new):
     m = re.search(rf"(//[^\n]*\n)?float {name}\(float2 q, float \w\) \{{\n", text)
     if not m:
         return text
-    depth, i = 0, m.end() - 1
+    depth, i = 0, m.end() - 2          # the function's opening brace
     while True:
         if text[i] == "{":
             depth += 1
