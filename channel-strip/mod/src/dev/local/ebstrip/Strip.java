@@ -677,6 +677,11 @@ final class Strip {
                             have = names.getOrDefault(((utt) devices.get(0)).beI(), "?");
                         }
                         String wantDevice = "Bypass".equals(want) ? "Bypass" : "EB " + want;
+                        if (devices.size() > 1) {
+                            if (names == null) names = registry();
+                            devices = tidy(w, n, devices, wantDevice, names);
+                            have = devices.isEmpty() ? "Bypass" : names.getOrDefault(((utt) devices.get(0)).beI(), "?");
+                        }
                         if (wantDevice.equalsIgnoreCase(have)) {
                             Object first = devices.isEmpty() ? null : devices.get(0);
                             if (first != w.linked[n]) relink(w, n, false);
@@ -694,6 +699,27 @@ final class Strip {
         }
     }
 
+    /**
+     * A slot holds one unit. Projects saved before the delete fix kept every unit a slot ever had; keep the newest one
+     * that matches the dropdown (or none) and delete the rest, as one undo step.
+     */
+    private static List<?> tidy(Watch w, int n, List<?> devices, String wantDevice, Map<UUID, String> names) {
+        Object keep = null;
+        for (Object d : devices) if (wantDevice.equalsIgnoreCase(names.getOrDefault(((utt) d).beI(), "?"))) keep = d;
+        k3K chain = w.chains[n];
+        CmH changes = w.c.root.cc_();
+        changes.beI("Slot " + n + ": remove leftover units", false);
+        int removed = 0;
+        try {
+            for (Object d : devices) if (d != keep && chain.qJX().contains(d)) { chain.beI((utt) d); removed++; }
+        } finally {
+            changes.beI(false);
+        }
+        MOD.log("slot " + n + ": removed " + removed + " leftover units");
+        relink(w, n, false);
+        return new ArrayList<>(chain.qJX());
+    }
+
     private static void swap(Watch w, int n, List<?> devices, String haveDevice, String wantDevice) {
         odK unit = null;
         if (!"Bypass".equals(wantDevice)) {
@@ -707,7 +733,7 @@ final class Strip {
         changes.beI("Slot " + n + ": " + wantDevice, false);
         try {
             if (!devices.isEmpty()) remember(w, n, haveDevice, (utt) devices.get(0));
-            for (Object d : devices) if (chain.qJX().contains(d)) chain.MgQ((utt) d);
+            for (Object d : devices) if (chain.qJX().contains(d)) chain.beI((utt) d);  // Bitwig's own delete (MgQ only hid it)
             if (unit != null) {
                 chain.Gef(utt.byf(unit.beI()), chain.qJX().size(), false, null);
                 List<?> now = new ArrayList<>(chain.qJX());
