@@ -82,8 +82,9 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
 ## 6. Metering
 
 - [ ] Scrolling level and gain-reduction history graph (TDR-style).
-- [ ] Correlation/phase meter on the output.
-- [ ] Integrated LUFS with reset and a target marker (for example -14 or -23).
+- [x] Correlation meter on the output (bar under the readouts, red below zero).
+- [x] Integrated LUFS (BS.1770 gated) as INT, a reset icon, and a target chooser (-14, -16, -23): green within
+      1 LU, orange above.
 
 ## 7. Release
 

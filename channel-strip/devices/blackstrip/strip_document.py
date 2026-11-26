@@ -74,7 +74,7 @@ def icon_toggle(ref, x, y, w, h, icon, title, tip):
 
 
 def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_meter_ref, knob_refs, backdrop_ref, ref=None,
-               match_ref=None, character_ref=None, amount_ref=None, char_input_ref=None, move_refs=(), ab_ref=None):
+               match_ref=None, character_ref=None, amount_ref=None, char_input_ref=None, move_refs=(), ab_ref=None, target_ref=None, reset_ref=None):
     items = [drawing_item(backdrop_ref, 0, 0, PANEL_WIDTH, PANEL_HEIGHT)]
     items.append(drawing_item(in_meter_ref, IN_X, METER_Y, IN_W, METER_H))
     items.append(obj(1683, "label_panel_item", {
@@ -102,6 +102,12 @@ def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_met
             items.append(icon_toggle(move_refs[i], sx + SLOT_W - 4, KNOB_Y + 3, 4, 4, "arrow_right.svg", "Move", f"Swap slot {i + 1} with slot {i + 2}"))
     items.append(drawing_item(out_meter_ref, RIGHT_X, METER_Y, RIGHT_W, METER_H))
     items.append(knob_item(out_ref, RIGHT_X, METER_Y + METER_H + 1, 9, 9, 1, "Out", "Output gain in dB"))
+    if reset_ref is not None:
+        # over the meter drawing, beside INT: click to start the integrated loudness again
+        items.append(icon_toggle(reset_ref, RIGHT_X + 17, 13, 4, 4, "trigger_reset.svg", "Reset",
+                                 "Reset the integrated loudness (INT) and start measuring again"))
+    if target_ref is not None:
+        items.append(chooser("Loudness target: INT turns green within 1 LU of it, orange above", target_ref, RIGHT_X + 7, 22, RIGHT_W - 7))
     if match_ref is not None:
         items.append(obj(1683, "label_panel_item", {
             "layout_settings#6226": v("Object", grid_layout(RIGHT_X + 10, METER_Y + METER_H + 1, RIGHT_W - 10, 4)),
@@ -235,7 +241,7 @@ def tap(binary, connections):
 
 
 def meter_atom(binary, connections):
-    inputs = [nitro_port("in", 0, 2, output=False)]
+    inputs = [nitro_port("in", 0, 2, output=False), value_port("lufs_target", 1, boolean=False), value_port("lufs_reset", 2, boolean=True)]
     outputs = [nitro_port("out", 0, 2, output=True), nitro_port("display", 1, 4, output=True), nitro_port("display2", 2, 4, output=True)]
     return obj(1721, "nitro_atom", {
         "settings#6194": settings(connections),
@@ -282,6 +288,8 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     char_input = boolean_parameter("Character Input", "CHARACTER_INPUT", False)
     view = boolean_parameter("Expanded View", "VIEW", False)
     ab = boolean_parameter("A/B", "AB", False)
+    lufs_target = indexed_parameter("Loudness Target", "LUFS_TARGET", ("No Target", "-14 LUFS", "-16 LUFS", "-23 LUFS"), 1)
+    lufs_reset = boolean_parameter("Reset Integrated Loudness", "LUFS_RESET", False)
     moves = [boolean_parameter(f"Swap Slots {n}-{n + 1}", f"MOVE_{n}", False) for n in range(1, SLOTS)]
     knobs = [[parameter(f"Slot {i} Knob {k}", f"SLOT{i}_K{k}", 0.0, 100.0, 50.0, 0) for k in (1, 2, 3)] for i in range(1, SLOTS + 1)]
     # the default chain a new strip loads (the mod inserts the units)
@@ -300,7 +308,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
         "channel_count#607": v("Byte", 0), "name#374": v("String", ""),
         "prevent_parent_from_sleeping#11002": v("Bool", False),
         "preset_identifier#701": v("String", "BACKDROP"), "#16316": v("WideString", backdrop_shader)})
-    meter_in = meter_atom(meter_binary, [wire(compensation)])
+    meter_in = meter_atom(meter_binary, [wire(compensation), wire(lufs_target), wire(lufs_reset)])
     in_drawing = drawing_atom(meter_in, "IN_METER", meter_shader)
     char_in = character_atom(char_in_binary, [wire(meter_in), wire(char_amount), wire(character), wire(char_input)], True)
     previous = char_in
@@ -323,14 +331,14 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     stage_out = stage(binary, [wire(char_out), wire(meter_in), wire(out_gain), wire(match)])
 
     output_proxy = proxy(output=True)
-    meter_out = meter_atom(meter_binary, [wire(stage_out)])
+    meter_out = meter_atom(meter_binary, [wire(stage_out), wire(lufs_target), wire(lufs_reset)])
     out_drawing = drawing_atom(meter_out, "OUT_METER", meter_shader, [wire(stage_out, 1)])   # audioHigh: Match state and gain
     output_proxy["fields"]["settings#6194"] = settings([wire(meter_out, 0)])
     panel = main_panel([ref(d) for d in drawings], ref(out_gain), [ref(t) for t in types], ref(view),
                        ref(in_drawing), ref(out_drawing), [[ref(k) for k in row] for row in knobs], ref(backdrop), ref,
-                       ref(match), ref(character), ref(char_amount), ref(char_input), [ref(m) for m in moves], ref(ab))
+                       ref(match), ref(character), ref(char_amount), ref(char_input), [ref(m) for m in moves], ref(ab), ref(lufs_target), ref(lufs_reset))
     identity = project["identity"]
-    children = [backdrop, audio_source, compensation, out_gain, match, character, char_amount, char_input, *types, *[k for row in knobs for k in row], view, *moves, ab, meter_in, in_drawing, char_in]
+    children = [backdrop, audio_source, compensation, out_gain, match, character, char_amount, char_input, *types, *[k for row in knobs for k in row], view, *moves, ab, lufs_target, lufs_reset, meter_in, in_drawing, char_in]
     for ph, sl, tp, dr in zip(placeholders, slots, taps, drawings):
         children += [ph, sl, tp, dr]
     children += [char_out, stage_out, meter_out, out_drawing]
@@ -356,7 +364,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v42".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v43".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,

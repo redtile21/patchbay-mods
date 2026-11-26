@@ -1,6 +1,8 @@
 component eb_meter
 {
     audio_inport in;
+    value_inport i32 lufs_target;
+    value_inport bool lufs_reset;
 
     audio_outport out;
     audio_outport f32<4> display;
@@ -32,15 +34,63 @@ component eb_meter
     f32<2> h1 = 0.0;
     f32<2> h2 = 0.0;
     f32<2> h3 = 0.0;
+    // correlation
+    f32 e_lr = 0.0;
+    f32 e_ll = 0.0;
+    f32 e_rr = 0.0;
+    f32 k_c = 0.0;
+    // integrated loudness (BS.1770 gating): 100 ms sub-blocks, 400 ms blocks, a 0.1 LU histogram from -70 LUFS
+    f32[800] hist;
+    f32[4] sub;
+    f32 acc = 0.0;
+    f32 acc_n = 0.0;
+    f32 hop = 0.0;
+    i32 sub_i = 0;
+    i32 sub_count = 0;
+    f32 blocks = 0.0;
+    f32 integ = -100.0;
+    i32 p_reset = -1;
 
     reset
     {
         runtime_magic = 0;
     }
 
+    f32 lin(f32 lufs)
+    {
+        return exp((lufs + 0.691) * 0.2302585093);
+    }
+
     process
     {
         f32 sr = EC.samplerate;
+        i32 rv = 0;
+        if (lufs_reset)
+        {
+            rv = 1;
+        }
+        if (runtime_magic != 551233 || rv != p_reset)
+        {
+            // first run, or the reset switch was clicked: start the integrated measurement again
+            runtime_magic = 551233;
+            p_reset = rv;
+            i32 j = 0;
+            while (j < 800)
+            {
+                hist[j] = 0.0;
+                j = j + 1;
+            }
+            sub[0] = 0.0;
+            sub[1] = 0.0;
+            sub[2] = 0.0;
+            sub[3] = 0.0;
+            acc = 0.0;
+            acc_n = 0.0;
+            sub_i = 0;
+            sub_count = 0;
+            blocks = 0.0;
+            integ = -100.0;
+        }
         if (sr != p_sr)
         {
             p_sr = sr;
@@ -65,6 +115,8 @@ component eb_meter
             // Smoothing of the mean square: momentary about 0.4 s, short-term about 3 s.
             k_m = 1.0 - exp(-1.0 / (0.2 * sr));
             k_s = 1.0 - exp(-1.0 / (1.5 * sr));
+            hop = floor(0.1 * sr);
+            k_c = 1.0 - exp(-1.0 / (0.3 * sr));
         }
         f32<> x = in;
         out = x;
@@ -79,6 +131,69 @@ component eb_meter
         f32 sq = s2[0] * s2[0] + s2[1] * s2[1];
         ms_m = ms_m + k_m * (sq - ms_m);
         ms_s = ms_s + k_s * (sq - ms_s);
+        // correlation of left and right, about 300 ms
+        e_lr = e_lr + k_c * (x[0] * x[1] - e_lr);
+        e_ll = e_ll + k_c * (x[0] * x[0] - e_ll);
+        e_rr = e_rr + k_c * (x[1] * x[1] - e_rr);
+        f32 corr = 1.0;
+        if (e_ll * e_rr > 0.0000000001)
+        {
+            corr = fmax(-1.0, fmin(1.0, e_lr / sqrt(e_ll * e_rr)));
+        }
+        // integrated loudness
+        acc = acc + sq;
+        acc_n = acc_n + 1.0;
+        if (acc_n >= hop)
+        {
+            sub[sub_i] = acc / acc_n;
+            sub_i = sub_i + 1;
+            if (sub_i > 3)
+            {
+                sub_i = 0;
+            }
+            acc = 0.0;
+            acc_n = 0.0;
+            sub_count = sub_count + 1;
+            if (sub_count >= 4)
+            {
+                f32 bl = -0.691 + 10.0 * log10(fmax(0.0000000001, (sub[0] + sub[1] + sub[2] + sub[3]) * 0.25));
+                if (bl > -70.0)
+                {
+                    i32 bin = cast(fmin(799.0, floor((bl + 70.0) * 10.0)), i32);
+                    hist[bin] = hist[bin] + 1.0;
+                    blocks = blocks + 1.0;
+                }
+                if (blocks > 0.5)
+                {
+                    // absolute gate (-70) is the histogram itself; relative gate 10 LU under the gated mean
+                    f32 sum = 0.0;
+                    i32 b = 0;
+                    while (b < 800)
+                    {
+                        sum = sum + hist[b] * lin(-70.0 + (cast(b, f32) + 0.5) * 0.1);
+                        b = b + 1;
+                    }
+                    f32 rel = -0.691 + 10.0 * log10(sum / blocks) - 10.0;
+                    f32 sum2 = 0.0;
+                    f32 n2 = 0.0;
+                    b = 0;
+                    while (b < 800)
+                    {
+                        f32 lc = -70.0 + (cast(b, f32) + 0.5) * 0.1;
+                        if (lc >= rel)
+                        {
+                            sum2 = sum2 + hist[b] * lin(lc);
+                            n2 = n2 + hist[b];
+                        }
+                        b = b + 1;
+                    }
+                    if (n2 > 0.5)
+                    {
+                        integ = -0.691 + 10.0 * log10(sum2 / n2);
+                    }
+                }
+            }
+        }
         env_l = fmax(fabs(x[0]), env_l * 0.99997);
         env_r = fmax(fabs(x[1]), env_r * 0.99997);
         f32 pl = fmax(0.0, fmin(1.0, (20.0 * log10(fmax(0.000001, env_l)) + 60.0) / 66.0));
@@ -107,6 +222,13 @@ component eb_meter
         h1 = x;
         if (tp >= tp_hold) { tp_hold = tp; tp_n = 5.0 * sr; }
         else { tp_n = tp_n - 1.0; if (tp_n < 0.0) { tp_hold = tp_hold * 0.9999; } }
-        display2 = <fmax(-100.0, 20.0 * log10(fmax(0.00001, hold))) / 100.0, fmax(-100.0, 20.0 * log10(fmax(0.00001, tp_hold))) / 100.0, 0.0, 0.0>;
+        // lane w: target code (0 off, 1 = -14, 2 = -16, 3 = -23) plus the integrated loudness as a fraction (-70..+10 LUFS)
+        f32 ifrac = 0.0;
+        if (integ > -70.0)
+        {
+            ifrac = fmax(0.001, fmin(0.999, (integ + 70.0) / 80.0));
+        }
+        f32 tcode = cast(lufs_target, f32);
+        display2 = <fmax(-100.0, 20.0 * log10(fmax(0.00001, hold))) / 100.0, fmax(-100.0, 20.0 * log10(fmax(0.00001, tp_hold))) / 100.0, (corr + 1.0) * 0.5, tcode + ifrac>;
     }
 }

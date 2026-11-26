@@ -44,7 +44,7 @@ final class Strip {
     private record Hit(Object object, String path) {}
 
     private static String identifierOf(Object o) {
-        return identifierOf(o, text -> text.matches("SLOT[1-6]_(TYPE|CHAIN|K[1-3])|INPUT_GAIN|VIEW|MOVE_[1-5]|AB"));
+        return identifierOf(o, text -> text.matches("SLOT[1-6]_(TYPE|CHAIN|K[1-3])|INPUT_GAIN|VIEW|MOVE_[1-5]|AB|LUFS_RESET"));
     }
 
     private static String identifierOf(Object o, java.util.function.Predicate<String> accept) {
@@ -411,6 +411,11 @@ final class Strip {
         long now = System.currentTimeMillis();
         if (now - lastButton < 500) return;
         String ident = identifierOf(atom);
+        if ("LUFS_RESET".equals(ident)) {
+            lastButton = now;
+            springBack(atom);     // the meter restarts on each change; the icon just flashes
+            return;
+        }
         if ("AB".equals(ident)) {
             abSet(atom);
             return;
