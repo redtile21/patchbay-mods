@@ -351,12 +351,12 @@ half4 main(float2 fragCoord) {
     if (wide) {
         float3 lite = float3(.42, .74, .95);
         // Short-term loudness, large.
-        put(col, a, dim * 2., word(p, 100., 26., 16., 12., 21., 6., 19., 0., 0.));
+        put(col, a, dim * 2., word(p, 100., 22., 16., 12., 21., 6., 19., 0., 0.));
         float lufs = audioLow.w * 60. - 60.;
-        if (audioLow.w > .002) put(col, a, lite, number(p, float2(56., 34.), 28., lufs));
-        else put(col, a, dim, 1. - smoothstep(.8, 1.6, sdseg(p, float2(70., 59.), float2(110., 59.))));
+        if (audioLow.w > .002) put(col, a, lite, number(p, float2(56., 30.), 26., lufs));
+        else put(col, a, dim, 1. - smoothstep(.8, 1.6, sdseg(p, float2(70., 53.), float2(110., 53.))));
         // Integrated loudness (gated), coloured against the target: green within 1 LU, orange above.
-        put(col, a, dim * 2., word(p, 84., 84., 16., 9., 14., 20., 0., 0., 0.));
+        put(col, a, dim * 2., word(p, 84., 78., 16., 9., 14., 20., 0., 0., 0.));
         float tcode = floor(audioMedium.w + .0005);
         float ifrac = audioMedium.w - tcode;
         float tgt = tcode < .5 ? 0. : (tcode < 1.5 ? -14. : (tcode < 2.5 ? -16. : -23.));
@@ -364,21 +364,21 @@ half4 main(float2 fragCoord) {
             float integ = ifrac * 80. - 70.;
             float3 ic = lite;
             if (tcode > .5) ic = abs(integ - tgt) <= 1. ? float3(.45, .85, .55) : (integ > tgt ? warn : lite);
-            put(col, a, ic, number(p, float2(56., 96.), 26., integ));
-        } else put(col, a, dim, 1. - smoothstep(.8, 1.6, sdseg(p, float2(70., 119.), float2(110., 119.))));
-        // (the target chooser shows at about 148..190)
+            put(col, a, ic, number(p, float2(56., 86.), 24., integ));
+        } else put(col, a, dim, 1. - smoothstep(.8, 1.6, sdseg(p, float2(70., 108.), float2(110., 108.))));
+        // (the target chooser sits low, above the correlation bar)
         // True peak (held 5 s).
-        put(col, a, dim * 2., word(p, 80., 198., 16., 20., 18., 21., 5., 0., 0.));
-        put(col, a, dim * 2., word(p, 130., 198., 16., 16., 11., 0., 0., 0., 0.));
+        put(col, a, dim * 2., word(p, 80., 134., 16., 20., 18., 21., 5., 0., 0.));
+        put(col, a, dim * 2., word(p, 130., 134., 16., 16., 11., 0., 0., 0., 0.));
         float tpdb = audioMedium.y * 100.;
         float3 tpc = tpdb > -.05 ? float3(.95, .32, .20) : (tpdb > -1. ? float3(.98, .52, .14) : lite);
-        if (tpdb > -59.) put(col, a, tpc, number(p, float2(56., 208.), 24., tpdb));
-        else put(col, a, dim, 1. - smoothstep(.8, 1.6, sdseg(p, float2(70., 228.), float2(110., 228.))));
+        if (tpdb > -59.) put(col, a, tpc, number(p, float2(56., 142.), 24., tpdb));
+        else put(col, a, dim, 1. - smoothstep(.8, 1.6, sdseg(p, float2(70., 164.), float2(110., 164.))));
         // Match gain, while Match is on.
         if (audioHigh.x > .5) {
-            put(col, a, dim * 2., word(p, 105., 252., 16., 13., 1., 20., 3., 8., 0.));
+            put(col, a, dim * 2., word(p, 105., 190., 16., 13., 1., 20., 3., 8., 0.));
             float mdb = audioHigh.y * 48. - 24.;
-            put(col, a, lite, number(p, float2(56., 262.), 22., mdb));
+            put(col, a, lite, number(p, float2(56., 198.), 22., mdb));
         }
         // Correlation: -1 (left) .. +1 (right) from the centre; red below zero.
         if (p.x >= 56. && p.x <= 164. && p.y >= 330. && p.y <= 342.) {

@@ -104,10 +104,10 @@ def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_met
     items.append(knob_item(out_ref, RIGHT_X, METER_Y + METER_H + 1, 9, 9, 1, "Out", "Output gain in dB"))
     if reset_ref is not None:
         # over the meter drawing, beside INT: click to start the integrated loudness again
-        items.append(icon_toggle(reset_ref, RIGHT_X + 17, 10, 4, 4, "trigger_reset.svg", "Reset",
+        items.append(icon_toggle(reset_ref, RIGHT_X + 17, 9, 4, 4, "trigger_reset.svg", "Reset",
                                  "Reset the integrated loudness (INT) and start measuring again"))
     if target_ref is not None:
-        items.append(chooser("Loudness target in LUFS: INT turns green within 1 LU of it, orange above", target_ref, RIGHT_X + 7, 17, RIGHT_W - 7))
+        items.append(chooser("Loudness target in LUFS: INT turns green within 1 LU of it, orange above", target_ref, RIGHT_X + 7, 31, RIGHT_W - 7))
     if match_ref is not None:
         items.append(obj(1683, "label_panel_item", {
             "layout_settings#6226": v("Object", grid_layout(RIGHT_X + 10, METER_Y + METER_H + 1, RIGHT_W - 10, 4)),
@@ -364,7 +364,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v45".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v46".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,
