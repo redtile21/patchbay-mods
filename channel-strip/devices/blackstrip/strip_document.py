@@ -21,12 +21,12 @@ KINDS = ("Bypass", "Gain", "EQ", "Compressor", "Saturation", "Limiter", "Gate", 
 
 SLOTS = 6
 SLOT_W, SLOT_H, GAP = 19, 8, 1
-X0 = 9                      # slots start after the input meter
+CHAR_X, CHAR_W = 0, 14      # the strip column on the left: Character, A/B, View
+IN_X, IN_W = CHAR_X + CHAR_W + 1, 8   # the input meter
+X0 = IN_X + IN_W + 1        # slots start after the input meter
 RIGHT_X = X0 + SLOTS * SLOT_W + (SLOTS - 1) * GAP + 1
 RIGHT_W = 21
-CHAR_X = RIGHT_X + RIGHT_W + 1   # the Character column
-CHAR_W = 14
-PANEL_WIDTH = CHAR_X + CHAR_W + 1
+PANEL_WIDTH = RIGHT_X + RIGHT_W + 1
 KNOB_Y = 16
 METER_Y = 0
 METER_H = 42
@@ -76,9 +76,13 @@ def icon_toggle(ref, x, y, w, h, icon, title, tip):
 def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_meter_ref, knob_refs, backdrop_ref, ref=None,
                match_ref=None, character_ref=None, amount_ref=None, char_input_ref=None, move_refs=(), ab_ref=None):
     items = [drawing_item(backdrop_ref, 0, 0, PANEL_WIDTH, PANEL_HEIGHT)]
-    items.append(drawing_item(in_meter_ref, 0, METER_Y, X0 - 1, METER_H))
+    items.append(drawing_item(in_meter_ref, IN_X, METER_Y, IN_W, METER_H))
+    items.append(obj(1683, "label_panel_item", {
+        "layout_settings#6226": v("Object", grid_layout(CHAR_X, 42, CHAR_W, 4)),
+        "text#6219": v("String", "VIEW"), "color#6520": v("Int16", 1),
+        "horizontal_alignment#6400": v("Byte", 1), "vertical_alignment#6401": v("Byte", 1)}))
     items.append(obj(1702, "toggle_button_panel_item", {
-        "layout_settings#6226": v("Object", grid_layout(0, METER_Y + METER_H + 2, X0 - 1, 4)),
+        "layout_settings#6226": v("Object", grid_layout(CHAR_X, 47, CHAR_W, 5)),
         "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
         "tooltip_text#6867": v("String", "Open or close the expanded view"), "data_model#6220": view_ref,
         "title#6241": v("String", "View"), "icon_name#6239": v("String", "zoom.svg"), "style#6240": v("Byte", 2),
@@ -123,10 +127,10 @@ def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_met
             "style#6240": v("Byte", 2), "label_style#6267": v("Byte", 1), "color#7527": v("Int16", 1)}))
     if ab_ref is not None:
         items.append(obj(1683, "label_panel_item", {
-            "layout_settings#6226": v("Object", grid_layout(CHAR_X, 36, CHAR_W, 4)),
+            "layout_settings#6226": v("Object", grid_layout(CHAR_X, 31, CHAR_W, 4)),
             "text#6219": v("String", "A / B"), "color#6520": v("Int16", 1),
             "horizontal_alignment#6400": v("Byte", 1), "vertical_alignment#6401": v("Byte", 1)}))
-        items.append(icon_toggle(ab_ref, CHAR_X, 41, CHAR_W, 6, "crossfade_ab.svg", "A/B",
+        items.append(icon_toggle(ab_ref, CHAR_X, 36, CHAR_W, 5, "crossfade_ab.svg", "A/B",
                                  "A/B snapshots of the whole strip: grey is A, orange is B. Flipping saves the side you leave "
                                  "(units, settings, Out, Match, Character) and loads the other; B starts as a copy of A"))
     exprs = []
@@ -348,7 +352,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v40".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v41".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,
