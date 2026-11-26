@@ -103,8 +103,12 @@ def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_met
     items.append(drawing_item(out_meter_ref, RIGHT_X, METER_Y, RIGHT_W, METER_H))
     items.append(knob_item(out_ref, RIGHT_X, METER_Y + METER_H + 1, 9, 9, 1, "Out", "Output gain in dB"))
     if match_ref is not None:
-        items.append(obj(1702, "toggle_button_panel_item", {
+        items.append(obj(1683, "label_panel_item", {
             "layout_settings#6226": v("Object", grid_layout(RIGHT_X + 10, METER_Y + METER_H + 1, RIGHT_W - 10, 4)),
+            "text#6219": v("String", "MATCH"), "color#6520": v("Int16", 1),
+            "horizontal_alignment#6400": v("Byte", 1), "vertical_alignment#6401": v("Byte", 1)}))
+        items.append(obj(1702, "toggle_button_panel_item", {
+            "layout_settings#6226": v("Object", grid_layout(RIGHT_X + 10, METER_Y + METER_H + 5, RIGHT_W - 10, 5)),
             "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
             "tooltip_text#6867": v("String", "Auto gain match: keep the output as loud as the input, for honest A/B (Out trims on top)"),
             "data_model#6220": match_ref, "title#6241": v("String", "Match"), "icon_name#6239": v("String", "equals.svg"),
@@ -352,7 +356,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v41".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v42".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,
