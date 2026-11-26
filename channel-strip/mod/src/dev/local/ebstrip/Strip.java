@@ -152,7 +152,7 @@ final class Strip {
     }
 
     private static String identifierOf(Object o) {
-        return identifierOf(o, text -> text.matches("SLOT[1-6]_(TYPE|CHAIN|K[1-3])|INPUT_GAIN|VIEW|MOVE_[1-5]"));
+        return identifierOf(o, text -> text.matches("SLOT[1-6]_(TYPE|CHAIN|K[1-3])|INPUT_GAIN|VIEW|MOVE_[1-5]|AB"));
     }
 
     private static String identifierOf(Object o, java.util.function.Predicate<String> accept) {
@@ -290,6 +290,9 @@ final class Strip {
         final lpr[] types = new lpr[7];
         Object view; // the "Expanded View" button's atom, if the strip has one
         final Object[] moves = new Object[6]; // MOVE_n buttons: swap slot n with slot n + 1
+        Object ab;                             // the A/B switch
+        int side;                              // 0 = A, 1 = B (the side the strip currently shows)
+        final Snapshot[] snaps = new Snapshot[2];
         final k3K[] chains = new k3K[7];
         final bitwig.obf.xdh[][] knobs = new bitwig.obf.xdh[7][3];   // the strip's own knobs
         final bitwig.obf.xdh[][] units = new bitwig.obf.xdh[7][3];   // the loaded unit's parameters they drive
@@ -324,6 +327,8 @@ final class Strip {
             Object viewAtom = findByIdentifier(strip, "VIEW");
             if (viewAtom != null) w.view = viewAtom;
             for (int n = 1; n <= 5; n++) w.moves[n] = findByIdentifier(strip, "MOVE_" + n);
+        w.ab = findByIdentifier(strip, "AB");
+        if (w.ab instanceof bitwig.obf.cbF b) w.side = b.Anf() ? 1 : 0;
             for (int n = 1; n <= 6; n++) for (int k = 1; k <= 3; k++) {
                 Object a = findByIdentifier(strip, "SLOT" + n + "_K" + k);
                 if (a instanceof bitwig.obf.xdh x) w.knobs[n][k - 1] = x;
@@ -576,6 +581,10 @@ final class Strip {
         long now = System.currentTimeMillis();
         if (now - lastButton < 500) return;
         String ident = identifierOf(atom);
+        if ("AB".equals(ident)) {
+            abSet(atom);
+            return;
+        }
         if (ident != null && ident.matches("MOVE_[1-5]")) {
             MOD.log("button " + ident + " pressed (" + via + ")");
             lastButton = now;
@@ -719,13 +728,107 @@ final class Strip {
         }
     }
 
+    // ---- A/B snapshots of the whole strip ----
+
+    private static final String[] STRIP_PARAMS = {"OUTPUT_GAIN", "MATCH", "CHARACTER", "CHARACTER_AMOUNT", "CHARACTER_INPUT"};
+
+    private record Snapshot(String[] types, List<Map<String, Object>> units, Map<String, Object> strip) {}
+
+    private static Object atomValue(Object a) {
+        if (a instanceof bitwig.obf.xdh x) return x.GwM();
+        if (a instanceof lpr c) return c.sSO();
+        if (a instanceof bitwig.obf.cbF b) return b.Anf();
+        return null;
+    }
+
+    private static void setAtom(Object a, Object value) {
+        if (a instanceof bitwig.obf.xdh x && value instanceof Double d) x.d_(d);
+        else if (a instanceof lpr c && value instanceof String text) setChoice(c, text);
+        else if (a instanceof bitwig.obf.cbF b && value instanceof Boolean on) b.Gef(on.booleanValue());
+    }
+
+    private static Snapshot snapshot(Watch w) {
+        String[] types = new String[7];
+        List<Map<String, Object>> units = new ArrayList<>();
+        units.add(null);
+        for (int n = 1; n <= 6; n++) { types[n] = w.types[n].sSO(); units.add(capture(w, n)); }
+        Map<String, Object> strip = new LinkedHashMap<>();
+        for (String id : STRIP_PARAMS) {
+            Object a = findByIdentifier(w.strip, id);
+            Object val = a == null ? null : atomValue(a);
+            if (val != null) strip.put(id, val);
+        }
+        return new Snapshot(types, units, strip);
+    }
+
+    private static void restore(Watch w, Snapshot snap) {
+        Map<String, Map<String, Object>> mem = MEMORY.computeIfAbsent(w.strip, k -> new java.util.concurrent.ConcurrentHashMap<>());
+        BUSY.set(true);
+        CmH changes = w.c.root.cc_();
+        changes.beI("Strip A/B", false);
+        try {
+            for (int n = 1; n <= 6; n++) {
+                String want = snap.types[n];
+                if (want.equals(w.types[n].sSO())) {
+                    List<?> devices = new ArrayList<>(w.chains[n].qJX());
+                    if (!devices.isEmpty()) apply((utt) devices.get(0), snap.units.get(n));
+                } else {
+                    // a different unit: the swap that follows the dropdown restores these settings
+                    if (!"Bypass".equals(want)) mem.put(n + "|eb " + want.toLowerCase(), snap.units.get(n));
+                    setChoice(w.types[n], want);
+                }
+            }
+            for (Map.Entry<String, Object> e : snap.strip.entrySet()) {
+                Object a = findByIdentifier(w.strip, e.getKey());
+                if (a != null) setAtom(a, e.getValue());
+            }
+        } finally {
+            changes.beI(false);
+            BUSY.set(false);
+        }
+        onChangesEnded();
+        for (int n = 1; n <= 6; n++) relink(w, n, true);
+    }
+
+    /** The A/B switch flipped: keep the side being left, show the other (B starts as a copy of A). */
+    private static void abSet(bitwig.obf.cbF atom) {
+        Watch w = null;
+        synchronized (WATCHES) { for (Watch o : WATCHES) if (o.ab == atom) w = o; }
+        if (w == null && !AUTO_FAILED.contains(atom)) {
+            autoArm(atom);
+            synchronized (WATCHES) { for (Watch o : WATCHES) if (o.ab == atom) w = o; }
+        }
+        if (w == null) { MOD.log("A/B: no watched strip owns this switch"); return; }
+        final Watch watch = w;
+        drf.EO().runAtEndOfCurrentEvent(() -> {
+            try {
+                int to = atom.Anf() ? 1 : 0;
+                if (to == watch.side) return;
+                watch.snaps[watch.side] = snapshot(watch);
+                watch.side = to;
+                Snapshot target = watch.snaps[to];
+                if (target == null) {
+                    watch.snaps[to] = watch.snaps[1 - to];
+                    MOD.log("A/B: " + (to == 1 ? "B" : "A") + " starts as a copy");
+                    Notifications.toast("EB Strip: " + (to == 1 ? "B" : "A") + " starts as a copy of " + (to == 1 ? "A" : "B"));
+                    return;
+                }
+                MOD.log("A/B: showing " + (to == 1 ? "B" : "A"));
+                restore(watch, target);
+            } catch (Throwable t) {
+                MOD.log("A/B failed", t);
+                Notifications.toast("EB Strip: A/B failed (see the log)");
+            }
+        });
+    }
+
     private static final Set<Object> AUTO_FAILED = Collections.newSetFromMap(new java.util.WeakHashMap<>());
 
     /** Finds the strip that owns this dropdown by following Bitwig's own references upwards, and starts watching it. */
     private static boolean autoArm(Object atom) {
         try {
             String id = identifierOf(atom);
-            if (id == null || !id.matches("SLOT[1-6]_TYPE|VIEW|MOVE_[1-5]|SLOT[1-6]_K[1-3]")) return false;
+            if (id == null || !id.matches("SLOT[1-6]_TYPE|VIEW|MOVE_[1-5]|AB|SLOT[1-6]_K[1-3]")) return false;
             utt strip = (utt) findUp(atom, o -> o instanceof utt u && STRIP_UUIDS.contains(String.valueOf(u.beI())), 8, 6000);
             if (strip == null || armStrip(strip) == null) { AUTO_FAILED.add(atom); return false; }
             return true;
@@ -755,6 +858,8 @@ final class Strip {
         Object viewAtom = findByIdentifier(strip, "VIEW");
         if (viewAtom != null) w.view = viewAtom;
         for (int n = 1; n <= 5; n++) w.moves[n] = findByIdentifier(strip, "MOVE_" + n);
+        w.ab = findByIdentifier(strip, "AB");
+        if (w.ab instanceof bitwig.obf.cbF b) w.side = b.Anf() ? 1 : 0;
         for (int n = 1; n <= 6; n++) for (int k = 1; k <= 3; k++) {
             Object a = findByIdentifier(strip, "SLOT" + n + "_K" + k);
             if (a instanceof bitwig.obf.xdh x) w.knobs[n][k - 1] = x;

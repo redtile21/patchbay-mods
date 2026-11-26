@@ -61,7 +61,8 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
 - [x] Auto gain match: a Match toggle by Out; the output stage follows the K-weighted short-term loudness
       difference between the strip's input and output (up to 24 dB, held in silence), with Out as a trim on top.
 - [x] Show the applied match gain on the output meter (MATCH and the gain under True Peak, while Match is on).
-- [ ] A/B snapshots of the whole strip.
+- [x] A/B snapshots of the whole strip: an A/B switch in the Character column; flipping keeps the side you leave
+      (units, settings, Out, Match, Character) and loads the other. Session only, not saved with the project.
 - [ ] Remote control pages for hardware controllers (macro knobs plus Out); check blueprint support.
 
 ## 5. New units

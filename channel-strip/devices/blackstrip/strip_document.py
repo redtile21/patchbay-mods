@@ -74,7 +74,7 @@ def icon_toggle(ref, x, y, w, h, icon, title, tip):
 
 
 def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_meter_ref, knob_refs, backdrop_ref, ref=None,
-               match_ref=None, character_ref=None, amount_ref=None, char_input_ref=None, move_refs=()):
+               match_ref=None, character_ref=None, amount_ref=None, char_input_ref=None, move_refs=(), ab_ref=None):
     items = [drawing_item(backdrop_ref, 0, 0, PANEL_WIDTH, PANEL_HEIGHT)]
     items.append(drawing_item(in_meter_ref, 0, METER_Y, X0 - 1, METER_H))
     items.append(obj(1702, "toggle_button_panel_item", {
@@ -121,6 +121,14 @@ def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_met
             "tooltip_text#6867": v("String", "Also add the character on the way in, before the slots (like a console's input and output stages)"),
             "data_model#6220": char_input_ref, "title#6241": v("String", "Input"), "icon_name#6239": v("String", "opamp.svg"),
             "style#6240": v("Byte", 2), "label_style#6267": v("Byte", 1), "color#7527": v("Int16", 1)}))
+    if ab_ref is not None:
+        items.append(obj(1683, "label_panel_item", {
+            "layout_settings#6226": v("Object", grid_layout(CHAR_X, 36, CHAR_W, 4)),
+            "text#6219": v("String", "A / B"), "color#6520": v("Int16", 1),
+            "horizontal_alignment#6400": v("Byte", 1), "vertical_alignment#6401": v("Byte", 1)}))
+        items.append(icon_toggle(ab_ref, CHAR_X, 41, CHAR_W, 6, "crossfade_ab.svg", "A/B",
+                                 "A/B snapshots of the whole strip: grey is A, orange is B. Flipping saves the side you leave "
+                                 "(units, settings, Out, Match, Character) and loads the other; B starts as a copy of A"))
     exprs = []
     caps = [(sx0 + 5, KNOB_Y + 12 * k, f"SLOT{i + 1}_K{k + 1}", 0.0, 100.0)
             for i in range(SLOTS) for k in range(3) for sx0 in (X0 + i * (SLOT_W + GAP),)]
@@ -265,6 +273,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     char_amount = parameter("Character Amount", "CHARACTER_AMOUNT", 0.0, 100.0, 50.0, 0)
     char_input = boolean_parameter("Character Input", "CHARACTER_INPUT", False)
     view = boolean_parameter("Expanded View", "VIEW", False)
+    ab = boolean_parameter("A/B", "AB", False)
     moves = [boolean_parameter(f"Swap Slots {n}-{n + 1}", f"MOVE_{n}", False) for n in range(1, SLOTS)]
     knobs = [[parameter(f"Slot {i} Knob {k}", f"SLOT{i}_K{k}", 0.0, 100.0, 50.0, 0) for k in (1, 2, 3)] for i in range(1, SLOTS + 1)]
     # the default chain a new strip loads (the mod inserts the units)
@@ -311,9 +320,9 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     output_proxy["fields"]["settings#6194"] = settings([wire(meter_out, 0)])
     panel = main_panel([ref(d) for d in drawings], ref(out_gain), [ref(t) for t in types], ref(view),
                        ref(in_drawing), ref(out_drawing), [[ref(k) for k in row] for row in knobs], ref(backdrop), ref,
-                       ref(match), ref(character), ref(char_amount), ref(char_input), [ref(m) for m in moves])
+                       ref(match), ref(character), ref(char_amount), ref(char_input), [ref(m) for m in moves], ref(ab))
     identity = project["identity"]
-    children = [backdrop, audio_source, compensation, out_gain, match, character, char_amount, char_input, *types, *[k for row in knobs for k in row], view, *moves, meter_in, in_drawing, char_in]
+    children = [backdrop, audio_source, compensation, out_gain, match, character, char_amount, char_input, *types, *[k for row in knobs for k in row], view, *moves, ab, meter_in, in_drawing, char_in]
     for ph, sl, tp, dr in zip(placeholders, slots, taps, drawings):
         children += [ph, sl, tp, dr]
     children += [char_out, stage_out, meter_out, out_drawing]
@@ -339,7 +348,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v39".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v40".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,
