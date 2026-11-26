@@ -577,7 +577,7 @@ final class Strip {
         if (now - lastButton < 500) return;
         String ident = identifierOf(atom);
         if (ident != null && ident.matches("MOVE_[1-5]")) {
-            if (!atom.Anf()) return;
+            MOD.log("button " + ident + " pressed (" + via + ")");
             lastButton = now;
             moveSet(atom, Integer.parseInt(ident.substring(5)));
             return;
@@ -631,7 +631,7 @@ final class Strip {
             synchronized (WATCHES) { for (Watch o : WATCHES) if (o.moves[a] == atom) w = o; }
         }
         springBack(atom);
-        if (w == null) return;
+        if (w == null) { MOD.log("move: no watched strip owns this button"); return; }
         final Watch watch = w;
         drf.EO().runAtEndOfCurrentEvent(() -> swapSlots(watch, a));
     }
