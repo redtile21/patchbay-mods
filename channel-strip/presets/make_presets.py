@@ -7,8 +7,9 @@ Bitwig stores every nested unit as a full copy of its state (values plus embedde
 built from scratch: they are copied from saved strip presets (decoded with bwmodule-parser to-json) that hold one of
 each unit type at default settings, and only their values are changed.
 
-    python3 make_presets.py OUT_DIR templates/units-b.json templates/units-a.json
-(units-b is first: its remote page provides the page and slot templates)
+    python3 make_presets.py OUT_DIR DEVICES_DIR templates/units-b.json templates/units-a.json
+(units-b is first: its remote page provides the page and slot templates). A preset also stores each display's shader
+code; DEVICES_DIR (the installed .bwdevice files) supplies the current code, so presets show the current panels.
 writes OUT_DIR/<name>.json for each preset; encode with `bwmodule-parser from-json`.
 """
 from __future__ import annotations
@@ -262,10 +263,43 @@ def build(name, recipe, base, units):
             lst = fields(cp)["#2273"]["value"]["fields"]["#841"]["value"]["fields"]["#135"]
             lst["value"] = [unit_objs[n]] if n in unit_objs else []
     remote_pages(meta, slots)
+    refresh_shaders(meta, SHADERS.get("EB BlackStrip", {}))
+    for obj in unit_objs.values():
+        refresh_shaders(fields(obj), SHADERS.get(fields(obj)["#154"]["value"], {}))
     return doc
 
 
-def main(out_dir, *template_paths):
+CODEC = Path.home() / "Developer/bitwig-blueprint-work/bitwig-devices-blueprint/tools/document_codec/target/release/bwmodule-parser"
+
+
+def current_shaders(devices_dir):
+    """device name -> drawing identifier -> shader source, from the installed .bwdevice files."""
+    import subprocess
+    out = {}
+    for f in Path(devices_dir).glob("EB *.bwdevice"):
+        body = json.loads(subprocess.run([str(CODEC), "to-json", str(f)], capture_output=True, check=True, text=True).stdout)["body"]
+        name = body["fields"]["device_name#386"]["value"]
+        codes = {}
+        for c in body["fields"]["child_components#173"]["value"]:
+            o = c["Object"] if "Object" in c else c
+            if o["class_id"] == 5512 and "#16316" in o["fields"]:
+                codes[o["fields"]["preset_identifier#701"]["value"]] = o["fields"]["#16316"]["value"]
+        out[name] = codes
+    return out
+
+
+def refresh_shaders(meta, codes):
+    for cp in children(meta):
+        o = cp["Object"] if "Object" in cp else cp
+        if o["class_id"] == 5516 and ident(cp) in codes:
+            o["fields"]["#16331"]["value"] = codes[ident(cp)]
+
+
+SHADERS = {}
+
+
+def main(out_dir, devices_dir, *template_paths):
+    SHADERS.update(current_shaders(devices_dir))
     base, units = load_templates(template_paths)
     missing = set(UNIT_DIRS) - set(units)
     if missing:
