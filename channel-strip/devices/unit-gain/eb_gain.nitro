@@ -4,8 +4,9 @@ component eb_gain
     audio_inport f32 gain_db = 0.0;
     audio_inport f32 pan = 0.0;
     audio_inport f32 stereo_width = 100.0;
-    value_inport i32 polarity;
-    value_inport i32 sum_mono;
+    value_inport bool invert_l;
+    value_inport bool invert_r;
+    value_inport bool sum_mono;
 
     audio_outport out;
     audio_outport f32<4> display;
@@ -47,9 +48,9 @@ component eb_gain
         f32 side = (x[0] - x[1]) * 0.5 * wd;
         f32 l = (mid + side) * lin * gl;
         f32 r = (mid - side) * lin * gr;
-        if (polarity == 1 || polarity == 3) { l = -l; }
-        if (polarity == 2 || polarity == 3) { r = -r; }
-        if (sum_mono == 1) {
+        if (invert_l) { l = -l; }
+        if (invert_r) { r = -r; }
+        if (sum_mono) {
             f32 m = (l + r) * 0.5;
             l = m;
             r = m;

@@ -789,7 +789,7 @@ final class Strip {
     // ---- remember each slot's settings per unit type, so swapping away and back keeps them ----
 
     private static final Map<String, Set<String>> UNIT_PARAMS = Map.of(
-        "eb gain", Set.of("GAIN", "PAN", "WIDTH", "POLARITY", "MONO"),
+        "eb gain", Set.of("GAIN", "PAN", "WIDTH", "INVERT_L", "INVERT_R", "MONO"),
         "eb eq", Set.of("HPF", "LOW_GAIN", "LOW_FREQ", "LOW_Q", "LM_GAIN", "LM_FREQ", "LM_Q", "HM_GAIN", "HM_FREQ", "HM_Q",
                         "HIGH_GAIN", "HIGH_FREQ", "HIGH_Q", "LPF", "LOW_SHAPE", "HIGH_SHAPE", "HP_SLOPE", "LP_SLOPE", "MODE", "AIR"),
         "eb compressor", Set.of("THRESHOLD", "RATIO", "ATTACK", "RELEASE", "MAKEUP", "KNEE", "MIX", "SC_HPF", "STEREO_LINK",

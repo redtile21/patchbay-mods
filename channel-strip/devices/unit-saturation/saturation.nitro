@@ -7,8 +7,8 @@ component eb_saturation
     audio_inport f32 mix = 100.0;
     audio_inport f32 output = 0.0;
     value_inport i32 sat_type;
-    value_inport i32 auto_gain;
-    value_inport i32 oversampling;
+    value_inport bool auto_gain;
+    value_inport bool oversampling;
 
     audio_outport out;
     audio_outport f32<4> display;
@@ -155,7 +155,7 @@ component eb_saturation
         f32 tone_a = 1.0 - exp(-6.283185307 * 1000.0 / sr);
         f32 m = bound(mix, 0.0, 100.0) * 0.01;
         f32 ag = 0.0;
-        if (auto_gain == 1 && sat_type != 6)
+        if (auto_gain && sat_type != 6)
         {
             ag = -dr * 0.6;
         }
@@ -165,7 +165,6 @@ component eb_saturation
         // Exciter: Drive pushes the high band into tanh; Bias adds even harmonics.
         f32 ex_tb = tanh_(bias_v);
         f32 out_lin = dbgain(bound(output, -24.0, 6.0) + ag);
-        i32 os = oversampling;
 
         // ---- channel l ----
         f32 d_l = x[0] * drive_lin + bias_v;
@@ -176,7 +175,7 @@ component eb_saturation
             d_l = d_l + tl_l;
         }
         f32 s_l = shape(d_l, kind) - bias_off;
-        if (os == 1 && sat_type != 6)
+        if (oversampling && sat_type != 6)
         {
             f32 mid_l = (d_l + prev_l) * 0.5;
             s_l = (s_l + shape(mid_l, kind) - bias_off) * 0.5;
@@ -215,7 +214,7 @@ component eb_saturation
             d_r = d_r + tl_r;
         }
         f32 s_r = shape(d_r, kind) - bias_off;
-        if (os == 1 && sat_type != 6)
+        if (oversampling && sat_type != 6)
         {
             f32 mid_r = (d_r + prev_r) * 0.5;
             s_r = (s_r + shape(mid_r, kind) - bias_off) * 0.5;

@@ -158,12 +158,14 @@ def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, disp
     for tg, ref in zip(spec.get("toggles", []), toggle_refs):
         col, ty, tw = tg[5]
         items.append(obj(1702, "toggle_button_panel_item", {
-            "layout_settings#6226": v("Object", grid_layout(g["knob_x"] + col * spec.get("pitch_x", PITCH_X), TOP + ty, tw, 5)),
+            "layout_settings#6226": v("Object", grid_layout(int(round(g["knob_x"] + col * spec.get("pitch_x", PITCH_X))), TOP + ty, tw, 5)),
             "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
             "tooltip_text#6867": v("String", tg[3]), "data_model#6220": ref, "title#6241": v("String", tg[0]),
             "icon_name#6239": v("String", tg[6] if len(tg) > 6 else ""),
             # With an icon: borderless (jmX 2) and icon only (nqM 1), lit in orange when on; otherwise a text button.
-            "style#6240": v("Byte", 2 if len(tg) > 6 else 0), "label_style#6267": v("Byte", 1 if len(tg) > 6 else 0),
+            # tg[7], when given, is the label style (0 text, 1 icon, 2 icon and title)
+            "style#6240": v("Byte", 2 if len(tg) > 6 else 0),
+            "label_style#6267": v("Byte", tg[7] if len(tg) > 7 else (1 if len(tg) > 6 else 0)),
             "color#7527": v("Int16", TITLE_COLOR if len(tg) > 6 else 6)}))
     if overlay is not None:
         extra_items, extra_exprs = overlay(knob_rects)
