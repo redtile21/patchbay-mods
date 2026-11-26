@@ -51,7 +51,7 @@ def geometry(spec):
         g["out_x"] = x
         x += METER_W + 1
     g["knob_x"] = x + 2
-    ncols = (max([c for c, r in spec["knob_pos"]] + [c for c, y in spec.get("chooser_col", [])]) + 1) if "knob_pos" in spec else spec["cols"]
+    ncols = (max([c for c, r in spec["knob_pos"]] + [c for c, y in spec.get("chooser_col", [])] + [int(t[5][0]) for t in spec.get("toggles", [])]) + 1) if "knob_pos" in spec else spec["cols"]
     g["width"] = g["knob_x"] + ncols * spec.get("pitch_x", PITCH_X) + 2 + spec.get("extra_w", 0)
     return g
 
