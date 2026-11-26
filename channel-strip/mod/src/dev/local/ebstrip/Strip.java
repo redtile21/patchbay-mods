@@ -152,7 +152,7 @@ final class Strip {
     }
 
     private static String identifierOf(Object o) {
-        return identifierOf(o, text -> text.matches("SLOT[1-6]_(TYPE|CHAIN|K[1-3])|INPUT_GAIN|VIEW"));
+        return identifierOf(o, text -> text.matches("SLOT[1-6]_(TYPE|CHAIN|K[1-3])|INPUT_GAIN|VIEW|MOVE_[1-5]"));
     }
 
     private static String identifierOf(Object o, java.util.function.Predicate<String> accept) {
