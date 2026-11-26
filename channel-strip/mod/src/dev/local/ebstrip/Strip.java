@@ -1076,11 +1076,97 @@ final class Strip {
         }
     }
 
+    // ---- saved defaults: one file per unit type, applied when a unit arrives in a slot with nothing remembered ----
+
+    private static java.nio.file.Path defaultsDir() {
+        return java.nio.file.Paths.get(System.getProperty("user.home"), "Library", "Application Support", "EB Strip", "defaults");
+    }
+
+    private static java.nio.file.Path defaultFile(String unitName) {
+        return defaultsDir().resolve(unitName.toLowerCase().replaceAll("[^a-z0-9]+", "-") + ".txt");
+    }
+
+    private static Map<String, Object> loadDefault(String unitName) {
+        java.nio.file.Path f = defaultFile(unitName);
+        if (!java.nio.file.Files.isRegularFile(f)) return null;
+        Map<String, Object> values = new LinkedHashMap<>();
+        try {
+            for (String line : java.nio.file.Files.readAllLines(f)) {
+                // IDENT=D:1.5 | IDENT=S:label | IDENT=B:true
+                int eq = line.indexOf('='), colon = line.indexOf(':', eq + 1);
+                if (eq < 1 || colon < 0) continue;
+                String id = line.substring(0, eq), kind = line.substring(eq + 1, colon), val = line.substring(colon + 1);
+                switch (kind) {
+                    case "D" -> values.put(id, Double.parseDouble(val));
+                    case "S" -> values.put(id, val);
+                    case "B" -> values.put(id, Boolean.parseBoolean(val));
+                    default -> { }
+                }
+            }
+        } catch (Throwable t) {
+            MOD.log("could not read " + f, t);
+            return null;
+        }
+        return values;
+    }
+
+    private static Watch watchFor(Object widget, Object selection) {
+        Ctx c = context(widget, selection);
+        if (c == null) return null;
+        utt strip = findStrip(c);
+        if (strip == null) { Notifications.toast("EB Strip: no strip on the selected track"); return null; }
+        synchronized (WATCHES) { for (Watch o : WATCHES) if (o.strip == strip) return o; }
+        return armStrip(strip);
+    }
+
+    /** Saves the settings of the unit in slot n as that unit type's default. */
+    static void saveDefault(int n, Object widget, Object selection) {
+        try {
+            Watch w = watchFor(widget, selection);
+            if (w == null) return;
+            String type = w.types[n].sSO();
+            if ("Bypass".equals(type)) { Notifications.toast("EB Strip: slot " + n + " is empty"); return; }
+            Map<String, Object> values = capture(w, n);
+            if (values.isEmpty()) { Notifications.toast("EB Strip: nothing to save in slot " + n); return; }
+            StringBuilder out = new StringBuilder();
+            for (Map.Entry<String, Object> e : values.entrySet()) {
+                Object v = e.getValue();
+                String kind = v instanceof Double ? "D" : v instanceof Boolean ? "B" : "S";
+                out.append(e.getKey()).append('=').append(kind).append(':').append(v).append('\n');
+            }
+            java.nio.file.Files.createDirectories(defaultsDir());
+            java.nio.file.Files.writeString(defaultFile("EB " + type), out.toString());
+            MOD.log("saved the default of EB " + type + " (" + values.size() + " settings)");
+            Notifications.toast("EB Strip: saved slot " + n + " as the default " + type);
+        } catch (Throwable t) {
+            MOD.log("save default failed", t);
+            Notifications.toast("EB Strip: could not save the default (see the log)");
+        }
+    }
+
+    /** Forgets the saved default of the unit type in slot n (new units start from the factory settings again). */
+    static void clearDefault(int n, Object widget, Object selection) {
+        try {
+            Watch w = watchFor(widget, selection);
+            if (w == null) return;
+            String type = w.types[n].sSO();
+            if ("Bypass".equals(type)) { Notifications.toast("EB Strip: slot " + n + " is empty"); return; }
+            boolean gone = java.nio.file.Files.deleteIfExists(defaultFile("EB " + type));
+            Notifications.toast(gone ? "EB Strip: " + type + " is back to its factory default" : "EB Strip: " + type + " had no saved default");
+        } catch (Throwable t) {
+            MOD.log("clear default failed", t);
+        }
+    }
+
     private static void recall(Watch w, int n, String unitName, utt device) {
         try {
             Map<String, Map<String, Object>> byStrip = MEMORY.get(w.strip);
             Map<String, Object> values = byStrip == null ? null : byStrip.get(n + "|" + unitName.toLowerCase());
-            if (values == null) return;
+            if (values == null) {
+                values = loadDefault(unitName);    // nothing remembered for this slot: the saved default, if any
+                if (values == null) return;
+                MOD.log("slot " + n + ": applying the saved default of " + unitName);
+            }
             int set = 0;
             for (Map.Entry<String, Object> e : params(device, values.keySet()).entrySet()) {
                 Object saved = values.get(e.getKey());

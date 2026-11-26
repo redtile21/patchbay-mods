@@ -25,6 +25,17 @@ public final class StripActions implements ActionProvider {
                .category("eb_strip")
                .in(Menu.selection("track"))
                .onRun(context -> Strip.openView(context.widget(), context.selection()));
+        for (int slot = 1; slot <= 6; slot++) {
+            final int n = slot;
+            actions.action("eb_strip_save_default_" + n, "EB Strip: Save Slot " + n + " Unit as Default")
+                   .category("eb_strip")
+                   .in(Menu.selection("track"))
+                   .onRun(context -> Strip.saveDefault(n, context.widget(), context.selection()));
+            actions.action("eb_strip_clear_default_" + n, "EB Strip: Clear Saved Default of Slot " + n + " Unit")
+                   .category("eb_strip")
+                   .in(Menu.selection("track"))
+                   .onRun(context -> Strip.clearDefault(n, context.widget(), context.selection()));
+        }
         for (int slot = 1; slot <= 3; slot++) {
             final int n = slot;
             actions.action("eb_strip_clear_" + n, "EB Strip: Clear Slot " + n)
