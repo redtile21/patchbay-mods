@@ -364,7 +364,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v46".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v47".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,
