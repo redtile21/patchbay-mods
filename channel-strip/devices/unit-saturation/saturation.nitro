@@ -25,6 +25,16 @@ component eb_saturation
     f32 out_pk = 0.0;
     f32 t_in = 0.0;
     f32 t_out = 0.0;
+    f32 tl_l = 0.0;
+    f32 tl_r = 0.0;
+    f32 tc_l = 0.0;
+    f32 tc_r = 0.0;
+    f32 xh_l = 0.0;
+    f32 xh_r = 0.0;
+    f32 dc_l = 0.0;
+    f32 dc_r = 0.0;
+    f32 xe_l = 0.0;
+    f32 xe_r = 0.0;
 
     f32 dbgain(f32 v)
     {
@@ -68,7 +78,37 @@ component eb_saturation
                 }
                 else
                 {
-                    r = bound(v, -1.0, 1.0);
+                    if (kind < 3.5)
+                    {
+                        r = bound(v, -1.0, 1.0);
+                    }
+                    else
+                    {
+                        if (kind < 4.5)
+                        {
+                            // Transformer: a soft core, a little asymmetric.
+                            if (v >= 0.0)
+                            {
+                                r = tanh_(v);
+                            }
+                            else
+                            {
+                                r = tanh_(v * 0.85) / 0.85;
+                            }
+                        }
+                        else
+                        {
+                            if (kind < 5.5)
+                            {
+                                // Console: a gentler knee than tanh.
+                                r = v / sqrt(1.0 + v * v);
+                            }
+                            else
+                            {
+                                r = tanh_(v);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -88,6 +128,16 @@ component eb_saturation
         out_pk = 0.0;
         t_in = 0.0;
         t_out = 0.0;
+        tl_l = 0.0;
+        tl_r = 0.0;
+        tc_l = 0.0;
+        tc_r = 0.0;
+        xh_l = 0.0;
+        xh_r = 0.0;
+        dc_l = 0.0;
+        dc_r = 0.0;
+        xe_l = 0.0;
+        xe_r = 0.0;
     }
 
     process
@@ -105,22 +155,52 @@ component eb_saturation
         f32 tone_a = 1.0 - exp(-6.283185307 * 1000.0 / sr);
         f32 m = bound(mix, 0.0, 100.0) * 0.01;
         f32 ag = 0.0;
-        if (auto_gain == 1)
+        if (auto_gain == 1 && sat_type != 6)
         {
             ag = -dr * 0.6;
         }
+        f32 tf_a = 1.0 - exp(-6.283185307 * 150.0 / sr);
+        f32 ex_a = 1.0 - exp(-6.283185307 * 3000.0 / sr);
+        f32 dc_a = 1.0 - exp(-6.283185307 * 8.0 / sr);
+        // Exciter: Drive pushes the high band into tanh; Bias adds even harmonics.
+        f32 ex_tb = tanh_(bias_v);
         f32 out_lin = dbgain(bound(output, -24.0, 6.0) + ag);
         i32 os = oversampling;
 
         // ---- channel l ----
         f32 d_l = x[0] * drive_lin + bias_v;
+        if (sat_type == 4)
+        {
+            // Transformer: the lows (below about 150 Hz) hit the core twice as hard.
+            tl_l = tl_l + tf_a * (d_l - tl_l);
+            d_l = d_l + tl_l;
+        }
         f32 s_l = shape(d_l, kind) - bias_off;
-        if (os == 1)
+        if (os == 1 && sat_type != 6)
         {
             f32 mid_l = (d_l + prev_l) * 0.5;
             s_l = (s_l + shape(mid_l, kind) - bias_off) * 0.5;
         }
         prev_l = d_l;
+        if (sat_type == 4)
+        {
+            // Undo the low boost on the way out (half the lows), so the level stays put.
+            tc_l = tc_l + tf_a * (s_l - tc_l);
+            s_l = s_l - 0.5 * tc_l;
+        }
+        if (sat_type == 6)
+        {
+            // Exciter: the dry signal plus harmonics made from the highs (above about 3 kHz) only.
+            xh_l = xh_l + ex_a * (x[0] - xh_l);
+            f32 hp_l = x[0] - xh_l;
+            f32 hm_l = tanh_(drive_lin * hp_l + bias_v) - ex_tb;
+            // High-pass the result again so only the upper harmonics are added.
+            xe_l = xe_l + ex_a * (hm_l - xe_l);
+            s_l = x[0] + 0.15 * (hm_l - xe_l);
+        }
+        // DC blocker (the asymmetric curves add a small offset)
+        dc_l = dc_l + dc_a * (s_l - dc_l);
+        s_l = s_l - dc_l;
         // tone: tilt around 1 kHz
         lp_l = lp_l + tone_a * (s_l - lp_l);
         f32 t_l = lp_l * tone_lo + (s_l - lp_l) * tone_hi;
@@ -128,13 +208,38 @@ component eb_saturation
 
         // ---- channel r ----
         f32 d_r = x[1] * drive_lin + bias_v;
+        if (sat_type == 4)
+        {
+            // Transformer: the lows (below about 150 Hz) hit the core twice as hard.
+            tl_r = tl_r + tf_a * (d_r - tl_r);
+            d_r = d_r + tl_r;
+        }
         f32 s_r = shape(d_r, kind) - bias_off;
-        if (os == 1)
+        if (os == 1 && sat_type != 6)
         {
             f32 mid_r = (d_r + prev_r) * 0.5;
             s_r = (s_r + shape(mid_r, kind) - bias_off) * 0.5;
         }
         prev_r = d_r;
+        if (sat_type == 4)
+        {
+            // Undo the low boost on the way out (half the lows), so the level stays put.
+            tc_r = tc_r + tf_a * (s_r - tc_r);
+            s_r = s_r - 0.5 * tc_r;
+        }
+        if (sat_type == 6)
+        {
+            // Exciter: the dry signal plus harmonics made from the highs (above about 3 kHz) only.
+            xh_r = xh_r + ex_a * (x[1] - xh_r);
+            f32 hp_r = x[1] - xh_r;
+            f32 hm_r = tanh_(drive_lin * hp_r + bias_v) - ex_tb;
+            // High-pass the result again so only the upper harmonics are added.
+            xe_r = xe_r + ex_a * (hm_r - xe_r);
+            s_r = x[1] + 0.15 * (hm_r - xe_r);
+        }
+        // DC blocker (the asymmetric curves add a small offset)
+        dc_r = dc_r + dc_a * (s_r - dc_r);
+        s_r = s_r - dc_r;
         // tone: tilt around 1 kHz
         lp_r = lp_r + tone_a * (s_r - lp_r);
         f32 t_r = lp_r * tone_lo + (s_r - lp_r) * tone_hi;
@@ -180,8 +285,8 @@ component eb_saturation
         f32 oute = bound((20.0 * log10(fmax(0.000001, fmax(meter_l, meter_r))) + 60.0) / 66.0, 0.0, 1.0);
         f32 inp = bound((20.0 * log10(fmax(0.000001, in_pk)) + 60.0) / 66.0, 0.0, 1.0);
         f32 outp = bound((20.0 * log10(fmax(0.000001, out_pk)) + 60.0) / 66.0, 0.0, 1.0);
-        // Type and mix share a lane: floor(lane * 4) = type, fract(lane * 4) = mix.
-        f32 tm = (kind + m * 0.99) / 4.0;
+        // Type and mix share a lane: floor(lane * 8) = type, fract(lane * 8) = mix.
+        f32 tm = (kind + m * 0.99) / 8.0;
         display = <dr / 36.0, (bound(bias, -1.0, 1.0) + 1.0) * 0.5, tm, ine>;
         display2 = <oute, inp, outp, 0.0>;
     }

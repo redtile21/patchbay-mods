@@ -31,7 +31,8 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
       aggressive, "all buttons" option), Vari-Mu (soft knee, ratio rises with level).
 - [ ] EQ: Clean (current), Console (proportional Q, British-style curves), Passive (Pultec-style simultaneous low boost
       and cut); optional air shelf.
-- [ ] Saturation: add Transformer, Console and Exciter (harmonics on the highs only) to Tape, Tube and Clip.
+- [x] Saturation: add Transformer (lows hit the core harder), Console (gentle knee) and Exciter (harmonics on the
+      highs only) to Tape, Tube and Clip; a DC blocker after the curve.
 - [x] Limiter: Transparent, Punchy (soft-clip first), Loud (harder clip, faster release); Auto Rel (two-stage
       program-dependent release); True Peak is now an on/off button.
 - [x] Limiter true-peak ceiling (True Peak chooser, on by default).
