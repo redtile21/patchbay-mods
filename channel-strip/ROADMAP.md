@@ -56,7 +56,8 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
       feature (Bitwig has no per-device default preset).
 - [x] Remember settings on swap: the mod keeps each slot's last values per unit type (for the session; not yet
       saved with the project).
-- [ ] Reorder slots (drag or move left/right action, in the mod).
+- [x] Reorder slots: arrows beside each slot's top knob swap it with its neighbour; the mod moves the units and
+      their settings (one MOVE_n button per neighbouring pair).
 - [x] Auto gain match: a Match toggle by Out; the output stage follows the K-weighted short-term loudness
       difference between the strip's input and output (up to 24 dB, held in silence), with Out as a trim on top.
 - [x] Show the applied match gain on the output meter (MATCH and the gain under True Peak, while Match is on).

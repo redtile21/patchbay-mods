@@ -289,6 +289,7 @@ final class Strip {
         final Ctx c; final utt strip;
         final lpr[] types = new lpr[7];
         Object view; // the "Expanded View" button's atom, if the strip has one
+        final Object[] moves = new Object[6]; // MOVE_n buttons: swap slot n with slot n + 1
         final k3K[] chains = new k3K[7];
         final bitwig.obf.xdh[][] knobs = new bitwig.obf.xdh[7][3];   // the strip's own knobs
         final bitwig.obf.xdh[][] units = new bitwig.obf.xdh[7][3];   // the loaded unit's parameters they drive
@@ -322,6 +323,7 @@ final class Strip {
             }
             Object viewAtom = findByIdentifier(strip, "VIEW");
             if (viewAtom != null) w.view = viewAtom;
+            for (int n = 1; n <= 5; n++) w.moves[n] = findByIdentifier(strip, "MOVE_" + n);
             for (int n = 1; n <= 6; n++) for (int k = 1; k <= 3; k++) {
                 Object a = findByIdentifier(strip, "SLOT" + n + "_K" + k);
                 if (a instanceof bitwig.obf.xdh x) w.knobs[n][k - 1] = x;
@@ -573,7 +575,14 @@ final class Strip {
         if (RESETTING.get()) return;
         long now = System.currentTimeMillis();
         if (now - lastButton < 500) return;
-        if (!"VIEW".equals(identifierOf(atom))) return;
+        String ident = identifierOf(atom);
+        if (ident != null && ident.matches("MOVE_[1-5]")) {
+            if (!atom.Anf()) return;
+            lastButton = now;
+            moveSet(atom, Integer.parseInt(ident.substring(5)));
+            return;
+        }
+        if (!"VIEW".equals(ident)) return;
         lastButton = now;
         Watch w = watchWithView(atom);
         if (w == null && !AUTO_FAILED.contains(atom)) {
@@ -599,13 +608,124 @@ final class Strip {
         openViewFor(watch);
     }
 
+    // ---- reorder: the arrows between neighbouring slots swap their units, settings included ----
+
+    private static void springBack(bitwig.obf.cbF atom) {
+        drf.EO().runAtEndOfCurrentEvent(() -> {
+            try {
+                RESETTING.set(true);
+                atom.MgQ(false);
+            } catch (Throwable t) {
+                MOD.log("could not reset a button", t);
+            } finally {
+                RESETTING.set(false);
+            }
+        });
+    }
+
+    private static void moveSet(bitwig.obf.cbF atom, int a) {
+        Watch w = null;
+        synchronized (WATCHES) { for (Watch o : WATCHES) if (o.moves[a] == atom) w = o; }
+        if (w == null && !AUTO_FAILED.contains(atom)) {
+            autoArm(atom);
+            synchronized (WATCHES) { for (Watch o : WATCHES) if (o.moves[a] == atom) w = o; }
+        }
+        springBack(atom);
+        if (w == null) return;
+        final Watch watch = w;
+        drf.EO().runAtEndOfCurrentEvent(() -> swapSlots(watch, a));
+    }
+
+    /** The current settings of the unit loaded in slot n (empty for a bypassed slot). */
+    private static Map<String, Object> capture(Watch w, int n) {
+        Map<String, Object> values = new LinkedHashMap<>();
+        List<?> devices = new ArrayList<>(w.chains[n].qJX());
+        Set<String> ids = UNIT_PARAMS.get(("eb " + w.types[n].sSO()).toLowerCase());
+        if (devices.isEmpty() || ids == null) return values;
+        for (Map.Entry<String, Object> e : params((utt) devices.get(0), ids).entrySet()) {
+            if (e.getValue() instanceof bitwig.obf.xdh x) values.put(e.getKey(), x.GwM());
+            else if (e.getValue() instanceof lpr c) values.put(e.getKey(), c.sSO());
+            else if (e.getValue() instanceof bitwig.obf.cbF b) values.put(e.getKey(), b.Anf());
+        }
+        return values;
+    }
+
+    private static void setChoice(lpr c, String text) {
+        for (int i = 0; i < 16 && !text.equals(c.sSO()); i++) c.MgQ(i);
+    }
+
+    /** Swaps slot a and slot a + 1: units, their settings, and the macro knobs. One undo step per slot. */
+    static void swapSlots(Watch w, int a) {
+        int b = a + 1;
+        try {
+            String ta = w.types[a].sSO(), tb = w.types[b].sSO();
+            Map<String, Object> va = capture(w, a), vb = capture(w, b);
+            MOD.log("swap slots " + a + " (" + ta + ") and " + b + " (" + tb + ")");
+            if (ta.equals(tb)) {
+                // same unit in both: just trade the settings
+                CmH changes = w.c.root.cc_();
+                changes.beI("Swap slots " + a + " and " + b, false);
+                try {
+                    List<?> da = new ArrayList<>(w.chains[a].qJX()), db = new ArrayList<>(w.chains[b].qJX());
+                    if (!da.isEmpty() && !db.isEmpty()) {
+                        apply((utt) da.get(0), vb);
+                        apply((utt) db.get(0), va);
+                    }
+                } finally {
+                    changes.beI(false);
+                }
+                relink(w, a, true);
+                relink(w, b, true);
+                return;
+            }
+            // different units: the swap that follows the dropdowns restores these settings in their new slots
+            Map<String, Map<String, Object>> mem = MEMORY.computeIfAbsent(w.strip, k -> new java.util.concurrent.ConcurrentHashMap<>());
+            if (!"Bypass".equals(ta)) mem.put(b + "|eb " + ta.toLowerCase(), va);
+            if (!"Bypass".equals(tb)) mem.put(a + "|eb " + tb.toLowerCase(), vb);
+            BUSY.set(true);
+            CmH changes = w.c.root.cc_();
+            changes.beI("Swap slots " + a + " and " + b, false);
+            try {
+                setChoice(w.types[a], tb);
+                setChoice(w.types[b], ta);
+            } finally {
+                changes.beI(false);
+                BUSY.set(false);
+            }
+            // the old units are remembered under their old slots by swap(); keep the moved settings for the new ones
+            swapNow(w, a, mem, tb, vb);
+            swapNow(w, b, mem, ta, va);
+        } catch (Throwable t) {
+            MOD.log("swap slots failed", t);
+            Notifications.toast("EB Strip: could not swap the slots (see the log)");
+        }
+    }
+
+    private static void swapNow(Watch w, int n, Map<String, Map<String, Object>> mem, String type, Map<String, Object> values) {
+        if (!"Bypass".equals(type)) mem.put(n + "|eb " + type.toLowerCase(), values);
+        onChangesEnded();
+    }
+
+    private static void apply(utt device, Map<String, Object> values) {
+        for (Map.Entry<String, Object> e : params(device, values.keySet()).entrySet()) {
+            Object saved = values.get(e.getKey());
+            try {
+                if (e.getValue() instanceof bitwig.obf.xdh x && saved instanceof Double d) x.d_(d);
+                else if (e.getValue() instanceof lpr c && saved instanceof String text) setChoice(c, text);
+                else if (e.getValue() instanceof bitwig.obf.cbF bt && saved instanceof Boolean on) bt.Gef(on.booleanValue());
+            } catch (Throwable t) {
+                MOD.log("could not set " + e.getKey(), t);
+            }
+        }
+    }
+
     private static final Set<Object> AUTO_FAILED = Collections.newSetFromMap(new java.util.WeakHashMap<>());
 
     /** Finds the strip that owns this dropdown by following Bitwig's own references upwards, and starts watching it. */
     private static boolean autoArm(Object atom) {
         try {
             String id = identifierOf(atom);
-            if (id == null || !id.matches("SLOT[1-6]_TYPE|VIEW|SLOT[1-6]_K[1-3]")) return false;
+            if (id == null || !id.matches("SLOT[1-6]_TYPE|VIEW|MOVE_[1-5]|SLOT[1-6]_K[1-3]")) return false;
             utt strip = (utt) findUp(atom, o -> o instanceof utt u && STRIP_UUIDS.contains(String.valueOf(u.beI())), 8, 6000);
             if (strip == null || armStrip(strip) == null) { AUTO_FAILED.add(atom); return false; }
             return true;
@@ -634,6 +754,7 @@ final class Strip {
         }
         Object viewAtom = findByIdentifier(strip, "VIEW");
         if (viewAtom != null) w.view = viewAtom;
+        for (int n = 1; n <= 5; n++) w.moves[n] = findByIdentifier(strip, "MOVE_" + n);
         for (int n = 1; n <= 6; n++) for (int k = 1; k <= 3; k++) {
             Object a = findByIdentifier(strip, "SLOT" + n + "_K" + k);
             if (a instanceof bitwig.obf.xdh x) w.knobs[n][k - 1] = x;

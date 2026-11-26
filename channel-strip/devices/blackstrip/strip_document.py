@@ -63,8 +63,18 @@ def knob_item(ref, x, y, w, h, size, title, tip):
     })
 
 
+def icon_toggle(ref, x, y, w, h, icon, title, tip):
+    """A borderless on/off icon (grey off, orange on), from Bitwig's device icon folder."""
+    return obj(1702, "toggle_button_panel_item", {
+        "layout_settings#6226": v("Object", grid_layout(x, y, w, h)),
+        "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
+        "tooltip_text#6867": v("String", tip), "data_model#6220": ref, "title#6241": v("String", title),
+        "icon_name#6239": v("String", icon), "style#6240": v("Byte", 2),
+        "label_style#6267": v("Byte", 1), "color#7527": v("Int16", 1)})
+
+
 def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_meter_ref, knob_refs, backdrop_ref, ref=None,
-               match_ref=None, character_ref=None, amount_ref=None, char_input_ref=None):
+               match_ref=None, character_ref=None, amount_ref=None, char_input_ref=None, move_refs=()):
     items = [drawing_item(backdrop_ref, 0, 0, PANEL_WIDTH, PANEL_HEIGHT)]
     items.append(drawing_item(in_meter_ref, 0, METER_Y, X0 - 1, METER_H))
     items.append(obj(1702, "toggle_button_panel_item", {
@@ -81,6 +91,11 @@ def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_met
         items.append(drawing_item(dref, sx, KNOB_Y, SLOT_W, 36))   # the same drawing, tall: the knob names
         for k in range(3):
             items.append(knob_item(knob_refs[i][k], sx + 5, KNOB_Y + 12 * k, 9, 9, 1, "", f"Slot {i + 1} knob {k + 1}"))
+        # arrows beside the top knob: swap this slot with its neighbour (the mod moves the units and their settings)
+        if move_refs and i > 0:
+            items.append(icon_toggle(move_refs[i - 1], sx, KNOB_Y + 3, 4, 4, "arrow_left.svg", "Move", f"Swap slot {i + 1} with slot {i}"))
+        if move_refs and i < SLOTS - 1:
+            items.append(icon_toggle(move_refs[i], sx + SLOT_W - 4, KNOB_Y + 3, 4, 4, "arrow_right.svg", "Move", f"Swap slot {i + 1} with slot {i + 2}"))
     items.append(drawing_item(out_meter_ref, RIGHT_X, METER_Y, RIGHT_W, METER_H))
     items.append(knob_item(out_ref, RIGHT_X, METER_Y + METER_H + 1, 9, 9, 1, "Out", "Output gain in dB"))
     if match_ref is not None:
@@ -250,6 +265,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     char_amount = parameter("Character Amount", "CHARACTER_AMOUNT", 0.0, 100.0, 50.0, 0)
     char_input = boolean_parameter("Character Input", "CHARACTER_INPUT", False)
     view = boolean_parameter("Expanded View", "VIEW", False)
+    moves = [boolean_parameter(f"Swap Slots {n}-{n + 1}", f"MOVE_{n}", False) for n in range(1, SLOTS)]
     knobs = [[parameter(f"Slot {i} Knob {k}", f"SLOT{i}_K{k}", 0.0, 100.0, 50.0, 0) for k in (1, 2, 3)] for i in range(1, SLOTS + 1)]
     # the default chain a new strip loads (the mod inserts the units)
     default_chain = ("Gain", "EQ", "Compressor", "Saturation", "Limiter", "Bypass")
@@ -295,9 +311,9 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     output_proxy["fields"]["settings#6194"] = settings([wire(meter_out, 0)])
     panel = main_panel([ref(d) for d in drawings], ref(out_gain), [ref(t) for t in types], ref(view),
                        ref(in_drawing), ref(out_drawing), [[ref(k) for k in row] for row in knobs], ref(backdrop), ref,
-                       ref(match), ref(character), ref(char_amount), ref(char_input))
+                       ref(match), ref(character), ref(char_amount), ref(char_input), [ref(m) for m in moves])
     identity = project["identity"]
-    children = [backdrop, audio_source, compensation, out_gain, match, character, char_amount, char_input, *types, *[k for row in knobs for k in row], view, meter_in, in_drawing, char_in]
+    children = [backdrop, audio_source, compensation, out_gain, match, character, char_amount, char_input, *types, *[k for row in knobs for k in row], view, *moves, meter_in, in_drawing, char_in]
     for ph, sl, tp, dr in zip(placeholders, slots, taps, drawings):
         children += [ph, sl, tp, dr]
     children += [char_out, stage_out, meter_out, out_drawing]
@@ -323,7 +339,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v38".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v39".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,
