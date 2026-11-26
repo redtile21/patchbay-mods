@@ -31,7 +31,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-/** Spike: find EB strip devices on the selected track, list their nested chains, insert a unit into the first one. */
+/** EB BlackStrip companion: keeps each slot's unit in step with its dropdown, links the macro knobs, swaps slots, A/B, expanded view. */
 final class Strip {
     static final Bml.Mod MOD = Bml.mod("eb-strip-console");
     /** The strip and the nested-chain test strip. */
@@ -42,114 +42,6 @@ final class Strip {
     private record Ctx(aCG project, GJy root, PiT track) {}
 
     private record Hit(Object object, String path) {}
-
-    /** What the Probe action does: logs the devices on the selected track and the nested chains inside each. */
-    static void probe(Object widget, Object selection) {
-        try {
-            Ctx c = context(widget, selection);
-            if (c == null) return;
-            Map<UUID, String> names = registry();
-            StringBuilder out = new StringBuilder("probe: track " + c.track.getClass().getName());
-            List<Hit> devices = walk(c.track.YQe(), utt.class, 6, 5000);
-            out.append("\n  devices on the track: ").append(devices.size());
-            int strips = 0;
-            for (Hit d : devices) {
-                utt device = (utt) d.object;
-                UUID id = device.beI();
-                out.append("\n  device ").append(names.getOrDefault(id, "?")).append(' ').append(id).append("  at ").append(d.path);
-                if (!STRIP_UUIDS.contains(String.valueOf(id))) continue;
-                strips++;
-                out.append("\n    identifiers:").append(scanIdentifiers(device));
-                List<Hit> chains = slotChains(device);
-                out.append("\n    nested chains: ").append(chains.size());
-                for (Hit chain : chains) {
-                    k3K k = (k3K) chain.object;
-                    out.append("\n      chain count=").append(k.XnJ()).append("  at ").append(chain.path);
-                    for (Hit inner : walk(k, utt.class, 4, 2000)) {
-                        UUID innerId = ((utt) inner.object).beI();
-                        out.append("\n        holds ").append(names.getOrDefault(innerId, "?")).append(' ').append(innerId);
-                    }
-                }
-            }
-            MOD.log(out.toString());
-            Notifications.toast("EB Strip probe: " + devices.size() + " device(s), " + strips + " strip(s). See the Patchbay log.");
-        } catch (Throwable t) {
-            MOD.log("probe failed", t);
-            Notifications.toast("EB Strip probe failed (see the log)");
-        }
-    }
-
-    /** Inserts the named unit device at the end of the first nested chain of the first strip on the selected track. */
-    static void insertIntoSlot(int slot, String unitName, Object widget, Object selection) {
-        try {
-            Ctx c = context(widget, selection);
-            if (c == null) return;
-            odK unit = null;
-            for (Object candidate : SJF.beI()) {
-                if (((odK) candidate).Gef().equalsIgnoreCase(unitName)) { unit = (odK) candidate; break; }
-            }
-            if (unit == null) {
-                MOD.log("no registered device named " + unitName + "; registered: " + registry().values());
-                Notifications.toast("EB Strip: device '" + unitName + "' is not registered (see the log)");
-                return;
-            }
-            utt strip = findStrip(c);
-            if (strip == null) {
-                Notifications.toast("EB Strip: no strip on the selected track");
-                return;
-            }
-            Hit found = slotChain(strip, slot);
-            if (found == null) {
-                MOD.log("slot " + slot + " chain not found");
-                Notifications.toast("EB Strip: slot " + slot + " not found (see the log)");
-                return;
-            }
-            k3K chain = (k3K) found.object;
-            utt device = utt.byf(unit.beI());
-            CmH changes = c.root.cc_();
-            changes.beI("Insert " + unitName + " in slot " + slot, false);
-            try {
-                chain.Gef(device, chain.qJX().size(), false, null);
-            } finally {
-                changes.beI(false);
-            }
-            StripViews.refreshAll();
-            MOD.log("inserted " + unitName + " into slot " + slot + " at " + found.path);
-            Notifications.toast("EB Strip: inserted " + unitName + " into slot " + slot);
-        } catch (Throwable t) {
-            MOD.log("insert failed", t);
-            Notifications.toast("EB Strip: insert failed (see the log)");
-        }
-    }
-
-    /** Reports objects whose String fields match a strip identifier (SLOTn_TYPE, SLOTn_CHAIN), with their readable members. */
-    private static String scanIdentifiers(utt strip) {
-        StringBuilder out = new StringBuilder();
-        Map<Object, Boolean> seen = new IdentityHashMap<>();
-        List<Hit> level = new ArrayList<>();
-        level.add(new Hit(strip, ""));
-        seen.put(strip, true);
-        int nodes = 0, reported = 0;
-        for (int depth = 0; depth <= 9 && !level.isEmpty() && nodes < 40000 && reported < 40; depth++) {
-            List<Hit> next = new ArrayList<>();
-            for (Hit hit : level) {
-                if (++nodes > 40000) break;
-                Object o = hit.object;
-                if (o != strip && o instanceof utt) continue;
-                String id = identifierOf(o);
-                if (id != null && reported < 40) {
-                    reported++;
-                    out.append("\n    ").append(id).append("  ").append(o.getClass().getName()).append("  at ").append(hit.path).append(describe(o));
-                }
-                for (Hit child : children(hit)) {
-                    if (child.object == null || seen.put(child.object, true) != null) continue;
-                    next.add(child);
-                }
-            }
-            level = next;
-        }
-        return out.toString();
-    }
 
     private static String identifierOf(Object o) {
         return identifierOf(o, text -> text.matches("SLOT[1-6]_(TYPE|CHAIN|K[1-3])|INPUT_GAIN|VIEW|MOVE_[1-5]|AB"));
@@ -171,36 +63,6 @@ final class Strip {
             }
         }
         return null;
-    }
-
-    /** Primitive and String fields, and simple no-argument getters, so the next version knows where a value lives. */
-    private static String describe(Object o) {
-        StringBuilder out = new StringBuilder();
-        for (Class<?> c = o.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
-            for (Field f : c.getDeclaredFields()) {
-                if (Modifier.isStatic(f.getModifiers())) continue;
-                Class<?> t = f.getType();
-                if (!(t.isPrimitive() || t == String.class)) continue;
-                try {
-                    f.setAccessible(true);
-                    out.append("\n        ").append(c.getSimpleName()).append('.').append(f.getName()).append(" = ").append(f.get(o));
-                } catch (Throwable ignored) {
-                    // unreadable
-                }
-            }
-            for (Method m : c.getDeclaredMethods()) {
-                if (Modifier.isStatic(m.getModifiers()) || m.getParameterCount() != 0) continue;
-                Class<?> t = m.getReturnType();
-                if (!(t == int.class || t == double.class || t == float.class || t == boolean.class || t == String.class || t == byte.class)) continue;
-                try {
-                    m.setAccessible(true);
-                    out.append("\n        ").append(c.getSimpleName()).append('.').append(m.getName()).append("() = ").append(m.invoke(o));
-                } catch (Throwable ignored) {
-                    // not callable
-                }
-            }
-        }
-        return out.toString();
     }
 
     /** The nested chain of slot n (1-6): found by the slot's own identifier, because the chain list has no fixed order. */
@@ -249,38 +111,6 @@ final class Strip {
             if (!parent) chains.add(hit);
         }
         return chains;
-    }
-
-    /** Removes every device from slot n's chain (one undo step). */
-    static void clearSlot(int slot, Object widget, Object selection) {
-        try {
-            Ctx c = context(widget, selection);
-            if (c == null) return;
-            utt strip = findStrip(c);
-            if (strip == null) { Notifications.toast("EB Strip: no strip on the selected track"); return; }
-            Hit found = slotChain(strip, slot);
-            if (found == null) { Notifications.toast("EB Strip: slot " + slot + " not found"); return; }
-            k3K chain = (k3K) found.object;
-            List<Object> devices = new ArrayList<>();
-            for (Object d : new ArrayList<>(chain.qJX())) if (d instanceof utt) devices.add(d);
-            if (devices.isEmpty()) { Notifications.toast("EB Strip: slot " + slot + " is already empty"); return; }
-            CmH changes = c.root.cc_();
-            changes.beI("Clear strip slot " + slot, false);
-            try {
-                for (Object d : devices) {
-                    if (!chain.qJX().contains(d)) continue;
-                    chain.MgQ((utt) d);
-                }
-            } finally {
-                changes.beI(false);
-            }
-            StripViews.refreshAll();
-            MOD.log("cleared " + devices.size() + " device(s) from slot " + slot);
-            Notifications.toast("EB Strip: cleared slot " + slot);
-        } catch (Throwable t) {
-            MOD.log("clear failed", t);
-            Notifications.toast("EB Strip: clear failed (see the log)");
-        }
     }
 
     // ---- Watcher: keeps each slot's loaded unit in step with the strip's SLOTn_TYPE dropdown ----
@@ -1076,97 +906,11 @@ final class Strip {
         }
     }
 
-    // ---- saved defaults: one file per unit type, applied when a unit arrives in a slot with nothing remembered ----
-
-    private static java.nio.file.Path defaultsDir() {
-        return java.nio.file.Paths.get(System.getProperty("user.home"), "Library", "Application Support", "EB Strip", "defaults");
-    }
-
-    private static java.nio.file.Path defaultFile(String unitName) {
-        return defaultsDir().resolve(unitName.toLowerCase().replaceAll("[^a-z0-9]+", "-") + ".txt");
-    }
-
-    private static Map<String, Object> loadDefault(String unitName) {
-        java.nio.file.Path f = defaultFile(unitName);
-        if (!java.nio.file.Files.isRegularFile(f)) return null;
-        Map<String, Object> values = new LinkedHashMap<>();
-        try {
-            for (String line : java.nio.file.Files.readAllLines(f)) {
-                // IDENT=D:1.5 | IDENT=S:label | IDENT=B:true
-                int eq = line.indexOf('='), colon = line.indexOf(':', eq + 1);
-                if (eq < 1 || colon < 0) continue;
-                String id = line.substring(0, eq), kind = line.substring(eq + 1, colon), val = line.substring(colon + 1);
-                switch (kind) {
-                    case "D" -> values.put(id, Double.parseDouble(val));
-                    case "S" -> values.put(id, val);
-                    case "B" -> values.put(id, Boolean.parseBoolean(val));
-                    default -> { }
-                }
-            }
-        } catch (Throwable t) {
-            MOD.log("could not read " + f, t);
-            return null;
-        }
-        return values;
-    }
-
-    private static Watch watchFor(Object widget, Object selection) {
-        Ctx c = context(widget, selection);
-        if (c == null) return null;
-        utt strip = findStrip(c);
-        if (strip == null) { Notifications.toast("EB Strip: no strip on the selected track"); return null; }
-        synchronized (WATCHES) { for (Watch o : WATCHES) if (o.strip == strip) return o; }
-        return armStrip(strip);
-    }
-
-    /** Saves the settings of the unit in slot n as that unit type's default. */
-    static void saveDefault(int n, Object widget, Object selection) {
-        try {
-            Watch w = watchFor(widget, selection);
-            if (w == null) return;
-            String type = w.types[n].sSO();
-            if ("Bypass".equals(type)) { Notifications.toast("EB Strip: slot " + n + " is empty"); return; }
-            Map<String, Object> values = capture(w, n);
-            if (values.isEmpty()) { Notifications.toast("EB Strip: nothing to save in slot " + n); return; }
-            StringBuilder out = new StringBuilder();
-            for (Map.Entry<String, Object> e : values.entrySet()) {
-                Object v = e.getValue();
-                String kind = v instanceof Double ? "D" : v instanceof Boolean ? "B" : "S";
-                out.append(e.getKey()).append('=').append(kind).append(':').append(v).append('\n');
-            }
-            java.nio.file.Files.createDirectories(defaultsDir());
-            java.nio.file.Files.writeString(defaultFile("EB " + type), out.toString());
-            MOD.log("saved the default of EB " + type + " (" + values.size() + " settings)");
-            Notifications.toast("EB Strip: saved slot " + n + " as the default " + type);
-        } catch (Throwable t) {
-            MOD.log("save default failed", t);
-            Notifications.toast("EB Strip: could not save the default (see the log)");
-        }
-    }
-
-    /** Forgets the saved default of the unit type in slot n (new units start from the factory settings again). */
-    static void clearDefault(int n, Object widget, Object selection) {
-        try {
-            Watch w = watchFor(widget, selection);
-            if (w == null) return;
-            String type = w.types[n].sSO();
-            if ("Bypass".equals(type)) { Notifications.toast("EB Strip: slot " + n + " is empty"); return; }
-            boolean gone = java.nio.file.Files.deleteIfExists(defaultFile("EB " + type));
-            Notifications.toast(gone ? "EB Strip: " + type + " is back to its factory default" : "EB Strip: " + type + " had no saved default");
-        } catch (Throwable t) {
-            MOD.log("clear default failed", t);
-        }
-    }
-
     private static void recall(Watch w, int n, String unitName, utt device) {
         try {
             Map<String, Map<String, Object>> byStrip = MEMORY.get(w.strip);
             Map<String, Object> values = byStrip == null ? null : byStrip.get(n + "|" + unitName.toLowerCase());
-            if (values == null) {
-                values = loadDefault(unitName);    // nothing remembered for this slot: the saved default, if any
-                if (values == null) return;
-                MOD.log("slot " + n + ": applying the saved default of " + unitName);
-            }
+            if (values == null) return;
             int set = 0;
             for (Map.Entry<String, Object> e : params(device, values.keySet()).entrySet()) {
                 Object saved = values.get(e.getKey());

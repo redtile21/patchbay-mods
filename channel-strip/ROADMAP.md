@@ -52,10 +52,7 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
       outside, such as by a preset load.) Then a curated set: Vocal, Drum Bus, Bass, Acoustic, Mix Bus, Master.
 - [x] Default chain on insert: Gain, EQ, Compressor, Saturation, Limiter (the mod loads the units into a new,
       empty strip).
-- [x] "Save as default" in the mod: track menu "EB Strip: Save Slot n Unit as Default" stores that unit's settings
-      (~/Library/Application Support/EB Strip/defaults); a unit arriving in a slot with nothing remembered starts from
-      it. "Clear Saved Default of Slot n Unit" forgets it.
-- [ ] Tuned factory starting values per unit (spec defaults).
+- [ ] Default settings: a well-designed set of default presets (decided 2026-11-26: no "Save as default" in the mod).
 - [x] Remember settings on swap: the mod keeps each slot's last values per unit type (for the session; not yet
       saved with the project).
 - [x] Reorder slots: arrows beside each slot's top knob swap it with its neighbour; the mod moves the units and

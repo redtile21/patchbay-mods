@@ -2,10 +2,10 @@
   "manifest_version": 2,
   "mod": {
     "id": "eb-strip-console",
-    "name": "Tracks: EB Strip Console (spike)",
-    "version": "0.0.1-spike.1",
+    "name": "Tracks: EB Strip Console",
+    "version": "0.1.0",
     "author": "Scott",
-    "description": "Spike for the EB Blackstar Strip: probes the selected track for strip devices and their nested chain slots, and inserts an EB unit into the first slot."
+    "description": "Companion for EB BlackStrip: loads the unit each slot dropdown names, links the macro knobs, swaps slots, keeps A/B snapshots and opens the expanded view."
   },
   "built_against": {
     "bitwig_version": "6.1.7",
