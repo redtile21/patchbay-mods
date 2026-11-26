@@ -1,7 +1,8 @@
 // audioLow:    low band, low-mid, high-mid, high band codes: shape*1310720 + gain_index*4096 + freq_index, divided by 2^24
 //              (gain = index*0.1 - 15 dB, freq = 20 * 10^(index/4095*3) Hz, shape 1 = bell)
 // audioMedium: high-pass index * 4096 + low-pass index (index 0 = off), low-mid Q index * 512 + high-mid Q index,
-//              low Q index * 512 + high Q index (Q = 0.4 + index/100)
+//              low Q index * 512 + high Q index (Q = 0.4 + index/100),
+//              air * 64 + mode * 16 + high-pass slope * 4 + low-pass slope
 uniform float4 audioLow;
 uniform float4 audioMedium;
 
@@ -152,6 +153,19 @@ float passdb(float f, float tw, bool high, float slope) {
     return 10. * log(n2 * n2 / (d1 * d2)) / 2.302585;
 }
 
+float bq(float q, float g, float md) {
+    float r = q;
+    if (md > .5 && md < 1.5) r = min(8., q * (.4 + .12 * abs(g)));
+    if (md > 1.5) r = q * .6;
+    return max(r, .1);
+}
+float sq(float q, float md) {
+    float r = q;
+    if (md > .5 && md < 1.5) r = min(4., q * 1.4);
+    if (md > 1.5) r = q * .7;
+    return max(r, .1);
+}
+
 half4 main(float2 fragCoord) {
     float2 uv = fragCoord / iResolution.xy;
     // Display x axis: semitones 15..135 (A4 = 69 at 440 Hz); y axis: +18 dB at the top, -42 dB at the bottom.
@@ -185,15 +199,25 @@ half4 main(float2 fragCoord) {
     float hqIdx = e2 - lqIdx * 512.;
 
     float e3 = audioMedium.w * 16777216.;
+    float airv = floor(e3 / 64. + .0001);
+    e3 -= airv * 64.;
+    float md = floor(e3 / 16. + .0001);
+    e3 -= md * 16.;
     float hs = floor(e3 / 4. + .0001);
     float ls = floor(e3 - hs * 4. + .5);
     float total = 0.;
     if (hpIdx >= 1.) total += passdb(20. * pow(10., hpIdx / 4095. * 3.), w, true, hs);
     if (lpIdx < 4094.) total += passdb(20. * pow(10., lpIdx / 4095. * 3.), w, false, ls);
-    total += bellL > .5 ? peakdb(gL * .1 - 15., fL, .4 + lqIdx * .01, w) : shelfdb(gL * .1 - 15., fL, .4 + lqIdx * .01, w, true);
-    total += peakdb(gM * .1 - 15., fM, .4 + lmqIdx * .01, w);
-    total += peakdb(gN * .1 - 15., fN, .4 + hmqIdx * .01, w);
-    total += bellH > .5 ? peakdb(gH * .1 - 15., fH, .4 + hqIdx * .01, w) : shelfdb(gH * .1 - 15., fH, .4 + hqIdx * .01, w, false);
+    float dbL = gL * .1 - 15.;
+    float dbM = gM * .1 - 15.;
+    float dbN = gN * .1 - 15.;
+    float dbH = gH * .1 - 15.;
+    total += bellL > .5 ? peakdb(dbL, fL, bq(.4 + lqIdx * .01, dbL, md), w) : shelfdb(dbL, fL, sq(.4 + lqIdx * .01, md), w, true);
+    if (md > 1.5 && bellL < .5 && dbL > 0.) total += peakdb(-.4 * dbL, fL * 2.5, .9, w);
+    total += peakdb(dbM, fM, bq(.4 + lmqIdx * .01, dbM, md), w);
+    total += peakdb(dbN, fN, bq(.4 + hmqIdx * .01, dbN, md), w);
+    total += bellH > .5 ? peakdb(dbH, fH, bq(.4 + hqIdx * .01, dbH, md), w) : shelfdb(dbH, fH, sq(.4 + hqIdx * .01, md), w, false);
+    if (airv > .5) total += shelfdb(2. * airv, 14000., .5, w, false);
     total = clamp(total, -40., 16.);
 
     float py = uv.y * iResolution.y;

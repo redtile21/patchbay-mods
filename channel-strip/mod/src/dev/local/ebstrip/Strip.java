@@ -791,7 +791,7 @@ final class Strip {
     private static final Map<String, Set<String>> UNIT_PARAMS = Map.of(
         "eb gain", Set.of("GAIN", "PAN", "WIDTH", "POLARITY", "MONO"),
         "eb eq", Set.of("HPF", "LOW_GAIN", "LOW_FREQ", "LOW_Q", "LM_GAIN", "LM_FREQ", "LM_Q", "HM_GAIN", "HM_FREQ", "HM_Q",
-                        "HIGH_GAIN", "HIGH_FREQ", "HIGH_Q", "LPF", "LOW_SHAPE", "HIGH_SHAPE", "HP_SLOPE", "LP_SLOPE"),
+                        "HIGH_GAIN", "HIGH_FREQ", "HIGH_Q", "LPF", "LOW_SHAPE", "HIGH_SHAPE", "HP_SLOPE", "LP_SLOPE", "MODE", "AIR"),
         "eb compressor", Set.of("THRESHOLD", "RATIO", "ATTACK", "RELEASE", "MAKEUP", "KNEE", "MIX", "SC_HPF", "STEREO_LINK",
                                 "DETECTOR", "MODE"),
         "eb saturation", Set.of("DRIVE", "BIAS", "TONE", "MIX", "OUTPUT", "TYPE", "AUTO_GAIN", "OVERSAMPLING"),

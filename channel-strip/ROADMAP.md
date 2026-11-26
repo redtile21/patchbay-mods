@@ -29,8 +29,8 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
 
 - [x] Compressor: VCA (clean, fast, hard knee), Opto (two-stage, program-dependent release), FET (very fast attack,
       aggressive, "all buttons" option), Vari-Mu (soft knee, ratio rises with level).
-- [ ] EQ: Clean (current), Console (proportional Q, British-style curves), Passive (Pultec-style simultaneous low boost
-      and cut); optional air shelf.
+- [x] EQ: Clean (current), Console (proportional Q, shelves with a small bump), Passive (broad curves; a low shelf
+      boost also dips just above it); Air shelf at 14 kHz (Off, +2, +4, +6 dB).
 - [x] Saturation: add Transformer (lows hit the core harder), Console (gentle knee) and Exciter (harmonics on the
       highs only) to Tape, Tube and Clip; a DC blocker after the curve.
 - [x] Limiter: Transparent, Punchy (soft-clip first), Loud (harder clip, faster release); Auto Rel (two-stage
