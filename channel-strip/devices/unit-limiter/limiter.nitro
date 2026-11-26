@@ -6,7 +6,9 @@ component eb_limiter
     audio_inport f32 release = 100.0;
     audio_inport f32 lookahead = 2.0;
     audio_inport f32 stereo_link = 100.0;
-    value_inport i32 true_peak;
+    value_inport i32 mode;
+    value_inport bool auto_release;
+    value_inport bool true_peak;
 
     audio_outport out;
     audio_outport f32<4> display;
@@ -30,6 +32,7 @@ component eb_limiter
     f32 disp_gr = 0.0;
     f32<2> h1 = 0.0;
     f32<2> h2 = 0.0;
+    f32 slow = 1.0;
 
     f32 dbgain(f32 v)
     {
@@ -38,6 +41,21 @@ component eb_limiter
     f32 bound(f32 v, f32 lo, f32 hi)
     {
         return fmax(lo, fmin(hi, v));
+    }
+    f32 th(f32 v)
+    {
+        f32 e = exp(2.0 * fmax(-10.0, fmin(10.0, v)));
+        return (e - 1.0) / (e + 1.0);
+    }
+    // Soft clip: linear below k, then a tanh curve that approaches lim.
+    f32 sclip(f32 v, f32 k, f32 lim)
+    {
+        f32 m = fabs(v);
+        if (m <= k)
+        {
+            return v;
+        }
+        return copysign(k + (lim - k) * th((m - k) / (lim - k)), v);
     }
     // Catmull-Rom between p1 and p2 at t (0 .. 1).
     f32 cr(f32 p0, f32 p1, f32 p2, f32 p3, f32 t)
@@ -82,6 +100,7 @@ component eb_limiter
             disp_gr = 0.0;
             h1 = 0.0;
             h2 = 0.0;
+            slow = 1.0;
             i32 j = 0;
             while (j < 1024)
             {
@@ -93,11 +112,22 @@ component eb_limiter
         f32 sr = EC.samplerate;
         f32 ceil_lin = dbgain(bound(ceiling, -12.0, 0.0));
         f32<> x = in * dbgain(bound(input_gain, 0.0, 24.0));
+        // Punchy and Loud round the peaks off before the limiter sees them.
+        f32 rel_scale = 1.0;
+        if (mode == 1)
+        {
+            x = <sclip(x[0], 0.7 * ceil_lin, 1.6 * ceil_lin), sclip(x[1], 0.7 * ceil_lin, 1.6 * ceil_lin)>;
+        }
+        if (mode == 2)
+        {
+            x = <sclip(x[0], 0.45 * ceil_lin, 1.25 * ceil_lin), sclip(x[1], 0.45 * ceil_lin, 1.25 * ceil_lin)>;
+            rel_scale = 0.5;
+        }
 
         // Detector with stereo link.
         f32 a = fabs(x[0]);
         f32 b = fabs(x[1]);
-        if (true_peak == 1)
+        if (true_peak)
         {
             // True peak: also catch the overs between samples (about 4x oversampled).
             a = tpeak(h2[0], h1[0], x[0]);
@@ -140,14 +170,44 @@ component eb_limiter
 
         // Attack reaches the target within the lookahead; release is a one-pole.
         f32 att = exp(-3.0 / cast(n, f32));
-        f32 rel = exp(-1.0 / (bound(release, 1.0, 1000.0) * 0.001 * sr));
-        if (gmin < gain)
+        f32 rel_ms = bound(release, 1.0, 1000.0) * rel_scale;
+        if (auto_release)
         {
-            gain = att * gain + (1.0 - att) * gmin;
+            // Two stages: a fast one follows the peaks and recovers at a quarter of Release; a slow one (50 ms
+            // attack, three times Release) only moves under sustained limiting and holds the gain down there.
+            f32 rf = exp(-1.0 / (0.25 * rel_ms * 0.001 * sr));
+            if (gmin < gain)
+            {
+                gain = att * gain + (1.0 - att) * gmin;
+            }
+            else
+            {
+                gain = rf * gain + (1.0 - rf) * gmin;
+            }
+            f32 sa = exp(-1.0 / (0.05 * sr));
+            f32 sr2 = exp(-1.0 / (3.0 * rel_ms * 0.001 * sr));
+            if (gmin < slow)
+            {
+                slow = sa * slow + (1.0 - sa) * gmin;
+            }
+            else
+            {
+                slow = sr2 * slow + (1.0 - sr2) * gmin;
+            }
+            gain = fmin(gain, slow);
         }
         else
         {
-            gain = rel * gain + (1.0 - rel) * gmin;
+            f32 rel = exp(-1.0 / (rel_ms * 0.001 * sr));
+            if (gmin < gain)
+            {
+                gain = att * gain + (1.0 - att) * gmin;
+            }
+            else
+            {
+                gain = rel * gain + (1.0 - rel) * gmin;
+            }
+            slow = gain;
         }
 
         // Delayed audio.

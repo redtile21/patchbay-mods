@@ -11,12 +11,18 @@ SPEC = {
     "cols": 2, "display_w": 56,
     "titles": {"STEREO_LINK": "Link"},
     "knob_pos": [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1)],
-    "knob_size": 1, "knob_w": 15, "knob_h": 12, "pitch_x": 16, "pitch_y": 12, "row0": 0, "chooser_style": 0, "revision": 20,
+    "knob_size": 1, "knob_w": 15, "knob_h": 12, "pitch_x": 16, "pitch_y": 12, "row0": 0, "chooser_style": 0, "revision": 21,
     "meters": {}, "vectors": 2, "display_h": 47,
-    "chooser_col": [(1, 30)],
-    "free_labels": [(1, 25, 15, "TRUE PEAK")],
+    "chooser_col": [(1, 32)],
+    "free_labels": [(1, 27, 15, "MODE")],
     "choices": [
-        ("True Peak", "TRUE_PEAK", ("Off", "On"), 1, "Limit inter-sample (true) peaks as well as sample peaks", "true_peak"),
+        ("Mode", "MODE", ("Transparent", "Punchy", "Loud"), 0,
+         "Transparent limits cleanly; Punchy soft-clips the peaks first; Loud clips harder and releases faster", "mode"),
+    ],
+    # name, identifier, default, tooltip, nitro port, (column, y, width)
+    "toggles": [
+        ("Auto Rel", "AUTO_RELEASE", False, "Program-dependent release: short peaks recover fast, sustained limiting recovers slowly", "auto_release", (0, 38, 15)),
+        ("True Peak", "TRUE_PEAK", True, "Limit inter-sample (true) peaks as well as sample peaks", "true_peak", (1, 38, 15)),
     ],
     "preflight_extra": {"recallSafety": {"canary": "runtime_magic", "arrays": []}},
 }

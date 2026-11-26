@@ -795,7 +795,7 @@ final class Strip {
         "eb compressor", Set.of("THRESHOLD", "RATIO", "ATTACK", "RELEASE", "MAKEUP", "KNEE", "MIX", "SC_HPF", "STEREO_LINK",
                                 "DETECTOR", "MODE"),
         "eb saturation", Set.of("DRIVE", "BIAS", "TONE", "MIX", "OUTPUT", "TYPE", "AUTO_GAIN", "OVERSAMPLING"),
-        "eb limiter", Set.of("INPUT_GAIN", "CEILING", "RELEASE", "LOOKAHEAD", "STEREO_LINK", "TRUE_PEAK"),
+        "eb limiter", Set.of("INPUT_GAIN", "CEILING", "RELEASE", "LOOKAHEAD", "STEREO_LINK", "MODE", "AUTO_RELEASE", "TRUE_PEAK"),
         "eb gate", Set.of("THRESHOLD", "RANGE", "HYSTERESIS", "ATTACK", "HOLD", "RELEASE", "SC_HPF", "MODE"),
         "eb de-esser", Set.of("FREQ", "THRESHOLD", "RANGE", "RELEASE", "MODE"),
         "eb transient", Set.of("ATTACK", "SUSTAIN", "OUTPUT", "MIX", "SPEED"),
