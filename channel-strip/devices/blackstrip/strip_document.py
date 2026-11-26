@@ -39,7 +39,7 @@ def chooser(tip, ref, x, y, w):
         "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
         "tooltip_text#6867": v("String", tip), "data_model#6220": ref,
         "attribute_id#11012": v("Int16", 457), "label_style#6262": v("Byte", 0),
-        "style#6266": v("Byte", 0), "color#7528": v("Int16", 6)})
+        "style#6266": v("Byte", 1), "color#7528": v("Int16", 4)})
 
 
 def drawing_item(ref, x, y, w, h):
@@ -92,7 +92,7 @@ def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_met
     if character_ref is not None:
         items.append(obj(1683, "label_panel_item", {
             "layout_settings#6226": v("Object", grid_layout(CHAR_X, 1, CHAR_W, 4)),
-            "text#6219": v("String", "CHAR"), "color#6520": v("Int16", 6),
+            "text#6219": v("String", "CHAR"), "color#6520": v("Int16", 1),
             "horizontal_alignment#6400": v("Byte", 1), "vertical_alignment#6401": v("Byte", 1)}))
         items.append(chooser("Strip character: Clean, Analog (light console), Tube (even harmonics), Tape (soft highs, low bump). "
                              "Always after the slots; with Input on, also before them", character_ref, CHAR_X, 6, CHAR_W))
@@ -322,7 +322,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v33".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v34".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,

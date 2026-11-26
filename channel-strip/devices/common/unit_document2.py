@@ -25,6 +25,10 @@ KNOB_W, KNOB_H, PITCH_X, PITCH_Y = 19, 14, 20, 16
 METER_W = 6
 CAP_CY, CAP_R = 3.66, 2.17      # the native knob's cap inside its rectangle (measured on a screenshot), grid units
 TOP = 3
+# Bitwig display colours (RCp): 1 orange, 4 blue, 6 white, 10 mint. Chooser styles (Gpo): 0 button, 1 display, 4 flat, 7 plain.
+TITLE_COLOR = 1
+CHOOSER_COLOR = 4
+CHOOSER_STYLE = 1
 
 
 def geometry(spec):
@@ -116,18 +120,18 @@ def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, disp
     for (lc, ltext) in spec.get("section_labels", []):
         items.append(obj(1683, "label_panel_item", {
             "layout_settings#6226": v("Object", grid_layout(g["knob_x"] + lc * spec.get("pitch_x", PITCH_X), TOP, spec.get("pitch_x", PITCH_X) - 1, 5)),
-            "text#6219": v("String", ltext), "color#6520": v("Int16", 6),
+            "text#6219": v("String", ltext), "color#6520": v("Int16", spec.get("section_color", TITLE_COLOR)),
             "horizontal_alignment#6400": v("Byte", 1), "vertical_alignment#6401": v("Byte", 1)}))
     for (lc, ly, lw, ltext) in spec.get("free_labels", []):
         items.append(obj(1683, "label_panel_item", {
             "layout_settings#6226": v("Object", grid_layout(g["knob_x"] + lc * spec.get("pitch_x", PITCH_X), ly, lw, 5)),
-            "text#6219": v("String", ltext), "color#6520": v("Int16", 6),
+            "text#6219": v("String", ltext), "color#6520": v("Int16", TITLE_COLOR),
             "horizontal_alignment#6400": v("Byte", 1), "vertical_alignment#6401": v("Byte", 1)}))
     for (lx, lw, ltext) in spec.get("chooser_labels", []):
         lx = g["disp_x"] + lx if lx >= 0 else g["disp_x"] + g["dw"] + lx
         items.append(obj(1683, "label_panel_item", {
             "layout_settings#6226": v("Object", grid_layout(lx, TOP + disp_h - choosers_h + 1, lw, 5)),
-            "text#6219": v("String", ltext), "color#6520": v("Int16", 6),
+            "text#6219": v("String", ltext), "color#6520": v("Int16", TITLE_COLOR),
             "horizontal_alignment#6400": v("Byte", 1), "vertical_alignment#6401": v("Byte", 1)}))
     for i, (ch, ref) in enumerate(zip(spec["choices"], choice_refs)):
         if bar:
@@ -149,7 +153,8 @@ def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, disp
             "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
             "tooltip_text#6867": v("String", ch[4]), "data_model#6220": ref,
             "attribute_id#11012": v("Int16", 457), "label_style#6262": v("Byte", 0),
-            "style#6266": v("Byte", spec.get("chooser_style", 7)), "color#7528": v("Int16", 6)}))
+            "style#6266": v("Byte", spec.get("chooser_styles", {}).get(i, CHOOSER_STYLE)),
+            "color#7528": v("Int16", spec.get("chooser_colors", {}).get(i, CHOOSER_COLOR))}))
     for tg, ref in zip(spec.get("toggles", []), toggle_refs):
         col, ty, tw = tg[5]
         items.append(obj(1702, "toggle_button_panel_item", {
