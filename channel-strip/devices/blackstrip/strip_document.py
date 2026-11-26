@@ -33,13 +33,14 @@ METER_H = 42
 PANEL_HEIGHT = 53
 
 
+
 def chooser(tip, ref, x, y, w):
     return obj(1714, "popup_chooser_panel_item", {
         "layout_settings#6226": v("Object", grid_layout(x, y, w, 5)),
         "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
         "tooltip_text#6867": v("String", tip), "data_model#6220": ref,
         "attribute_id#11012": v("Int16", 457), "label_style#6262": v("Byte", 0),
-        "style#6266": v("Byte", 1), "color#7528": v("Int16", 4)})
+        "style#6266": v("Byte", 0), "color#7528": v("Int16", 1)})
 
 
 def drawing_item(ref, x, y, w, h):
@@ -322,7 +323,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v34".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v37".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,

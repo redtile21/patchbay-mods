@@ -25,10 +25,9 @@ KNOB_W, KNOB_H, PITCH_X, PITCH_Y = 19, 14, 20, 16
 METER_W = 6
 CAP_CY, CAP_R = 3.66, 2.17      # the native knob's cap inside its rectangle (measured on a screenshot), grid units
 TOP = 3
-# Bitwig display colours (RCp): 1 orange, 4 blue, 6 white, 10 mint. Chooser styles (Gpo): 0 button, 1 display, 4 flat, 7 plain.
+# Bitwig display colours (RCp): 1 orange, 4 blue, 6 white, 10 mint. Chooser styles (Gpo): 0 button, 1 display, 4 flat, 7 plain; each spec keeps its own chooser_style.
 TITLE_COLOR = 1
-CHOOSER_COLOR = 4
-CHOOSER_STYLE = 1
+CHOOSER_COLOR = 1
 
 
 def geometry(spec):
@@ -60,6 +59,7 @@ def geometry(spec):
 def vu_meter(connections):
     return obj(40, "vu_meter_atom", {
         "settings#6194": settings(connections), "channel_count#607": v("Byte", 0), "scale_style#2075": v("Int32", 0)})
+
 
 
 def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, display_item=None, expressions=(), backdrop_ref=None, overlay=None, toggle_refs=()):
@@ -153,7 +153,7 @@ def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, disp
             "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
             "tooltip_text#6867": v("String", ch[4]), "data_model#6220": ref,
             "attribute_id#11012": v("Int16", 457), "label_style#6262": v("Byte", 0),
-            "style#6266": v("Byte", spec.get("chooser_styles", {}).get(i, CHOOSER_STYLE)),
+            "style#6266": v("Byte", spec.get("chooser_styles", {}).get(i, spec.get("chooser_style", 7))),
             "color#7528": v("Int16", spec.get("chooser_colors", {}).get(i, CHOOSER_COLOR))}))
     for tg, ref in zip(spec.get("toggles", []), toggle_refs):
         col, ty, tw = tg[5]
