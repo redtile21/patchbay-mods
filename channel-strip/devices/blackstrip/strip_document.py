@@ -71,8 +71,8 @@ def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_met
         "layout_settings#6226": v("Object", grid_layout(0, METER_Y + METER_H + 2, X0 - 1, 4)),
         "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
         "tooltip_text#6867": v("String", "Open or close the expanded view"), "data_model#6220": view_ref,
-        "title#6241": v("String", "View"), "icon_name#6239": v("String", ""), "style#6240": v("Byte", 0),
-        "label_style#6267": v("Byte", 0), "color#7527": v("Int16", 6)}))
+        "title#6241": v("String", "View"), "icon_name#6239": v("String", "zoom.svg"), "style#6240": v("Byte", 2),
+        "label_style#6267": v("Byte", 1), "color#7527": v("Int16", 1)}))
     for i, tref in enumerate(type_refs):
         items.append(chooser(f"Slot {i + 1} unit", tref, X0 + i * (SLOT_W + GAP), 0, SLOT_W))
     for i, dref in enumerate(drawing_refs):
@@ -88,8 +88,8 @@ def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_met
             "layout_settings#6226": v("Object", grid_layout(RIGHT_X + 10, METER_Y + METER_H + 1, RIGHT_W - 10, 4)),
             "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
             "tooltip_text#6867": v("String", "Auto gain match: keep the output as loud as the input, for honest A/B (Out trims on top)"),
-            "data_model#6220": match_ref, "title#6241": v("String", "Match"), "icon_name#6239": v("String", ""),
-            "style#6240": v("Byte", 0), "label_style#6267": v("Byte", 0), "color#7527": v("Int16", 6)}))
+            "data_model#6220": match_ref, "title#6241": v("String", "Match"), "icon_name#6239": v("String", "equals.svg"),
+            "style#6240": v("Byte", 2), "label_style#6267": v("Byte", 1), "color#7527": v("Int16", 1)}))
     if character_ref is not None:
         items.append(obj(1683, "label_panel_item", {
             "layout_settings#6226": v("Object", grid_layout(CHAR_X, 1, CHAR_W, 4)),
@@ -104,8 +104,8 @@ def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_met
             "layout_settings#6226": v("Object", grid_layout(CHAR_X, 25, CHAR_W, 4)),
             "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
             "tooltip_text#6867": v("String", "Also add the character on the way in, before the slots (like a console's input and output stages)"),
-            "data_model#6220": char_input_ref, "title#6241": v("String", "Input"), "icon_name#6239": v("String", ""),
-            "style#6240": v("Byte", 0), "label_style#6267": v("Byte", 0), "color#7527": v("Int16", 6)}))
+            "data_model#6220": char_input_ref, "title#6241": v("String", "Input"), "icon_name#6239": v("String", "opamp.svg"),
+            "style#6240": v("Byte", 2), "label_style#6267": v("Byte", 1), "color#7527": v("Int16", 1)}))
     exprs = []
     caps = [(sx0 + 5, KNOB_Y + 12 * k, f"SLOT{i + 1}_K{k + 1}", 0.0, 100.0)
             for i in range(SLOTS) for k in range(3) for sx0 in (X0 + i * (SLOT_W + GAP),)]
@@ -323,7 +323,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v37".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v38".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,

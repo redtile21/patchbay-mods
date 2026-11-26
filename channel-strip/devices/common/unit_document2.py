@@ -161,8 +161,10 @@ def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, disp
             "layout_settings#6226": v("Object", grid_layout(g["knob_x"] + col * spec.get("pitch_x", PITCH_X), TOP + ty, tw, 5)),
             "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
             "tooltip_text#6867": v("String", tg[3]), "data_model#6220": ref, "title#6241": v("String", tg[0]),
-            "icon_name#6239": v("String", ""), "style#6240": v("Byte", 0), "label_style#6267": v("Byte", 0),
-            "color#7527": v("Int16", 6)}))
+            "icon_name#6239": v("String", tg[6] if len(tg) > 6 else ""),
+            # With an icon: borderless (jmX 2) and icon only (nqM 1), lit in orange when on; otherwise a text button.
+            "style#6240": v("Byte", 2 if len(tg) > 6 else 0), "label_style#6267": v("Byte", 1 if len(tg) > 6 else 0),
+            "color#7527": v("Int16", TITLE_COLOR if len(tg) > 6 else 6)}))
     if overlay is not None:
         extra_items, extra_exprs = overlay(knob_rects)
         items.extend(extra_items)
