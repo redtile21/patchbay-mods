@@ -23,7 +23,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 UNIT_DIRS = {"Gain": "gain", "EQ": "eq", "Compressor": "compressor", "Saturation": "saturation", "Limiter": "limiter",
              "Gate": "gate", "De-esser": "deesser", "Transient": "transient", "Clipper": "clipper"}
-KINDS = ("Bypass", "Gain", "EQ", "Compressor", "Saturation", "Limiter", "Gate", "De-esser", "Transient", "Clipper")
+KINDS = ("Bypass", "Gain", "EQ", "Compressor", "Saturation", "Limiter", "Gate", "De-esser", "Transient", "Clipper", "Visualizer")
 
 # The strip's three macro knobs per unit (as the mod links them) and their short names on a controller, in the
 # order they matter most (rank 0 goes on the first remote page).
