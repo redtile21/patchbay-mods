@@ -23,14 +23,18 @@ HELP = {
                                   "position (marker, centre tick) and the width (bar, with a tick at 100 %).",
 
     # ---------------- EB EQ ----------------
-    "eb.eq.hpf": "High-pass filter position, on a log scale from 20 Hz to 20 kHz. At 0 the filter is off.",
+    "eb.eq.hpf": "High-pass filter position, on a log scale from 20 Hz to 20 kHz. At 0 the filter is off. Low-Pass below it in "
+                 "the same column is the low-pass filter, off at 100.",
     "eb.eq.lpf": "Low-pass filter position, on a log scale from 20 Hz to 20 kHz. At 100 the filter is off.",
-    "eb.eq.hp_slope": "High-pass slope: 6, 12 or 24 dB per octave.",
+    "eb.eq.hp_slope": "Filter slope: 6, 12 or 24 dB per octave. The upper chooser sets the high-pass, the lower one the "
+                      "low-pass.",
     "eb.eq.lp_slope": "Low-pass slope: 6, 12 or 24 dB per octave.",
-    "eb.eq.low_gain": "Boost or cut of the low band, in dB.",
-    "eb.eq.low_freq": "Frequency of the low band.",
-    "eb.eq.low_q": "Slope of the low shelf, or width of the low bell (higher is narrower).",
-    "eb.eq.low_shape": "Low band as a shelf (everything below the frequency) or a bell (around it).",
+    "eb.eq.low_gain": "Boost or cut of the band, in dB. The four bands (LOW, LOW-MID, HIGH-MID, HIGH) each have Gain, "
+                      "Freq and Q in their own column; the LOW column is described here.",
+    "eb.eq.low_freq": "Frequency of the band: the corner of a shelf or the centre of a bell.",
+    "eb.eq.low_q": "Width of a bell (higher is narrower), or the slope of a shelf.",
+    "eb.eq.low_shape": "The LOW and HIGH bands can be a shelf (everything below or above the frequency) or a bell "
+                       "(around it), each with the chooser under its column; the two mid bands are always bells.",
     "eb.eq.lm_gain": "Boost or cut of the low-mid bell, in dB.",
     "eb.eq.lm_freq": "Centre frequency of the low-mid bell.",
     "eb.eq.lm_q": "Width of the low-mid bell: higher is narrower.",

@@ -19,8 +19,18 @@ def _key(ident):
     return ident.lower()
 
 
-def _repeat(ident):
+# Controls whose help would repeat another's: the EQ describes its low band for all four and the high-pass for both
+# filters; its response curve is drawn over the spectrum, which carries the help.
+REPEATS = {
+    "eq": {"PANEL_DRAWING", "LPF", "LP_SLOPE", "LM_GAIN", "LM_FREQ", "LM_Q", "HM_GAIN", "HM_FREQ", "HM_Q",
+           "HIGH_GAIN", "HIGH_FREQ", "HIGH_Q", "HIGH_SHAPE"},
+}
+
+
+def _repeat(ident, device):
     """The strip's slots 2-6 and the later swap buttons repeat slot 1's help; only slot 1 is described."""
+    if ident.upper() in REPEATS.get(device, ()):
+        return True
     return bool(re.match(r"^SLOT[2-9]_", ident) or re.match(r"^MOVE_([2-9]|\d\d)$", ident))
 
 
@@ -48,7 +58,7 @@ def apply(doc, device):
         if ident is None and item.get("class_id") == 1804 and "help_id#10543" not in f:
             ident = "SPECTRUM"
         key = f"eb.{device}.{_key(ident)}" if ident else None
-        if (ident and ident != "BACKDROP" and not _repeat(ident) and key not in used
+        if (ident and ident != "BACKDROP" and not _repeat(ident, device) and key not in used
                 and not f.get("help_id#10543", {}).get("value")):
             f["help_id#10543"] = v("String", key)
             used.add(key)
