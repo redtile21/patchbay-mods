@@ -45,7 +45,8 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
       and Out (soft saturation, slight high-frequency rolloff, low-end bump for Tape).
 - [x] Exact tanh (from exp) for Character and the compressor's drive.
 - [x] Character amount knob, and a matching stage before the slots (Character column: chooser, Amount, Input switch).
-- [ ] Oversampling as one strip setting, passed by the mod to each unit.
+- [ ] Oversampling as one strip setting, passed by the mod to the units that benefit (Saturation has 2x already;
+      add it to Clipper and Character). The button could sit in the device header if View moves there (section 4).
 
 ## 4. Workflow
 
@@ -65,6 +66,9 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
 - [x] Show the applied match gain on the output meter (MATCH and the gain under True Peak, while Match is on).
 - [x] A/B snapshots of the whole strip: an A/B switch in the Character column; flipping keeps the side you leave
       (units, settings, Out, Match, Character) and loads the other. Session only, not saved with the project.
+- [ ] View button in the device header (a small square, as on native devices with an expanded view) instead of
+      the VIEW toggle in the Character column: needs research into how Bitwig shows that button and whether the mod
+      can catch it.
 - [x] Remote control pages: Bitwig keeps them with a device instance or preset, not in the .bwdevice, so they ship
       in the preset "EB BlackStrip Default" (pages Knob 1, Knob 2, Knob 3: the six slots' knob, plus Out/Match,
       Amount/Character, Input/A-B). `presets/add_remote_pages.py` adds them to any strip preset.
@@ -77,13 +81,12 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
 - [x] Clipper: Tilt (shelf around 1 kHz before the clipper, undone after), Delta (hear only what is removed), Auto Gain
       (output down by the input gain).
 - [x] Remember on/off switches on swap too (Clipper Delta and Auto Gain; Bitwig's boolean atom is `cbF`).
-- [ ] Dynamic EQ (later).
-- [ ] External sidechain into a nested unit: uncertain, needs a test of whether the container can expose a sidechain
-      input. The compressor's internal sidechain filter already works.
 
 ## 6. Metering
 
-- [ ] Scrolling level and gain-reduction history graph (TDR-style).
+- [ ] EB Visualizer, a separate device rather than a wider strip: spectrum, oscilloscope, frequency/pan, and a
+      scrolling level history. Bitwig has display items for an oscilloscope, a sonogram (scrolling spectrum) and data
+      arrays; whether Nitro can feed a history array needs a test.
 - [x] Correlation meter on the output (bar under the readouts, red below zero).
 - [x] Integrated LUFS (BS.1770 gated) as INT, a reset icon, and a target chooser (-14, -16, -23): green within
       1 LU, orange above.
@@ -94,6 +97,8 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
 - [ ] Check other Bitwig versions (6.1.4) and Windows.
 
 ## Tried and set aside
+
+- External sidechain and Dynamic EQ: not needed, Bitwig's modulators (Audio Sidechain, Follower) cover both.
 
 - Speckled texture background (image panel item): works technically, did not look good. Code kept in
   `devices/common/texture.py`.
