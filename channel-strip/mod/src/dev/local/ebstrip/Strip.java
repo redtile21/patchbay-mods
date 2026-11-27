@@ -279,7 +279,11 @@ final class Strip {
         synchronized (WATCHES) {
             for (Watch w : WATCHES) for (int n = 1; n <= 6; n++) if (w.types[n] == atom) ours = true;
         }
-        if (!ours && !AUTO_FAILED.contains(atom)) ours = autoArm(atom);
+        boolean failedBefore = AUTO_FAILED.contains(atom);
+        if (!ours && !failedBefore) ours = autoArm(atom);
+        String id = identifierOf(atom);
+        if (id != null && id.matches("SLOT[1-6]_TYPE"))
+            MOD.log(id + " set to " + atom.sSO() + (ours ? "" : failedBefore ? " (strip not found earlier; ignored)" : " (strip not found)"));
         if (ours) onChangesEnded();
     }
 
