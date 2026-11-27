@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="ramp" x1="0" y1="1" x2="0" y2="0" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#3d9e2b"/>
+      <stop offset=".62" stop-color="#f58f1f"/>
+      <stop offset=".85" stop-color="#eb4d38"/>
+      <stop offset="1" stop-color="#eb4d38"/>
+    </linearGradient>
+    <linearGradient id="face" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1a1e24"/>
+      <stop offset="1" stop-color="#0f1115"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="480" height="480" rx="72" fill="url(#face)"/>
+  <rect x="16" y="16" width="480" height="480" rx="72" fill="none" stroke="#2a3038" stroke-width="6"/>
+  <!-- six slots: a dark well each, a meter clipped to the ramp's scale -->
+  <g>
+    <rect x="76"  y="96" width="44" height="300" rx="10" fill="#080a0d"/>
+    <rect x="136" y="96" width="44" height="300" rx="10" fill="#080a0d"/>
+    <rect x="196" y="96" width="44" height="300" rx="10" fill="#080a0d"/>
+    <rect x="256" y="96" width="44" height="300" rx="10" fill="#080a0d"/>
+    <rect x="316" y="96" width="44" height="300" rx="10" fill="#080a0d"/>
+    <rect x="376" y="96" width="44" height="300" rx="10" fill="#080a0d"/>
+  </g>
+  <clipPath id="c1"><rect x="80" y="236" width="36" height="156" rx="6"/></clipPath>
+  <clipPath id="c2"><rect x="140" y="176" width="36" height="216" rx="6"/></clipPath>
+  <clipPath id="c3"><rect x="200" y="128" width="36" height="264" rx="6"/></clipPath>
+  <clipPath id="c4"><rect x="260" y="196" width="36" height="196" rx="6"/></clipPath>
+  <clipPath id="c5"><rect x="320" y="150" width="36" height="242" rx="6"/></clipPath>
+  <clipPath id="c6"><rect x="380" y="216" width="36" height="176" rx="6"/></clipPath>
+  <rect x="80"  y="100" width="36" height="292" fill="url(#ramp)" clip-path="url(#c1)"/>
+  <rect x="140" y="100" width="36" height="292" fill="url(#ramp)" clip-path="url(#c2)"/>
+  <rect x="200" y="100" width="36" height="292" fill="url(#ramp)" clip-path="url(#c3)"/>
+  <rect x="260" y="100" width="36" height="292" fill="url(#ramp)" clip-path="url(#c4)"/>
+  <rect x="320" y="100" width="36" height="292" fill="url(#ramp)" clip-path="url(#c5)"/>
+  <rect x="380" y="100" width="36" height="292" fill="url(#ramp)" clip-path="url(#c6)"/>
+  <!-- the signal line through the strip, in the display accent -->
+  <polyline points="76,436 136,436 196,420 256,428 316,412 376,424 436,416" fill="none" stroke="#5499f5" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

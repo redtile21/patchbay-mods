@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" width="21" height="21">
+  <!-- EB Strip: a strip face with three slot meters -->
+  <rect x="2.5" y="3.5" width="16" height="14" rx="2" fill="none" stroke="#000" stroke-width="1.4"/>
+  <rect x="5.5" y="9" width="2.2" height="6" rx=".6" fill="#000"/>
+  <rect x="9.4" y="6.5" width="2.2" height="8.5" rx=".6" fill="#000"/>
+  <rect x="13.3" y="11" width="2.2" height="4" rx=".6" fill="#000"/>
+</svg>

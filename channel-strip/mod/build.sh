@@ -17,5 +17,10 @@ CP="$COMPILE:$BW/libs.jar:$KIT/bml-api.jar:$FW2:$FW3"
 "$JDK/bin/java" -jar "$KIT/bml-modkit.jar" finish "$WORK/classes" "$WORK/hooks.json" "$BW/bitwig.jar" "$BW/libs.jar" "$FW2" "$FW3"
 "$JDK/bin/jar" --create --file "$OUT/helper.jar" -C "$WORK/classes" .
 python3 "$HERE/finish_manifest.py" "$HERE/mod.json" "$WORK/hooks.json" "$OUT/mod.json"
-cp "$HERE/README.md" "$OUT/"; cp "$HERE"/package/* "$OUT/"
+cp "$HERE/README.md" "$OUT/"; cp -R "$HERE"/package/* "$OUT/"
+# the README's images (Patchbay shows them in its reader): only the ones it references
+grep -o '](images/[^)]*)' "$HERE/README.md" | sed 's/^](//; s/)$//' | sort -u | while read -r img; do
+  if [ -f "$HERE/$img" ]; then mkdir -p "$OUT/$(dirname "$img")"; cp "$HERE/$img" "$OUT/$img"
+  else echo "WARNING: README image missing: $img"; fi
+done
 echo BUILD_OK "$OUT"

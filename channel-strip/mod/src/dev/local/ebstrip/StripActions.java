@@ -11,6 +11,7 @@ public final class StripActions implements ActionProvider {
         actions.category("eb_strip", "EB Strip");
         actions.action("eb_strip_view", "EB Strip: Open Expanded View")
                .category("eb_strip")
+               .icon("strip_icon")
                .in(Menu.selection("track"))
                .onRun(context -> Strip.openView(context.widget(), context.selection()));
     }
