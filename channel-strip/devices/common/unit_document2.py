@@ -413,6 +413,8 @@ def document(spec, project, binary, shader):
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
     revision = hashlib.sha1(f"{identity['uuid']}/v{spec.get('revision', 7)}".encode("utf-8")).hexdigest()
-    return {"header": {"format_version": 3, "serialization_format": 2, "document_version": 207,
+    from devices.common import help_ids
+    return help_ids.apply({"header": {"format_version": 3, "serialization_format": 2, "document_version": 207,
                        "object_offset": 0, "resources_offset": 0, "flags": 0},
-            "metadata": metadata(project, revision), "body": body, "meta_nonce": "0" * 32, "body_nonce": "0" * 32}
+            "metadata": metadata(project, revision), "body": body, "meta_nonce": "0" * 32, "body_nonce": "0" * 32},
+        project["name"].replace("EB ", "").replace("-", "").lower())

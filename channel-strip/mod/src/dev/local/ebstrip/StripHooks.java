@@ -94,6 +94,44 @@ public final class StripHooks {
         }
     }
 
+    // ---- F1 device help: the help widget looks up "<help id>.desc" and ".title"; answer the EB devices' keys ----
+
+    @Hook(target = com.bitwig.flt.widget.core.device.CyJ.class, method = "sCA(LZXC;)Ljava/lang/String;", at = At.REPLACE_CALL,
+          callOwner = bitwig.obf.drf.class, call = "wLf", occurrence = 1, id = "help-desc")
+    public static String helpDesc(String key) {
+        try {
+            String text = HelpText.get(key);
+            if (text != null) return text;
+        } catch (Throwable t) {
+            // fall through to Bitwig's own text
+        }
+        return bitwig.obf.drf.wLf(key);
+    }
+
+    @Hook(target = com.bitwig.flt.widget.core.device.CyJ.class, method = "MgQ(LZXC;)Ljava/lang/String;", at = At.REPLACE_CALL,
+          callOwner = bitwig.obf.drf.class, call = "MgQ(Ljava/lang/String;Z)Ljava/lang/String;", occurrence = 1, id = "help-title")
+    public static String helpTitle(String key, boolean flag) {
+        try {
+            String text = HelpText.get(key);
+            if (text != null) return text;
+        } catch (Throwable t) {
+            // fall through
+        }
+        return bitwig.obf.drf.MgQ(key, flag);
+    }
+
+    @Hook(target = com.bitwig.flt.widget.core.device.CyJ.class, method = "Gef(Lcom/bitwig/graphics/ijY;)V", at = At.REPLACE_CALL,
+          callOwner = bitwig.obf.drf.class, call = "MgQ(Ljava/lang/String;Z)Ljava/lang/String;", occurrence = 1, id = "help-label")
+    public static String helpLabel(String key, boolean flag) {
+        try {
+            String text = HelpText.get(key + ".title");
+            if (text != null) return text;
+        } catch (Throwable t) {
+            // fall through
+        }
+        return bitwig.obf.drf.MgQ(key, flag);
+    }
+
     @Hook(target = com.bitwig.flt.document.core.master.device.vP2.class,
           method = "Gef(Lcom/bitwig/flt/document/core/master/device/sgH;I)V", at = At.ENTRY, id = "device-added")
     public static void deviceAdded(@Arg(0) Object device) {

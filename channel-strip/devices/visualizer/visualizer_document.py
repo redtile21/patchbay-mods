@@ -14,7 +14,7 @@ import unit_document2 as u
 
 owned, settings, proxy, nitro_port, metadata = u.owned, u.settings, u.proxy, u.nitro_port, u.metadata
 PANEL_HEIGHT = 53
-REVISION = 4
+REVISION = 5
 
 
 def stack():
@@ -47,8 +47,11 @@ def label(text, x, y, w):
                "horizontal_alignment#6400": v("Byte", 1), "vertical_alignment#6401": v("Byte", 1)})
 
 
-def place(item, x, y, w, h):
+def place(item, x, y, w, h, help_id=None):
     item["fields"]["layout_settings#6226"] = v("Object", grid_layout(x, y, w, h))
+    if help_id:
+        item["fields"]["help_id#10543"] = v("String", help_id)
+        item["fields"]["help_location#10546"] = v("Byte", 0)
     return item
 
 
@@ -144,9 +147,9 @@ def document(project, binaries, shaders):
         items.append(label(name, xx, 1, w))
     spec = u.spectrum_display(ref(analyser), (15.0, 135.0), (-84.0, -12.0))
     items.append(place(spec, xs[0], TOP, cols[0][1], H))
-    items.append(place(display([plot(sc_wave, 4, "Waveform (mid), about the last 6 seconds")], (0.0, 1.0), (-1.0, 1.0)), xs[1], TOP, cols[1][1], H))
+    items.append(place(display([plot(sc_wave, 4, "Waveform (mid), about the last 6 seconds")], (0.0, 1.0), (-1.0, 1.0)), xs[1], TOP, cols[1][1], H, "eb.visualizer.waveform"))
     items.append(place(display([plot(sc_rms, 4, "RMS level, about the last 6 seconds"), plot(sc_peak, 1, "Peak level, about the last 6 seconds")],
-                               (0.0, 1.0), (0.0, 1.0)), xs[2], TOP, cols[2][1], H))
+                               (0.0, 1.0), (0.0, 1.0)), xs[2], TOP, cols[2][1], H, "eb.visualizer.level"))
     items.append(shader_item(ref(grid_draw), xs[2], TOP, cols[2][1], H))
     items.append(shader_item(ref(field_draw), xs[3], TOP, cols[3][1], H))
     grid = obj(1681, "grid_panel_item", {
@@ -180,6 +183,7 @@ def document(project, binaries, shaders):
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
     revision = hashlib.sha1(f"{identity['uuid']}/v{REVISION}".encode("utf-8")).hexdigest()
-    return {"header": {"format_version": 3, "serialization_format": 2, "document_version": 207,
+    from devices.common import help_ids
+    return help_ids.apply({"header": {"format_version": 3, "serialization_format": 2, "document_version": 207,
                        "object_offset": 0, "resources_offset": 0, "flags": 0},
-            "metadata": metadata(project, revision), "body": body, "meta_nonce": "0" * 32, "body_nonce": "0" * 32}
+            "metadata": metadata(project, revision), "body": body, "meta_nonce": "0" * 32, "body_nonce": "0" * 32}, "visualizer")
