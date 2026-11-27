@@ -125,6 +125,8 @@ float number(float2 p, float2 o, float h, float val) {
     return lit;
 }
 
+// @frame
+
 const float MT = 22.;
 const float MB = 170.;
 const float MH = 148.;
@@ -216,5 +218,10 @@ half4 main(float2 fragCoord) {
     if (number(p, float2(292., 7.), 8., outpk) > .5) color = numcol(outpk, -.1);
     if (number(p, float2(250., 7.), 8., -gr) > .5) color = gr > .05 ? red : txt;
     if (number(p, float2(62., 7.), 8., thr) > .5) color = blue;
+    // Captions (shared frame): meters and bars in the bottom row, the header readout's name beside it.
+    color = caption(p, color, 18., 9., 14., 0., 0., 0.);
+    color = caption(p, color, 272., 7., 18., 0., 0., 0.);
+    color = caption(p, color, 302., 15., 21., 20., 0., 0.);
+    color = caption_at(p, color, 50., 15., 20., 8., 18., 0., 0.);
     return half4(half3(color), 1.);
 }

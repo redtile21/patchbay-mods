@@ -129,6 +129,8 @@ float number(float2 p, float2 o, float h, float val) {
     return lit;
 }
 
+// @frame
+
 const float MT = 22.;
 const float MB = 124.;
 const float MH = 102.;
@@ -167,18 +169,23 @@ half4 main(float2 fragCoord) {
     if (number(p, float2(123., 7.), 8., rpk) > .5) color = numcol(rpk, .05);
 
     // Pan: centre tick and marker.
-    if (p.x >= 14. && p.x <= 162. && p.y >= 138. && p.y <= 148.) {
+    if (p.x >= 14. && p.x <= 162. && p.y >= 138. && p.y <= 146.) {
         color = float3(.040, .042, .048);
         float pos = (p.x - 14.) / 148.;
         if (abs(pos - .5) < .005) color = float3(.2, .23, .26);
         if (abs(pos - (pan + 100.) / 200.) < .012) color = blue;
     }
     // Width: bar from the left, tick at 100 percent.
-    if (p.x >= 14. && p.x <= 162. && p.y >= 158. && p.y <= 168.) {
+    if (p.x >= 14. && p.x <= 162. && p.y >= 163. && p.y <= 171.) {
         color = float3(.040, .042, .048);
         float pos = (p.x - 14.) / 148.;
         if (pos < audioMedium.z) color = float3(.30, .68, .92);
         if (abs(pos - .5) < .005) color = float3(.8, .85, .9);
     }
+    // Captions (shared frame): L and R under the meters, PAN and WIDTH under their bars.
+    color = caption_at(p, color, 42., 133., 12., 0., 0., 0., 0.);
+    color = caption_at(p, color, 134., 133., 18., 0., 0., 0., 0.);
+    color = caption_at(p, color, 88., 157., 16., 1., 14., 0., 0.);
+    color = caption(p, color, 88., 23., 9., 4., 20., 8.);
     return half4(half3(color), 1.);
 }

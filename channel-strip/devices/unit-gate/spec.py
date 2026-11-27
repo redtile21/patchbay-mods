@@ -13,8 +13,9 @@ SPEC = {
     "cols": 3, "display_w": 80,
     "knob_pos": [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (2, 0), (2, 1)],
     "titles": {"SC_HPF": "SC HPF", "HYSTERESIS": "Hyst"},
-    "chooser_col": [(1, 29)],
-    "knob_size": 1, "knob_w": 15, "knob_h": 12, "pitch_x": 16, "pitch_y": 12, "row0": 0, "chooser_style": 0, "revision": 5,
+    "knob_size": 1, "knob_w": 15, "knob_h": 12, "pitch_x": 16, "pitch_y": 12, "row0": 0, "chooser_style": 0, "revision": 6,
+    # Option cells (shared frame): (column, row, title, controls[, width])
+    "cells": [(1, 2, 'MODE', ['MODE'])],
     "meters": {}, "vectors": 2, "display_h": 47,
     "choices": [
         ("Mode", "MODE", ("Gate", "Expander"), 0, "Gate: closes by the range below the threshold. Expander: 1:2 below the threshold, at most the range", "mode"),

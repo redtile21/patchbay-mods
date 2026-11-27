@@ -51,7 +51,7 @@ def geometry(spec):
         g["out_x"] = x
         x += METER_W + 1
     g["knob_x"] = x + 2
-    ncols = (max([c for c, r in spec["knob_pos"]] + [c for c, y in spec.get("chooser_col", [])] + [int(t[5][0]) for t in spec.get("toggles", [])]) + 1) if "knob_pos" in spec else spec["cols"]
+    ncols = (max([c for c, r in spec["knob_pos"]] + [c for c, y in spec.get("chooser_col", [])] + [int(t[5][0]) for t in spec.get("toggles", []) if t[5]] + [c[0] for c in spec.get("cells", [])]) + 1) if "knob_pos" in spec else spec["cols"]
     g["width"] = g["knob_x"] + ncols * spec.get("pitch_x", PITCH_X) + 2 + spec.get("extra_w", 0)
     return g
 
@@ -60,6 +60,22 @@ def vu_meter(connections):
     return obj(40, "vu_meter_atom", {
         "settings#6194": settings(connections), "channel_count#607": v("Byte", 0), "scale_style#2075": v("Int32", 0)})
 
+
+
+def cell_rects(spec, g):
+    """Option cells (the shared unit frame): each takes one knob cell, an orange title on top and its controls under it.
+    spec["cells"] entries: (column, row, title, [choice or toggle identifiers], optional width). Toggles share the width."""
+    px, py = spec.get("pitch_x", PITCH_X), spec.get("pitch_y", PITCH_Y)
+    labels, rects = [], {}
+    for cell in spec.get("cells", []):
+        col, row, title, ids = cell[:4]
+        w = cell[4] if len(cell) > 4 else spec.get("knob_w", KNOB_W)
+        x, y0 = g["knob_x"] + col * px, TOP + spec.get("row0", 0) + int(row * py)
+        labels.append((x, y0 + 1, w, title))
+        n = len(ids)
+        for k, ident in enumerate(ids):
+            rects[ident] = (x + int(round(k * w / n)), y0 + 6, int(w / n) if n > 1 else w)
+    return labels, rects
 
 
 def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, display_item=None, expressions=(), backdrop_ref=None, overlay=None, toggle_refs=()):
@@ -127,6 +143,12 @@ def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, disp
             "layout_settings#6226": v("Object", grid_layout(g["knob_x"] + lc * spec.get("pitch_x", PITCH_X), ly, lw, 5)),
             "text#6219": v("String", ltext), "color#6520": v("Int16", TITLE_COLOR),
             "horizontal_alignment#6400": v("Byte", 1), "vertical_alignment#6401": v("Byte", 1)}))
+    cell_labels, cells = cell_rects(spec, g)
+    for (lx, ly, lw, ltext) in cell_labels:
+        items.append(obj(1683, "label_panel_item", {
+            "layout_settings#6226": v("Object", grid_layout(lx, ly, lw, 5)),
+            "text#6219": v("String", ltext), "color#6520": v("Int16", TITLE_COLOR),
+            "horizontal_alignment#6400": v("Byte", 1), "vertical_alignment#6401": v("Byte", 1)}))
     for (lx, lw, ltext) in spec.get("chooser_labels", []):
         lx = g["disp_x"] + lx if lx >= 0 else g["disp_x"] + g["dw"] + lx
         items.append(obj(1683, "label_panel_item", {
@@ -134,7 +156,9 @@ def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, disp
             "text#6219": v("String", ltext), "color#6520": v("Int16", TITLE_COLOR),
             "horizontal_alignment#6400": v("Byte", 1), "vertical_alignment#6401": v("Byte", 1)}))
     for i, (ch, ref) in enumerate(zip(spec["choices"], choice_refs)):
-        if bar:
+        if ch[1] in cells:
+            cx, cy, cw = cells[ch[1]]
+        elif bar:
             n_side = len(spec["decimals"]) - nb
             cx, cy, cw = g["side_x"], TOP + ((n_side + spec["side_cols"] - 1) // spec["side_cols"]) * PITCH_Y + 1 + i * 6, spec["side_cols"] * PITCH_X - 1
         elif "chooser_col" in spec:
@@ -156,9 +180,13 @@ def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, disp
             "style#6266": v("Byte", spec.get("chooser_styles", {}).get(i, spec.get("chooser_style", 7))),
             "color#7528": v("Int16", spec.get("chooser_colors", {}).get(i, CHOOSER_COLOR))}))
     for tg, ref in zip(spec.get("toggles", []), toggle_refs):
-        col, ty, tw = tg[5]
+        if tg[1] in cells:
+            tx, ty, tw = cells[tg[1]]
+        else:
+            col, ty, tw = tg[5]
+            tx, ty = int(round(g["knob_x"] + col * spec.get("pitch_x", PITCH_X))), TOP + ty
         items.append(obj(1702, "toggle_button_panel_item", {
-            "layout_settings#6226": v("Object", grid_layout(int(round(g["knob_x"] + col * spec.get("pitch_x", PITCH_X))), TOP + ty, tw, 5)),
+            "layout_settings#6226": v("Object", grid_layout(tx, ty, tw, 5)),
             "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
             "tooltip_text#6867": v("String", tg[3]), "data_model#6220": ref, "title#6241": v("String", tg[0]),
             "icon_name#6239": v("String", tg[6] if len(tg) > 6 else ""),
@@ -281,6 +309,8 @@ def document(spec, project, binary, shader):
         return entry
 
     g = geometry(spec)
+    if "// @frame" in shader:
+        shader = shader.replace("// @frame", (Path(__file__).resolve().parent / "frame.sksl").read_text(encoding="utf-8"), 1)
     input_proxy = proxy()
     input_owner = connection()
     input_owner["Object"]["fields"]["source_component#248"] = v("Object", input_proxy)

@@ -18,7 +18,9 @@ outports each), the companion mod that swaps units, and panel expressions for in
 - [x] One meter style everywhere: the strip's blue → amber → red bars and light-blue numbers. Units still use their
       own colours (for example the teal-green bar on Gain). Write meter colours and number style once in a shared
       source that every shader takes.
-- [ ] Shared unit frame: the same header, frames, label case and spacing on every unit.
+- [x] Shared unit frame: every option (dropdown or switch) sits in a knob cell with an orange title over it
+      (`cells` in the unit specs); every display names its meters and bars in a bottom caption row (IN, GR, OUT,
+      CLIP, GAIN, DET) and the header readout beside it (THR, CEIL, KHZ), from the shared `common/frame.sksl`.
 - [x] Remove the build digit in the corner of the unit displays.
 - [x] Clearer slot states on the strip: a dimmed box for a bypassed slot, a gain-reduction bar on Compressor and
       Limiter slots (already in place; the slot output bar now uses the shared ramp).
