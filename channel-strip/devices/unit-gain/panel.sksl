@@ -132,8 +132,8 @@ float number(float2 p, float2 o, float h, float val) {
 // @frame
 
 const float MT = 22.;
-const float MB = 170.;
-const float MH = 148.;
+const float MB = 118.;
+const float MH = 96.;
 // Meter fill shared with the EB BlackStrip meters: blue, light blue, amber near the top, red at the very top.
 float3 ramp(float t) {
     float3 c = mix(float3(.22, .52, .82), float3(.42, .74, .95), smoothstep(0., .75, t));
@@ -148,50 +148,44 @@ float3 meterpx(float2 p, float3 color, float x0, float x1, float lvl, float pk) 
         float lv = (MB - p.y) / MH;
         color = float3(.040, .042, .048);
         if (lv < lvl) color = ramp(lv);
-        if (abs(mod(lv * 6., 1.)) < .03 && lv > .01 && lv < .99 && lv >= lvl) color = float3(.10, .12, .14);
+        if (abs(mod(lv * 6., 1.)) < .045 && lv > .01 && lv < .99 && lv >= lvl) color = float3(.10, .12, .14);
         if (abs(lv - pk) < .006 && pk > .01) color = float3(1., .62, .16);
     }
     return color;
 }
 
 half4 main(float2 fragCoord) {
-    // 44 x 47 grid units -> 176 x 188 design units. Narrow meters as on the other units: left (6..30) and right (146..170).
-    float2 p = fragCoord / iResolution.xy * float2(176., 188.);
+    // 16 x 47 grid units -> 64 x 188 design units: the two narrow meters side by side, pan and width bars under them.
+    float2 p = fragCoord / iResolution.xy * float2(64., 188.);
     float3 color = float3(.060, .064, .072);
     float3 blue = float3(.30, .68, .92);
-    float3 txt = float3(.80, .82, .84);
-    float gain = audioMedium.x * 48. - 24.;
     float pan = audioMedium.y * 200. - 100.;
 
     color = meterpx(p, color, 6., 30., audioLow.x, audioLow.z);
-    color = meterpx(p, color, 146., 170., audioLow.y, audioLow.w);
+    color = meterpx(p, color, 34., 58., audioLow.y, audioLow.w);
     float lpk = audioLow.z * 66. - 60.;
     float rpk = audioLow.w * 66. - 60.;
-    if (number(p, float2(8., 6.), 10., lpk) > .5) color = numcol(lpk, .05);
-    if (number(p, float2(144., 6.), 10., rpk) > .5) color = numcol(rpk, .05);
-
-    // Gain readout, large, in the middle.
-    if (number(p, float2(66., 40.), 18., gain) > .5) color = abs(gain) < .05 ? txt : blue;
+    if (number(p, float2(5., 7.), 9., lpk) > .5) color = numcol(lpk, .05);
+    if (number(p, float2(34., 7.), 9., rpk) > .5) color = numcol(rpk, .05);
 
     // Pan: centre tick and marker.
-    if (p.x >= 40. && p.x <= 136. && p.y >= 104. && p.y <= 112.) {
+    if (p.x >= 6. && p.x <= 58. && p.y >= 136. && p.y <= 144.) {
         color = float3(.040, .042, .048);
-        float pos = (p.x - 40.) / 96.;
-        if (abs(pos - .5) < .007) color = float3(.2, .23, .26);
-        if (abs(pos - (pan + 100.) / 200.) < .018) color = blue;
+        float pos = (p.x - 6.) / 52.;
+        if (abs(pos - .5) < .012) color = float3(.2, .23, .26);
+        if (abs(pos - (pan + 100.) / 200.) < .03) color = blue;
     }
     // Width: bar from the left, tick at 100 percent.
-    if (p.x >= 40. && p.x <= 136. && p.y >= 144. && p.y <= 152.) {
+    if (p.x >= 6. && p.x <= 58. && p.y >= 162. && p.y <= 170.) {
         color = float3(.040, .042, .048);
-        float pos = (p.x - 40.) / 96.;
+        float pos = (p.x - 6.) / 52.;
         if (pos < audioMedium.z) color = blue;
-        if (abs(pos - .5) < .007) color = float3(.8, .85, .9);
+        if (abs(pos - .5) < .012) color = float3(.8, .85, .9);
     }
-    // Captions (shared frame): L and R under the meters, GAIN, PAN and WIDTH under their readouts.
-    color = caption(p, color, 18., 12., 0., 0., 0., 0.);
-    color = caption(p, color, 158., 18., 0., 0., 0., 0.);
-    color = caption_at(p, color, 88., 84., 7., 1., 9., 14., 0.);
-    color = caption_at(p, color, 88., 125., 16., 1., 14., 0., 0.);
-    color = caption_at(p, color, 88., 165., 23., 9., 4., 20., 8.);
+    // Captions (shared frame): L and R under the meters, PAN and WIDTH under their bars.
+    color = caption_at(p, color, 18., 130., 12., 0., 0., 0., 0.);
+    color = caption_at(p, color, 46., 130., 18., 0., 0., 0., 0.);
+    color = caption_at(p, color, 32., 156., 16., 1., 14., 0., 0.);
+    color = caption(p, color, 32., 23., 9., 4., 20., 8.);
     return half4(half3(color), 1.);
 }

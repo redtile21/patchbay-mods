@@ -89,7 +89,7 @@ def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, disp
             "help_location#10546": v("Byte", 0), "data_model#6220": backdrop_ref}))
     cols = spec["cols"]
     disp_h = spec.get("display_h", PANEL_HEIGHT - 2 * TOP)
-    choosers_h = 6 if "chooser_abs" in spec else (0 if (spec.get("layout") == "bar" or "chooser_pos" in spec or "chooser_col" in spec) else 6 * len(spec["choices"]))
+    choosers_h = 6 if "chooser_abs" in spec else (0 if (spec.get("layout") == "bar" or "chooser_pos" in spec or "chooser_col" in spec or "cells" in spec) else 6 * len(spec["choices"]))
     for name, vu, key in (("Input peak meter", in_vu, "in_x"), ("Output peak meter", out_vu, "out_x")):
         if vu is not None:
             items.append(obj(1724, "meter_panel_item", {
