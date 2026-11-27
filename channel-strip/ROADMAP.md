@@ -46,8 +46,13 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
 - [x] Exact tanh (from exp) for Character and the compressor's drive.
 - [x] Character amount knob, and a matching stage before the slots (Character column: chooser, Amount, Input switch).
 - [x] Strip-wide 2x: a QUALITY switch in the Character column turns on 2x in Character and, through the mod, in the
-      Saturation and Clipper units in the slots (also when a unit is loaded or swapped). The 2x adds the curve's
-      effect halfway between samples and averages it, so it adds no latency and changes nothing below the curve.
+      Saturation and Clipper units in the slots (also when a unit is loaded or swapped). True 2x oversampling with
+      polyphase IIR half-band filters (`devices/common/halfband.py` generates the Nitro code); the dry paths (Mix,
+      Clipper Delta) go through a matching pair so they stay in phase.
+- [x] Saturation sound pass (from the saturation DSP guide): Tape with pre/de-emphasis, head bump and drive-dependent
+      high loss; Tube bias that moves with level; Console asymmetric with emphasis; new Diode Si and Diode Ge types.
+      Tried and dropped: ADAA and averaged in-between points (both leak a treble-heavy copy of the driven signal or dull
+      the highs; measured in Python).
 
 ## 4. Workflow
 

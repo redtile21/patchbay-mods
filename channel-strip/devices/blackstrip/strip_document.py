@@ -86,7 +86,7 @@ def main_panel(drawing_refs, out_ref, type_refs, in_meter_ref, out_meter_ref, kn
         items.append(obj(1702, "toggle_button_panel_item", {
             "layout_settings#6226": v("Object", grid_layout(CHAR_X, 47, CHAR_W, 5)),
             "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
-            "tooltip_text#6867": v("String", "2x oversampling for the whole strip: Character, and the Saturation and Clipper units in the slots (less aliasing when driven)"),
+            "tooltip_text#6867": v("String", "2x oversampling for the whole strip: Character, and the Saturation and Clipper units in the slots (far less aliasing when driven)"),
             "data_model#6220": os_ref, "title#6241": v("String", "2x"), "icon_name#6239": v("String", "sample-rate.svg"),
             "style#6240": v("Byte", 2), "label_style#6267": v("Byte", 2), "color#7527": v("Int16", 1)}))
     for i, tref in enumerate(type_refs):
@@ -381,7 +381,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v52".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v53".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,

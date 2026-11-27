@@ -1,4 +1,4 @@
-// audioLow:    drive (0..1 = 0..36 dB), bias (0..1 = -1..1), type + mix packed ((type + mix * .99) / 8), input level (-60..+6 dB)
+// audioLow:    drive (0..1 = 0..36 dB), bias (0..1 = -1..1), type + mix packed ((type + mix * .99) / 16), input level (-60..+6 dB)
 // audioMedium: output level, input peak hold, output peak hold (-60..+6 dB), reserved
 uniform float4 audioLow;
 uniform float4 audioMedium;
@@ -142,7 +142,14 @@ float shape(float v, float kind) {
     }
     if (kind < 3.5) return clamp(v, -1., 1.);
     if (kind < 4.5) return v >= 0. ? tanhf(v) : tanhf(v * .85) / .85;
-    if (kind < 5.5) return v / sqrt(1. + v * v);
+    if (kind < 5.5) { float kc = v < 0. ? .8 : 1.; return v / sqrt(1. + kc * kc * v * v); }
+    if (kind > 6.5) {
+        float t = kind > 7.5 ? (v < 0. ? .22 : .3) : .7;
+        float sl = kind > 7.5 ? .25 : .08;
+        float a = abs(v);
+        float r = a > t ? t + sl * log(1. + (a - t) / sl) : a;
+        return v < 0. ? -r : r;
+    }
     return tanhf(v);
 }
 
@@ -176,7 +183,7 @@ half4 main(float2 fragCoord) {
     float3 color = float3(.060, .064, .072);
     float drive = pow(10., audioLow.x * 36. / 20.);
     float bias = (audioLow.y * 2. - 1.) * .5;
-    float tm = audioLow.z * 8.;
+    float tm = audioLow.z * 16.;
     float kind = floor(tm + .001);
     float mixv = fract(tm + .001) / .99;
     float inlv = audioLow.w;
@@ -197,14 +204,14 @@ half4 main(float2 fragCoord) {
         float off = shape(bias, kind);
         float yc = shape(gx * drive + bias, kind) - off;
         // Exciter: the line plus the saturated highs (drawn as if the whole band were highs).
-        if (kind > 5.5) yc = gx + .15 * (tanhf(drive * gx + bias) - tanhf(bias));
+        if (kind > 5.5 && kind < 6.5) yc = gx + .15 * (tanhf(drive * gx + bias) - tanhf(bias));
         yc = gx * (1. - mixv) + yc * mixv;
         yc = clamp(yc, -1.2, 1.2);
         if (abs(gy - yc) < .03) color = float3(.50, .76, 1.);
         // Live operating point at the current input level.
         float il = pow(10., (inlv * 66. - 60.) / 20.);
         float iy = shape(il * drive + bias, kind) - off;
-        if (kind > 5.5) iy = il + .15 * (tanhf(drive * il + bias) - tanhf(bias));
+        if (kind > 5.5 && kind < 6.5) iy = il + .15 * (tanhf(drive * il + bias) - tanhf(bias));
         iy = il * (1. - mixv) + iy * mixv;
         float2 d = float2((gx - il) * 76., (gy - iy) * 74.);
         if (length(d) < 3.2) color = float3(.95, .96, .98);
