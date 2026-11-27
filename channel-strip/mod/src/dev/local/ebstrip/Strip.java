@@ -44,7 +44,7 @@ final class Strip {
     private record Hit(Object object, String path) {}
 
     private static String identifierOf(Object o) {
-        return identifierOf(o, text -> text.matches("SLOT[1-6]_(TYPE|CHAIN|K[1-3])|INPUT_GAIN|MOVE_[1-5]|AB|LUFS_RESET"));
+        return identifierOf(o, text -> text.matches("SLOT[1-6]_(TYPE|CHAIN|K[1-3])|INPUT_GAIN|MOVE_[1-5]|AB|LUFS_RESET|OVERSAMPLING"));
     }
 
     private static String identifierOf(Object o, java.util.function.Predicate<String> accept) {
@@ -120,6 +120,7 @@ final class Strip {
         final lpr[] types = new lpr[7];
         final Object[] moves = new Object[6]; // MOVE_n buttons: swap slot n with slot n + 1
         Object ab;                             // the A/B switch
+        Object os;                             // the strip's 2x (oversampling) switch, passed on to the units
         int side;                              // 0 = A, 1 = B (the side the strip currently shows)
         final Snapshot[] snaps = new Snapshot[2];
         final k3K[] chains = new k3K[7];
@@ -155,6 +156,7 @@ final class Strip {
             }
             for (int n = 1; n <= 5; n++) w.moves[n] = findByIdentifier(strip, "MOVE_" + n);
         w.ab = findByIdentifier(strip, "AB");
+        w.os = findByIdentifier(strip, "OVERSAMPLING");
         if (w.ab instanceof bitwig.obf.cbF b) w.side = b.Anf() ? 1 : 0;
             for (int n = 1; n <= 6; n++) for (int k = 1; k <= 3; k++) {
                 Object a = findByIdentifier(strip, "SLOT" + n + "_K" + k);
@@ -308,6 +310,7 @@ final class Strip {
             for (int i = 0; i < KNOB_KINDS.length; i++) if (KNOB_KINDS[i].equals(kind)) row = i;
             List<?> devices = new ArrayList<>(w.chains[n].qJX());
             w.linked[n] = devices.isEmpty() ? null : devices.get(0);
+            if (!devices.isEmpty()) pushOversampling(w, n);
             if (row < 0 || devices.isEmpty()) return;
             Object device = devices.get(0);
             for (int k = 0; k < 3; k++) {
@@ -398,6 +401,7 @@ final class Strip {
     /** Called after one of the strip's buttons is set: Reset, A/B or a slot-move arrow. */
     static void buttonSet(bitwig.obf.cbF atom, String via) {
         if (RESETTING.get()) return;
+        if (oversamplingSet(atom)) return;
         long now = System.currentTimeMillis();
         if (now - lastButton < 500) return;
         String ident = identifierOf(atom);
@@ -415,6 +419,38 @@ final class Strip {
             lastButton = now;
             moveSet(atom, Integer.parseInt(ident.substring(5)));
             return;
+        }
+    }
+
+    // ---- strip-wide 2x: the strip's switch sets the OVERSAMPLING switch of every slot's unit that has one ----
+
+    /** True when this is a strip's own 2x switch (then every slot's unit follows it). */
+    private static boolean oversamplingSet(bitwig.obf.cbF atom) {
+        if (!"OVERSAMPLING".equals(identifierOf(atom))) return false;
+        boolean known;
+        synchronized (WATCHES) { known = WATCHES.stream().anyMatch(w -> w.os == atom || w.strip == null); }
+        if (!known && !AUTO_FAILED.contains(atom)) autoArm(atom);   // a strip not watched yet (or a unit's own switch)
+        List<Watch> copy;
+        synchronized (WATCHES) { copy = new ArrayList<>(WATCHES); }
+        for (Watch w : copy) {
+            if (w.os != atom) continue;
+            MOD.log("strip 2x " + (atom.Anf() ? "on" : "off"));
+            for (int n = 1; n <= 6; n++) pushOversampling(w, n);
+            return true;
+        }
+        AUTO_FAILED.add(atom);   // a unit's own switch: don't search for its strip again
+        return false;
+    }
+
+    /** Gives slot n's unit the strip's 2x setting, if the unit has an OVERSAMPLING switch. */
+    private static void pushOversampling(Watch w, int n) {
+        try {
+            if (!(w.os instanceof bitwig.obf.cbF strip) || w.chains[n] == null) return;
+            List<?> devices = new ArrayList<>(w.chains[n].qJX());
+            if (devices.isEmpty() || !(devices.get(0) instanceof utt unit)) return;
+            if (findByIdentifier(unit, "OVERSAMPLING") instanceof bitwig.obf.cbF b && b.Anf() != strip.Anf()) b.Gef(strip.Anf());
+        } catch (Throwable t) {
+            MOD.log("could not pass 2x to slot " + n, t);
         }
     }
 
@@ -586,7 +622,7 @@ final class Strip {
 
     // ---- A/B snapshots of the whole strip ----
 
-    private static final String[] STRIP_PARAMS = {"OUTPUT_GAIN", "MATCH", "CHARACTER", "CHARACTER_AMOUNT", "CHARACTER_INPUT"};
+    private static final String[] STRIP_PARAMS = {"OUTPUT_GAIN", "MATCH", "CHARACTER", "CHARACTER_AMOUNT", "CHARACTER_INPUT", "OVERSAMPLING"};
 
     private record Snapshot(String[] types, List<Map<String, Object>> units, Map<String, Object> strip) {}
 
@@ -684,7 +720,7 @@ final class Strip {
     private static boolean autoArm(Object atom) {
         try {
             String id = identifierOf(atom);
-            if (id == null || !id.matches("SLOT[1-6]_TYPE|MOVE_[1-5]|AB|SLOT[1-6]_K[1-3]")) return false;
+            if (id == null || !id.matches("SLOT[1-6]_TYPE|MOVE_[1-5]|AB|SLOT[1-6]_K[1-3]|OVERSAMPLING")) return false;
             utt strip = (utt) findUp(atom, o -> o instanceof utt u && STRIP_UUIDS.contains(String.valueOf(u.beI())), 8, 6000);
             if (strip == null || armStrip(strip) == null) { AUTO_FAILED.add(atom); return false; }
             return true;
@@ -713,6 +749,7 @@ final class Strip {
         }
         for (int n = 1; n <= 5; n++) w.moves[n] = findByIdentifier(strip, "MOVE_" + n);
         w.ab = findByIdentifier(strip, "AB");
+        w.os = findByIdentifier(strip, "OVERSAMPLING");
         if (w.ab instanceof bitwig.obf.cbF b) w.side = b.Anf() ? 1 : 0;
         for (int n = 1; n <= 6; n++) for (int k = 1; k <= 3; k++) {
             Object a = findByIdentifier(strip, "SLOT" + n + "_K" + k);
@@ -879,7 +916,7 @@ final class Strip {
         "eb gate", Set.of("THRESHOLD", "RANGE", "HYSTERESIS", "ATTACK", "HOLD", "RELEASE", "SC_HPF", "MODE"),
         "eb de-esser", Set.of("FREQ", "THRESHOLD", "RANGE", "RELEASE", "MODE"),
         "eb transient", Set.of("ATTACK", "SUSTAIN", "OUTPUT", "MIX", "SPEED"),
-        "eb clipper", Set.of("INPUT_GAIN", "CEILING", "SOFTNESS", "TILT", "DELTA", "AUTO_GAIN"));
+        "eb clipper", Set.of("INPUT_GAIN", "CEILING", "SOFTNESS", "TILT", "DELTA", "AUTO_GAIN", "OVERSAMPLING"));
 
     /** strip -> "slot|unit" -> identifier -> value (Double for knobs, String for choices). Lives for the session. */
     private static final Map<Object, Map<String, Map<String, Object>>> MEMORY =

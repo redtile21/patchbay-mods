@@ -45,8 +45,9 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
       and Out (soft saturation, slight high-frequency rolloff, low-end bump for Tape).
 - [x] Exact tanh (from exp) for Character and the compressor's drive.
 - [x] Character amount knob, and a matching stage before the slots (Character column: chooser, Amount, Input switch).
-- [ ] Oversampling as one strip setting, passed by the mod to the units that benefit (Saturation has 2x already;
-      add it to Clipper and Character). The button could sit in the device header if View moves there (section 4).
+- [x] Strip-wide 2x: a QUALITY switch in the Character column turns on 2x in Character and, through the mod, in the
+      Saturation and Clipper units in the slots (also when a unit is loaded or swapped). The 2x adds the curve's
+      effect halfway between samples and averages it, so it adds no latency and changes nothing below the curve.
 
 ## 4. Workflow
 

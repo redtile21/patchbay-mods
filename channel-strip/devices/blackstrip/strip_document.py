@@ -74,9 +74,21 @@ def icon_toggle(ref, x, y, w, h, icon, title, tip):
 
 
 def main_panel(drawing_refs, out_ref, type_refs, in_meter_ref, out_meter_ref, knob_refs, backdrop_ref, ref=None,
-               match_ref=None, character_ref=None, amount_ref=None, char_input_ref=None, move_refs=(), ab_ref=None, target_ref=None, reset_ref=None):
+               match_ref=None, character_ref=None, amount_ref=None, char_input_ref=None, move_refs=(), ab_ref=None, target_ref=None, reset_ref=None, os_ref=None):
     items = [drawing_item(backdrop_ref, 0, 0, PANEL_WIDTH, PANEL_HEIGHT)]
     items.append(drawing_item(in_meter_ref, IN_X, METER_Y, IN_W, METER_H))
+    if os_ref is not None:
+        # Strip-wide 2x (where VIEW was; the expanded view now opens from the header's window icon)
+        items.append(obj(1683, "label_panel_item", {
+            "layout_settings#6226": v("Object", grid_layout(CHAR_X, 42, CHAR_W, 4)),
+            "text#6219": v("String", "QUALITY"), "color#6520": v("Int16", 1),
+            "horizontal_alignment#6400": v("Byte", 1), "vertical_alignment#6401": v("Byte", 1)}))
+        items.append(obj(1702, "toggle_button_panel_item", {
+            "layout_settings#6226": v("Object", grid_layout(CHAR_X, 47, CHAR_W, 5)),
+            "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
+            "tooltip_text#6867": v("String", "2x oversampling for the whole strip: Character, and the Saturation and Clipper units in the slots (less aliasing when driven)"),
+            "data_model#6220": os_ref, "title#6241": v("String", "2x"), "icon_name#6239": v("String", "sample-rate.svg"),
+            "style#6240": v("Byte", 2), "label_style#6267": v("Byte", 2), "color#7527": v("Int16", 1)}))
     for i, tref in enumerate(type_refs):
         items.append(chooser(f"Slot {i + 1} unit", tref, X0 + i * (SLOT_W + GAP), 0, SLOT_W))
     for i, dref in enumerate(drawing_refs):
@@ -203,6 +215,7 @@ def character_atom(binary, connections, switchable):
     inputs = [nitro_port("in", 0, 2, output=False), nitro_port("amount", 1, 1, output=False), value_port("character", 2, boolean=False)]
     if switchable:
         inputs.append(value_port("enabled", 3, boolean=True))
+    inputs.append(value_port("oversampling", len(inputs), boolean=True))
     return obj(1721, "nitro_atom", {
         "settings#6194": settings(connections),
         "channel_count#607": v("Byte", 0), "oversampling#608": v("Byte", 0),
@@ -279,6 +292,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     ab = boolean_parameter("A/B", "AB", False)
     lufs_target = indexed_parameter("Loudness Target", "LUFS_TARGET", ("Off", "-14", "-16", "-23"), 1)
     lufs_reset = boolean_parameter("Reset Integrated Loudness", "LUFS_RESET", False)
+    oversampling = boolean_parameter("2x Oversampling", "OVERSAMPLING", False)
     moves = [boolean_parameter(f"Swap Slots {n}-{n + 1}", f"MOVE_{n}", False) for n in range(1, SLOTS)]
     knobs = [[parameter(f"Slot {i} Knob {k}", f"SLOT{i}_K{k}", 0.0, 100.0, 50.0, 0) for k in (1, 2, 3)] for i in range(1, SLOTS + 1)]
     # the default chain a new strip loads (the mod inserts the units)
@@ -299,7 +313,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
         "preset_identifier#701": v("String", "BACKDROP"), "#16316": v("WideString", backdrop_shader)})
     meter_in = meter_atom(meter_binary, [wire(compensation), wire(lufs_target), wire(lufs_reset)])
     in_drawing = drawing_atom(meter_in, "IN_METER", meter_shader)
-    char_in = character_atom(char_in_binary, [wire(meter_in), wire(char_amount), wire(character), wire(char_input)], True)
+    char_in = character_atom(char_in_binary, [wire(meter_in), wire(char_amount), wire(character), wire(char_input), wire(oversampling)], True)
     previous = char_in
     placeholders, slots, taps, drawings = [], [], [], []
     for index in range(1, SLOTS + 1):
@@ -316,7 +330,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
         taps.append(tp)
         drawings.append(drawing)
         previous = tp
-    char_out = character_atom(char_out_binary, [wire(previous), wire(char_amount), wire(character)], False)
+    char_out = character_atom(char_out_binary, [wire(previous), wire(char_amount), wire(character), wire(oversampling)], False)
     stage_out = stage(binary, [wire(char_out), wire(meter_in), wire(out_gain), wire(match)])
 
     output_proxy = proxy(output=True)
@@ -325,7 +339,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     output_proxy["fields"]["settings#6194"] = settings([wire(meter_out, 0)])
     panel = main_panel([ref(d) for d in drawings], ref(out_gain), [ref(t) for t in types],
                        ref(in_drawing), ref(out_drawing), [[ref(k) for k in row] for row in knobs], ref(backdrop), ref,
-                       ref(match), ref(character), ref(char_amount), ref(char_input), [ref(m) for m in moves], ref(ab), ref(lufs_target), ref(lufs_reset))
+                       ref(match), ref(character), ref(char_amount), ref(char_input), [ref(m) for m in moves], ref(ab), ref(lufs_target), ref(lufs_reset), ref(oversampling))
     window = obj(1680, "panel", {
         "name#6211": v("String", "Expanded"),
         "root_item#6212": v("Object", obj(1681, "grid_panel_item", {
@@ -337,7 +351,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
         "expressions#6277": v("ObjectList", owned()),
     })
     identity = project["identity"]
-    children = [backdrop, audio_source, compensation, out_gain, match, character, char_amount, char_input, *types, *[k for row in knobs for k in row], *moves, ab, lufs_target, lufs_reset, meter_in, in_drawing, char_in]
+    children = [backdrop, audio_source, compensation, out_gain, match, character, char_amount, char_input, *types, *[k for row in knobs for k in row], *moves, ab, lufs_target, lufs_reset, oversampling, meter_in, in_drawing, char_in]
     for ph, sl, tp, dr in zip(placeholders, slots, taps, drawings):
         children += [ph, sl, tp, dr]
     children += [char_out, stage_out, meter_out, out_drawing]
@@ -367,7 +381,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v51".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v52".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,

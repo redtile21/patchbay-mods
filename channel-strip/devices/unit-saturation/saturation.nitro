@@ -178,7 +178,7 @@ component eb_saturation
         if (oversampling && sat_type != 6)
         {
             f32 mid_l = (d_l + prev_l) * 0.5;
-            s_l = (s_l + shape(mid_l, kind) - bias_off) * 0.5;
+            s_l = d_l + 0.5 * ((s_l + bias_off - d_l) + (shape(mid_l, kind) - mid_l)) - bias_off;
         }
         prev_l = d_l;
         if (sat_type == 4)
@@ -217,7 +217,7 @@ component eb_saturation
         if (oversampling && sat_type != 6)
         {
             f32 mid_r = (d_r + prev_r) * 0.5;
-            s_r = (s_r + shape(mid_r, kind) - bias_off) * 0.5;
+            s_r = d_r + 0.5 * ((s_r + bias_off - d_r) + (shape(mid_r, kind) - mid_r)) - bias_off;
         }
         prev_r = d_r;
         if (sat_type == 4)

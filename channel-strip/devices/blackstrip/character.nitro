@@ -4,6 +4,7 @@ component eb_character
     audio_inport f32 amount = 50.0;
     value_inport i32 character;
     value_inport bool enabled;
+    value_inport bool oversampling;
 
     audio_outport out;
 
@@ -13,6 +14,7 @@ component eb_character
     f32<2> lb = 0.0;
     f32<2> dc_x = 0.0;
     f32<2> dc_y = 0.0;
+    f32<2> px = 0.0;          // previous input, for 2x
     f32 k_hc_an = 0.0;
     f32 k_hc_tu = 0.0;
     f32 k_hc_ta = 0.0;
@@ -24,6 +26,12 @@ component eb_character
     {
         f32 e = exp(2.0 * fmax(-10.0, fmin(10.0, v)));
         return (e - 1.0) / (e + 1.0);
+    }
+
+    // The voiced curve at one point, level kept at low levels.
+    f32 sat(f32 v, f32 drive, f32 bias, f32 sb)
+    {
+        return (soft(v * drive + bias) - sb) / drive;
     }
 
     process
@@ -39,6 +47,7 @@ component eb_character
             k_dc = exp(-6.283185307 * 8.0 / sr);
         }
         f32<> x = in;
+        f32<> xin = in;
 
         // Character (0 Clean, 1 Analog, 2 Tube, 3 Tape): gentle saturation with level kept at low levels.
         // Amount 50 % is the voicing below; 0 % is clean, 100 % doubles the drive, bias and colour.
@@ -53,8 +62,17 @@ component eb_character
             drive = 1.0 + (drive - 1.0) * am;
             bias = bias * am;
             f32 sb = soft(bias);
-            f32<> d = x * drive;
-            f32<> y = <(soft(d[0] + bias) - sb) / drive, (soft(d[1] + bias) - sb) / drive>;
+            f32 y_l = sat(x[0], drive, bias, sb);
+            f32 y_r = sat(x[1], drive, bias, sb);
+            if (oversampling)
+            {
+                // 2x: average what the curve adds at this sample and halfway to the previous one (less aliasing).
+                f32 m_l = 0.5 * (x[0] + px[0]);
+                f32 m_r = 0.5 * (x[1] + px[1]);
+                y_l = x[0] + 0.5 * ((y_l - x[0]) + (sat(m_l, drive, bias, sb) - m_l));
+                y_r = x[1] + 0.5 * ((y_r - x[1]) + (sat(m_r, drive, bias, sb) - m_r));
+            }
+            f32<> y = <y_l, y_r>;
             // DC blocker (the bias adds a little offset)
             f32<> yb = y - dc_x + dc_y * k_dc;
             dc_x = y;
@@ -68,6 +86,7 @@ component eb_character
             }
             x = y;
         }
+        px = xin;
         out = x;
     }
 }
