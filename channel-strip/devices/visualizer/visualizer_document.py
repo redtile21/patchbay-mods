@@ -14,7 +14,7 @@ import unit_document2 as u
 
 owned, settings, proxy, nitro_port, metadata = u.owned, u.settings, u.proxy, u.nitro_port, u.metadata
 PANEL_HEIGHT = 53
-REVISION = 3
+REVISION = 4
 
 
 def stack():
