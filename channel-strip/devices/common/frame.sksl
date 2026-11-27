@@ -180,10 +180,10 @@ float word(float2 p, float cx, float y, float h, float a, float b, float c, floa
 
 
 // Letters: A1 B2 C3 D4 E5 F6 G7 H8 I9 J10 K11 L12 M13 N14 O15 P16 Q17 R18 S19 T20 U21 V22 W23 X24 Y25 Z26 (B, J, Q are not drawn; Z is).
-const float CAP_Y = 183.;     // caption baseline, bottom row (displays are 188 design units high)
-const float CAP_H = 7.;
+const float CAP_Y = 184.;     // caption baseline, bottom row (displays are 188 design units high)
+const float CAP_H = 9.;
 float3 caption_at(float2 p, float3 color, float cx, float y, float a, float b, float c, float d, float e) {
-    if (abs(p.y - (y - CAP_H * .5)) > CAP_H || abs(p.x - cx) > 20.) return color;
+    if (abs(p.y - (y - CAP_H * .5)) > CAP_H || abs(p.x - cx) > 26.) return color;
     if (word(p, cx, y, CAP_H, a, b, c, d, e, 0.) > .5) color = float3(.50, .52, .56);
     return color;
 }

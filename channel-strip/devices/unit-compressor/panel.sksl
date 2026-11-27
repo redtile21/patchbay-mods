@@ -221,14 +221,14 @@ half4 main(float2 fragCoord) {
     // Numeric readouts: input peak, gain reduction, output peak.
     float inpk = audioMedium.z * 60. - 60.;
     float outpk = audioMedium.w * 60. - 60.;
-    if (number(p, float2(8., 7.), 8., inpk) > .5) color = numcol(inpk, -.1);
-    if (number(p, float2(292., 7.), 8., outpk) > .5) color = numcol(outpk, -.1);
-    if (number(p, float2(250., 7.), 8., -gr) > .5) color = gr > .05 ? red : txt;
-    if (number(p, float2(62., 7.), 8., thr) > .5) color = blue;
+    if (number(p, float2(8., 6.), 10., inpk) > .5) color = numcol(inpk, -.1);
+    if (number(p, float2(292., 6.), 10., outpk) > .5) color = numcol(outpk, -.1);
+    if (number(p, float2(250., 6.), 10., -gr) > .5) color = gr > .05 ? red : txt;
+    if (number(p, float2(74., 6.), 10., thr) > .5) color = blue;
     // Captions (shared frame): meters and bars in the bottom row, the header readout's name beside it.
     color = caption(p, color, 18., 9., 14., 0., 0., 0.);
     color = caption(p, color, 272., 7., 18., 0., 0., 0.);
     color = caption(p, color, 302., 15., 21., 20., 0., 0.);
-    color = caption_at(p, color, 50., 15., 20., 8., 18., 0., 0.);
+    color = caption_at(p, color, 59., 16., 20., 8., 18., 0., 0.);
     return half4(half3(color), 1.);
 }

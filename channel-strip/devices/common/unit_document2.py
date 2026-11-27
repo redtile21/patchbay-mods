@@ -63,7 +63,7 @@ def vu_meter(connections):
 
 
 def cell_rects(spec, g):
-    """Option cells (the shared unit frame): each takes one knob cell, an orange title on top and its controls under it.
+    """Option cells (the shared unit frame): each takes one knob cell, an orange title at its top (level with section titles) and its controls under it.
     spec["cells"] entries: (column, row, title, [choice or toggle identifiers], optional width). Toggles share the width."""
     px, py = spec.get("pitch_x", PITCH_X), spec.get("pitch_y", PITCH_Y)
     labels, rects = [], {}
@@ -71,10 +71,10 @@ def cell_rects(spec, g):
         col, row, title, ids = cell[:4]
         w = cell[4] if len(cell) > 4 else spec.get("knob_w", KNOB_W)
         x, y0 = g["knob_x"] + col * px, TOP + spec.get("row0", 0) + int(row * py)
-        labels.append((x, y0 + 1, w, title))
+        labels.append((x, y0, w, title))
         n = len(ids)
         for k, ident in enumerate(ids):
-            rects[ident] = (x + int(round(k * w / n)), y0 + 6, int(w / n) if n > 1 else w)
+            rects[ident] = (x + int(round(k * w / n)), y0 + 5, int(w / n) if n > 1 else w)
     return labels, rects
 
 

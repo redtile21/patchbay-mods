@@ -211,8 +211,8 @@ half4 main(float2 fragCoord) {
     }
     float ipk = audioMedium.y * 66. - 60.;
     float opk = audioMedium.z * 66. - 60.;
-    if (number(p, float2(8., 7.), 8., ipk) > .5) color = numcol(ipk, .05);
-    if (number(p, float2(196., 7.), 8., opk) > .5) color = numcol(opk, .05);
+    if (number(p, float2(8., 6.), 10., ipk) > .5) color = numcol(ipk, .05);
+    if (number(p, float2(196., 6.), 10., opk) > .5) color = numcol(opk, .05);
     // Captions (shared frame): meters and bars in the bottom row, the header readout's name beside it.
     color = caption(p, color, 18., 9., 14., 0., 0., 0.);
     color = caption(p, color, 206., 15., 21., 20., 0., 0.);
