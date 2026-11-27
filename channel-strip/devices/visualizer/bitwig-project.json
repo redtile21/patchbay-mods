@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "projectId": "eb-visualizer",
+  "name": "EB Visualizer",
+  "surface": "device",
+  "target": {
+    "bitwigVersion": "6.1.7",
+    "platform": "macos-arm64"
+  },
+  "identity": {
+    "uuid": "f6b84227-a522-4b92-89cd-43a8a16134e2",
+    "creator": "Elodea Blackstar",
+    "category": "Audio FX"
+  },
+  "presentation": {
+    "type": "audio-fx",
+    "description": "Elodea Blackstar visualizer: spectrum, sonogram, oscilloscope, stereo field and level history"
+  },
+  "sources": {
+    "nitro": [
+      "levels.nitro",
+      "mid.nitro",
+      "field.nitro"
+    ],
+    "sksl": [
+      "field.sksl",
+      "grid.sksl"
+    ]
+  },
+  "adapter": {
+    "type": "external-builder",
+    "argv": [
+      "python",
+      "{workspace}/build.py",
+      "--out",
+      "{output}"
+    ]
+  },
+  "output": {
+    "path": "build/macos-6.1.7/EB Visualizer.bwdevice",
+    "libraryPath": "EB Visualizer.bwdevice"
+  }
+}

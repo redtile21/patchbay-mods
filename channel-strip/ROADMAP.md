@@ -91,9 +91,10 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
 
 ## 6. Metering
 
-- [ ] EB Visualizer, a separate device rather than a wider strip: spectrum, oscilloscope, frequency/pan, and a
-      scrolling level history. Bitwig has display items for an oscilloscope, a sonogram (scrolling spectrum) and data
-      arrays; whether Nitro can feed a history array needs a test.
+- [ ] EB Visualizer (`devices/visualizer`), a separate device: spectrum, scrolling waveform, level history (RMS and
+      peak, about 6 s) and a stereo field (8 bands by pan and level, correlation bar). Built on the display items that
+      work in a Patchbay device: the spectrum and the scope observer (a scrolling time plot). The sonogram and the
+      lightweight oscilloscope stayed blank in tests. First build installed; needs checking in Bitwig.
 - [x] Correlation meter on the output (bar under the readouts, red below zero).
 - [x] Integrated LUFS (BS.1770 gated) as INT, a reset icon, and a target chooser (-14, -16, -23): green within
       1 LU, orange above.

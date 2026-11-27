@@ -1,0 +1,15 @@
+component eb_vis_mid
+{
+    audio_inport in;
+
+    audio_outport out;
+    audio_outport f32<2> mid;
+
+    process
+    {
+        f32<> x = in;
+        out = x;
+        f32 m = 0.5 * (x[0] + x[1]);
+        mid = <m, m>;
+    }
+}

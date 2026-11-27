@@ -1,0 +1,71 @@
+// EB Visualizer stereo field: eight bands (60 Hz bottom .. 14 kHz top) placed by pan, sized and coloured by level;
+// correlation bar at the bottom. 36 x 46 grid units -> 144 x 184 design units.
+// audioLow: bands 0-3, audioMedium: bands 4-7. Each lane: (level8 * 256 + pan8) / 2^24; band 0 also has corr8 * 65536.
+uniform float4 audioLow;
+uniform float4 audioMedium;
+
+float sdseg(float2 p, float2 a, float2 b) {
+    float2 pa = p - a;
+    float2 ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0., 1.);
+    return length(pa - ba * h);
+}
+// @frame
+
+float3 ramp(float t) {
+    float3 c = mix(float3(.22, .52, .82), float3(.42, .74, .95), smoothstep(0., .75, t));
+    c = mix(c, float3(.98, .60, .16), smoothstep(.78, .88, t));
+    return t > .93 ? float3(.95, .32, .20) : c;
+}
+float lane(int i) {
+    if (i == 0) return audioLow.x;
+    if (i == 1) return audioLow.y;
+    if (i == 2) return audioLow.z;
+    if (i == 3) return audioLow.w;
+    if (i == 4) return audioMedium.x;
+    if (i == 5) return audioMedium.y;
+    if (i == 6) return audioMedium.z;
+    return audioMedium.w;
+}
+
+half4 main(float2 fragCoord) {
+    float2 p = fragCoord / iResolution.xy * float2(144., 184.);
+    float3 color = float3(.060, .064, .072);
+    const float X0 = 10.;
+    const float X1 = 134.;
+    const float CX = 72.;
+    const float HW = 62.;
+    const float T = 22.;
+    const float RH = 18.;
+    // guides: centre, half left and half right
+    if (p.y > T - 4. && p.y < T + 8. * RH + 4.) {
+        if (abs(p.x - CX) < .5) color = float3(.20, .22, .25);
+        if (abs(abs(p.x - CX) - HW * .5) < .4) color = float3(.12, .13, .15);
+    }
+    float c0 = audioLow.x * 16777216.;
+    float corr = floor(c0 / 65536. + .0001) / 127.5 - 1.;
+    for (int i = 0; i < 8; i++) {
+        float c = lane(i) * 16777216.;
+        if (i == 0) c -= floor(c / 65536. + .0001) * 65536.;
+        float lq = floor(c / 256. + .0001);
+        float lv = lq / 255.;
+        float pan = (c - lq * 256.) / 127.5 - 1.;
+        float y = T + (7. - float(i)) * RH + RH * .5;
+        if (abs(p.y - y) < .4 && p.x > X0 && p.x < X1) color = max(color, float3(.10, .11, .13));
+        if (lv > .02) {
+            float r = 1.5 + lv * 7.5;
+            float d = length(p - float2(CX + pan * HW, y));
+            if (d < r) color = mix(color, ramp(lv), 1. - smoothstep(r - 1., r, d));
+        }
+    }
+    // correlation: -1 .. +1, red below zero, green above
+    if (p.y > 172. && p.y < 180. && p.x > X0 && p.x < X1) {
+        color = float3(.040, .042, .048);
+        float px = CX + corr * HW;
+        if ((p.x > CX && p.x < px) || (p.x < CX && p.x > px)) color = corr < 0. ? float3(.95, .32, .20) : float3(.35, .78, .45);
+        if (abs(p.x - CX) < .5) color = float3(.35, .37, .40);
+    }
+    color = caption_at(p, color, 14., 15., 12., 0., 0., 0., 0.);
+    color = caption_at(p, color, 130., 15., 18., 0., 0., 0., 0.);
+    return half4(half3(color), 1.);
+}
