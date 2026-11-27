@@ -434,8 +434,12 @@ final class Strip {
         synchronized (WATCHES) { copy = new ArrayList<>(WATCHES); }
         for (Watch w : copy) {
             if (w.os != atom) continue;
-            MOD.log("strip 2x " + (atom.Anf() ? "on" : "off"));
-            for (int n = 1; n <= 6; n++) pushOversampling(w, n);
+            // The switch holds its new value only once the click has finished (as with A/B), so read it then.
+            final Watch watch = w;
+            drf.EO().runAtEndOfCurrentEvent(() -> {
+                MOD.log("strip 2x " + (atom.Anf() ? "on" : "off"));
+                for (int n = 1; n <= 6; n++) pushOversampling(watch, n);
+            });
             return true;
         }
         AUTO_FAILED.add(atom);   // a unit's own switch: don't search for its strip again
