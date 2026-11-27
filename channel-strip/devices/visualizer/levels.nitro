@@ -1,0 +1,31 @@
+component eb_vis_levels
+{
+    audio_inport in;
+
+    audio_outport out;
+    audio_outport f32<2> rms;
+    audio_outport f32<2> peak;
+
+    f32 e2 = 0.0;
+    f32 pk = 0.0;
+
+    process
+    {
+        f32<> x = in;
+        out = x;
+        f32 sr = EC.samplerate;
+        // RMS over about 300 ms; peak with an instant rise and a 20 dB per second fall. Both -60..0 dB as 0..1.
+        f32 a = 1.0 - exp(-1.0 / (0.3 * sr));
+        e2 = e2 + a * (0.5 * (x[0] * x[0] + x[1] * x[1]) - e2);
+        f32 p = fmax(fabs(x[0]), fabs(x[1]));
+        pk = pk * exp(-2.302585093 / sr);
+        if (p > pk)
+        {
+            pk = p;
+        }
+        f32 r = fmax(0.0, fmin(1.0, (10.0 * log10(fmax(e2, 0.000000000001)) + 60.0) / 60.0));
+        f32 q = fmax(0.0, fmin(1.0, (20.0 * log10(fmax(pk, 0.000001)) + 60.0) / 60.0));
+        rms = <r, r>;
+        peak = <q, q>;
+    }
+}

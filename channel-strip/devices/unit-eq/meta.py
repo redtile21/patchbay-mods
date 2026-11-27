@@ -1,0 +1,5 @@
+NAME = "EB EQ"
+PROJECT_ID = "elodea-blackstar.eq"
+UUID = "7e41c0d9-2f58-4b36-a1d7-93c5e8b0f214"
+DESCRIPTION = "Elodea Blackstar four-band equaliser with high-pass and low-pass filters."
+NITRO = "eq.nitro"

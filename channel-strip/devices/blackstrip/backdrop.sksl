@@ -1,0 +1,28 @@
+// EB BlackStrip TDR backdrop: a flat charcoal panel with thin framed sections.
+float frame(float2 p, float2 lo, float2 hi, float r) {
+    float2 c = (lo + hi) * .5;
+    float2 h = (hi - lo) * .5;
+    float2 q = abs(p - c) - h + r;
+    return length(max(q, 0.)) + min(max(q.x, q.y), 0.) - r;
+}
+
+half4 main(float2 fragCoord) {
+    float2 p = fragCoord / iResolution.xy * float2(166., 53.);
+    float3 col = float3(.128, .133, .143);
+    float a = 1.;
+    float3 well = float3(.082, .087, .096);
+    float3 line = float3(.27, .28, .30);
+    float d = 1000.;
+    for (int i = 0; i < 6; i++) {
+        float x0 = 24. + 20. * float(i);
+        d = min(d, frame(p, float2(x0 - .2, 5.8), float2(x0 + 19.2, 52.6), .5));
+    }
+    d = min(d, frame(p, float2(.3, .3), float2(14.4, 52.6), .5));     // strip column: Character, A/B, 2x (View is the header window button)
+    d = min(d, frame(p, float2(15.3, .3), float2(23.2, 42.2), .5));   // input meter
+    d = min(d, frame(p, float2(143.8, .3), float2(165.4, 42.2), .5)); // output meter
+    if (d < 0.) { col = well; a = 1.; }
+    float l = 1. - smoothstep(.04, .16, abs(d));
+    col = mix(col, line, l);
+    a = max(a, l);
+    return half4(half3(col * a), half(a));
+}

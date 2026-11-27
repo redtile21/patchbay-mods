@@ -1,0 +1,1140 @@
+package dev.local.ebstrip;
+
+import bitwig.obf.drf;
+import bitwig.obf.PiT;
+import bitwig.obf.aCG;
+import bitwig.obf.aDs;
+import bitwig.obf.dwF;
+import bitwig.obf.dwe;
+import bitwig.obf.lpr;
+import bml.api.Bml;
+import bml.notifications.Notifications;
+import com.bitwig.flt.document.core.iface.bMt;
+import com.bitwig.flt.document.core.iface.uVN;
+import com.bitwig.flt.document.core.master.CmH;
+import com.bitwig.flt.document.core.master.GJy;
+import com.bitwig.flt.document.core.master.device.k3K;
+import com.bitwig.flt.document.core.master.device.utt;
+import com.bitwig.flt.packaging.core.SJF;
+import com.bitwig.flt.packaging.core.odK;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+/** EB BlackStrip companion: keeps each slot's unit in step with its dropdown, links the macro knobs, swaps slots, A/B, expanded view. */
+final class Strip {
+    static final Bml.Mod MOD = Bml.mod("eb-strip-console");
+    /** The strip and the nested-chain test strip. */
+    static final Set<String> STRIP_UUIDS = Set.of("4f1e9a37-0b6c-4d82-95e3-d7a2c8b1f406", "5d0c6a52-3c5e-4f0b-9a58-2f1d4b7e6c31");
+
+    private Strip() {}
+
+    private record Ctx(aCG project, GJy root, PiT track) {}
+
+    private record Hit(Object object, String path) {}
+
+    private static String identifierOf(Object o) {
+        return identifierOf(o, text -> text.matches("SLOT[1-6]_(TYPE|CHAIN|K[1-3])|INPUT_GAIN|MOVE_[1-5]|AB|LUFS_RESET|OVERSAMPLING"));
+    }
+
+    private static String identifierOf(Object o, java.util.function.Predicate<String> accept) {
+        String name = o.getClass().getName();
+        if (name.contains(".") && !name.startsWith("com.bitwig.")) return null;
+        for (Class<?> c = o.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
+            for (Field f : c.getDeclaredFields()) {
+                if (Modifier.isStatic(f.getModifiers()) || f.getType() != String.class) continue;
+                try {
+                    f.setAccessible(true);
+                    Object v = f.get(o);
+                    if (v instanceof String text && accept.test(text)) return text;
+                } catch (Throwable ignored) {
+                    // unreadable
+                }
+            }
+        }
+        return null;
+    }
+
+    /** The nested chain of slot n (1-6): found by the slot's own identifier, because the chain list has no fixed order. */
+    private static Hit slotChain(utt strip, int n) {
+        String wanted = "SLOT" + n + "_CHAIN";
+        Map<Object, Boolean> seen = new IdentityHashMap<>();
+        List<Hit> level = new ArrayList<>();
+        level.add(new Hit(strip, ""));
+        seen.put(strip, true);
+        int nodes = 0;
+        for (int depth = 0; depth <= 9 && !level.isEmpty() && nodes < 40000; depth++) {
+            List<Hit> next = new ArrayList<>();
+            for (Hit hit : level) {
+                if (++nodes > 40000) break;
+                Object o = hit.object;
+                if (o != strip && o instanceof utt) continue;
+                if (wanted.equals(identifierOf(o))) {
+                    List<Hit> chains = walk(o, k3K.class, 4, 500);
+                    if (!chains.isEmpty()) return new Hit(chains.get(0).object, hit.path + chains.get(0).path);
+                }
+                for (Hit child : children(hit)) {
+                    if (child.object == null || seen.put(child.object, true) != null) continue;
+                    next.add(child);
+                }
+            }
+            level = next;
+        }
+        return null;
+    }
+
+    private static utt findStrip(Ctx c) {
+        for (Hit d : walk(c.track.YQe(), utt.class, 6, 5000)) {
+            if (STRIP_UUIDS.contains(String.valueOf(((utt) d.object).beI()))) return (utt) d.object;
+        }
+        return null;
+    }
+
+    /** The strip's own nested chains: the walk also reaches the chain the strip sits in, which holds the strip itself. */
+    private static List<Hit> slotChains(utt strip) {
+        List<Hit> chains = new ArrayList<>();
+        for (Hit hit : walk(strip, k3K.class, 8, 20000)) {
+            boolean parent = false;
+            for (Hit inner : walk(hit.object, utt.class, 2, 500)) {
+                if (inner.object == strip) { parent = true; break; }
+            }
+            if (!parent) chains.add(hit);
+        }
+        return chains;
+    }
+
+    // ---- Watcher: keeps each slot's loaded unit in step with the strip's SLOTn_TYPE dropdown ----
+
+    private static final class Watch {
+        final Ctx c; final utt strip;
+        final lpr[] types = new lpr[7];
+        final Object[] moves = new Object[6]; // MOVE_n buttons: swap slot n with slot n + 1
+        Object ab;                             // the A/B switch
+        Object os;                             // the strip's 2x (oversampling) switch, passed on to the units
+        int side;                              // 0 = A, 1 = B (the side the strip currently shows)
+        final Snapshot[] snaps = new Snapshot[2];
+        final k3K[] chains = new k3K[7];
+        final bitwig.obf.xdh[][] knobs = new bitwig.obf.xdh[7][3];   // the strip's own knobs
+        final bitwig.obf.xdh[][] units = new bitwig.obf.xdh[7][3];   // the loaded unit's parameters they drive
+        final bitwig.obf.xdh[] enhanceHigh = new bitwig.obf.xdh[7];  // the EQ's high band, driven with its low band by Enhance
+        final double[][] lo = new double[7][3], hi = new double[7][3];
+        final Object[] linked = new Object[7];  // the unit the knobs were last linked to
+        Watch(Ctx c, utt strip) { this.c = c; this.strip = strip; }
+    }
+
+    private static final List<Watch> WATCHES = new ArrayList<>();
+    private static final ThreadLocal<Boolean> BUSY = ThreadLocal.withInitial(() -> false);
+
+    /** Starts keeping the first strip on the selected track in step with its dropdowns. */
+    static void arm(Object widget, Object selection) {
+        try {
+            Ctx c = context(widget, selection);
+            if (c == null) return;
+            utt strip = findStrip(c);
+            if (strip == null) { Notifications.toast("EB Strip: no strip on the selected track"); return; }
+            Watch w = new Watch(c, strip);
+            for (int n = 1; n <= 6; n++) {
+                Object atom = findByIdentifier(strip, "SLOT" + n + "_TYPE");
+                Hit chain = slotChain(strip, n);
+                if (!(atom instanceof lpr) || chain == null) {
+                    MOD.log("watch: slot " + n + " is missing its dropdown or chain");
+                    Notifications.toast("EB Strip: this strip has no slot dropdowns (see the log)");
+                    return;
+                }
+                w.types[n] = (lpr) atom;
+                w.chains[n] = (k3K) chain.object;
+            }
+            for (int n = 1; n <= 5; n++) w.moves[n] = findByIdentifier(strip, "MOVE_" + n);
+        w.ab = findByIdentifier(strip, "AB");
+        w.os = findByIdentifier(strip, "OVERSAMPLING");
+        if (w.ab instanceof bitwig.obf.cbF b) w.side = b.Anf() ? 1 : 0;
+            for (int n = 1; n <= 6; n++) for (int k = 1; k <= 3; k++) {
+                Object a = findByIdentifier(strip, "SLOT" + n + "_K" + k);
+                if (a instanceof bitwig.obf.xdh x) w.knobs[n][k - 1] = x;
+            }
+            synchronized (WATCHES) {
+                WATCHES.removeIf(o -> o.strip == strip);
+                WATCHES.add(w);
+            }
+            for (int n = 1; n <= 6; n++) relink(w, n, false);
+            Notifications.toast("EB Strip: watching the dropdowns on this track");
+            onChangesEnded();
+        } catch (Throwable t) {
+            MOD.log("watch failed", t);
+        }
+    }
+
+    private static java.util.TimerTask watchdog;
+    private static int watchChecks;
+
+    /** While the expanded view is open, closes it as soon as its strip is gone from the track (a view of deleted chains crashes Bitwig). */
+    private static void watchStrip(Watch w) {
+        if (watchdog != null) watchdog.cancel();
+        k3K found = null;
+        try {
+            found = (k3K) findUp(w.strip, o -> o instanceof k3K k && k.qJX().contains(w.strip), 4, 3000);
+        } catch (Throwable t) { MOD.log("watchdog: could not find the strip's chain", t); }
+        final k3K parent = found;
+        watchdog = drf.EO().beI(() -> {
+            try {
+                if (!StripViews.hasOpen()) { watchdog.cancel(); return; }
+                boolean alive;
+                try {
+                    alive = parent == null || parent.qJX().contains(w.strip);
+                } catch (Throwable t) { alive = true; if (watchChecks++ < 3) MOD.log("watchdog check failed", t); }
+                if (!alive) {
+                    MOD.log("strip is gone; closing the expanded view");
+                    StripViews.closeAll();
+                    synchronized (WATCHES) { WATCHES.remove(w); }
+                    watchdog.cancel();
+                }
+            } catch (Throwable t) {
+                MOD.log("watchdog failed", t);
+            }
+        }, 100L, 100L);
+    }
+
+    /** Opens the strip's expanded view (its own window): Bitwig's chain widget for each slot with a unit loaded. */
+    static void openView(Object widget, Object selection) {
+        try {
+            arm(widget, selection);
+            Ctx c = context(widget, selection);
+            if (c == null) return;
+            utt strip = findStrip(c);
+            Watch watch = null;
+            synchronized (WATCHES) {
+                for (Watch w : WATCHES) if (w.strip == strip) watch = w;
+            }
+            if (watch == null) return;
+            openViewFor(watch);
+        } catch (Throwable t) {
+            MOD.log("open view failed", t);
+            Notifications.toast("EB Strip: could not open the expanded view (see the log)");
+        }
+    }
+
+    static void openViewFor(Watch w) {
+        try {
+            Ctx c = w.c;
+            java.util.function.Supplier<List<StripView.Entry>> loaded = () -> {
+                List<StripView.Entry> out = new ArrayList<>();
+                for (int n = 1; n <= 6; n++) if (!w.chains[n].qJX().isEmpty()) out.add(new StripView.Entry(w.chains[n], "Slot " + n));
+                return out;
+            };
+            StripView view = new StripView((com.bitwig.flt.document.core.iface.bMt) c.root.cc_(), loaded);
+            StripViews.closeAll();
+            StripViews.add(view);
+            watchStrip(w);
+            drf.EO().runAtEndOfCurrentEvent(() -> {
+                try {
+                    view.open(null);
+                    drf.EO().runAtEndOfCurrentEvent(view::measure);
+                } catch (Throwable t) {
+                    MOD.log("open view failed", t);
+                }
+            });
+        } catch (Throwable t) {
+            MOD.log("open view failed", t);
+            Notifications.toast("EB Strip: could not open the expanded view (see the log)");
+        }
+    }
+
+    private static Object findByIdentifier(utt strip, String wanted) {
+        Map<Object, Boolean> seen = new IdentityHashMap<>();
+        List<Hit> level = new ArrayList<>();
+        level.add(new Hit(strip, ""));
+        seen.put(strip, true);
+        int nodes = 0;
+        for (int depth = 0; depth <= 9 && !level.isEmpty() && nodes < 40000; depth++) {
+            List<Hit> next = new ArrayList<>();
+            for (Hit hit : level) {
+                if (++nodes > 40000) break;
+                Object o = hit.object;
+                if (o != strip && o instanceof utt) continue;
+                if (identifierOf(o, wanted::equals) != null) return o;
+                for (Hit child : children(hit)) {
+                    if (child.object == null || seen.put(child.object, true) != null) continue;
+                    next.add(child);
+                }
+            }
+            level = next;
+        }
+        return null;
+    }
+
+    /** Called by the hook each time Bitwig finishes an undoable change. */
+    /** Called after a dropdown atom's value is set: brings that strip's slots in line if the atom is one we watch. */
+    static void valueSet(lpr atom) {
+        boolean ours = false;
+        synchronized (WATCHES) {
+            for (Watch w : WATCHES) for (int n = 1; n <= 6; n++) if (w.types[n] == atom) ours = true;
+        }
+        boolean failedBefore = AUTO_FAILED.contains(atom);
+        if (!ours && !failedBefore) ours = autoArm(atom);
+        String id = identifierOf(atom);
+        if (id != null && id.matches("SLOT[1-6]_TYPE"))
+            MOD.log(id + " set to " + atom.sSO() + (ours ? "" : failedBefore ? " (strip not found earlier; ignored)" : " (strip not found)"));
+        if (ours) onChangesEnded();
+    }
+
+    // ---- the three macro knobs under each slot ----
+
+    private static final String[][] KNOB_PARAMS = {
+        {"GAIN", "PAN", "WIDTH"},                       // Gain
+        {"LPF", "HPF", "ENHANCE"},                      // EQ
+        {"THRESHOLD", "RATIO", "MAKEUP"},               // Compressor
+        {"DRIVE", "TONE", "MIX"},                       // Saturation
+        {"INPUT_GAIN", "CEILING", "RELEASE"},           // Limiter
+        {"THRESHOLD", "RANGE", "RELEASE"},              // Gate
+        {"FREQ", "THRESHOLD", "RANGE"},                 // De-esser
+        {"ATTACK", "SUSTAIN", "OUTPUT"},                // Transient
+        {"INPUT_GAIN", "CEILING", "SOFTNESS"},          // Clipper
+    };
+    private static final String[] KNOB_KINDS = {"Gain", "EQ", "Compressor", "Saturation", "Limiter", "Gate", "De-esser", "Transient", "Clipper"};
+    private static final double ENHANCE_DB = 6.0;
+    private static final ThreadLocal<Boolean> SYNCING = ThreadLocal.withInitial(() -> false);
+
+    /** Finds the parameters of slot n's loaded unit that the strip's knobs drive; with {@code reset}, the knobs take the unit's values. */
+    static void relink(Watch w, int n, boolean reset) {
+        try {
+            for (int k = 0; k < 3; k++) { w.units[n][k] = null; }
+            w.enhanceHigh[n] = null;
+            String kind = w.types[n].sSO();
+            int row = -1;
+            for (int i = 0; i < KNOB_KINDS.length; i++) if (KNOB_KINDS[i].equals(kind)) row = i;
+            List<?> devices = new ArrayList<>(w.chains[n].qJX());
+            w.linked[n] = devices.isEmpty() ? null : devices.get(0);
+            if (!devices.isEmpty()) pushOversampling(w, n);
+            if (row < 0 || devices.isEmpty()) return;
+            Object device = devices.get(0);
+            for (int k = 0; k < 3; k++) {
+                String id = KNOB_PARAMS[row][k];
+                if ("ENHANCE".equals(id)) {
+                    Object low = findByIdentifier((utt) device, "LOW_GAIN"), high = findByIdentifier((utt) device, "HIGH_GAIN");
+                    if (low instanceof bitwig.obf.xdh l && high instanceof bitwig.obf.xdh h) { w.units[n][k] = l; w.enhanceHigh[n] = h; }
+                } else if (findByIdentifier((utt) device, id) instanceof bitwig.obf.xdh x) {
+                    w.units[n][k] = x;
+                }
+                bitwig.obf.xdh u = w.units[n][k];
+                if (u != null) {
+                    bitwig.obf.aG range = u.XdI();
+                    w.lo[n][k] = Math.min(range.scr(), range.ZRB());
+                    w.hi[n][k] = Math.max(range.scr(), range.ZRB());
+                } else {
+                    MOD.log("slot " + n + " knob " + (k + 1) + ": no parameter " + id + " in " + kind);
+                }
+            }
+            if (reset) {
+                for (int k = 0; k < 3; k++) if (w.units[n][k] != null) unitToKnob(w, n, k, w.units[n][k]);
+            }
+        } catch (Throwable t) {
+            MOD.log("could not link the knobs of slot " + n, t);
+        }
+    }
+
+    /** Called after any knob-type atom has its value set: keeps a strip knob and the unit parameter it drives in step. */
+    static void knobSet(bitwig.obf.kh atom, String via) {
+        if (SYNCING.get() || WATCHES.isEmpty() || !(atom instanceof bitwig.obf.xdh)) return;
+        List<Watch> copy;
+        synchronized (WATCHES) { copy = new ArrayList<>(WATCHES); }
+        for (Watch w : copy) {
+            for (int n = 1; n <= 6; n++) for (int k = 0; k < 3; k++) {
+                if (w.knobs[n][k] == atom && w.units[n][k] != null) {
+                    knobToUnit(w, n, k);
+                    return;
+                }
+                if (w.units[n][k] == atom || (k == 2 && w.enhanceHigh[n] == atom && w.units[n][k] != null)) {
+                    unitToKnob(w, n, k, (bitwig.obf.xdh) atom);
+                    return;
+                }
+            }
+        }
+    }
+
+    private static boolean isEnhance(Watch w, int n, int k) { return w.enhanceHigh[n] != null && k == 2; }
+
+    private static void knobToUnit(Watch w, int n, int k) {
+        double pct = w.knobs[n][k].GwM();
+        SYNCING.set(true);
+        try {
+            if (isEnhance(w, n, k)) {
+                double db = Math.max(0, Math.min(1, pct / 100.0)) * ENHANCE_DB;
+                w.units[n][k].d_(db);
+                w.enhanceHigh[n].d_(db);
+            } else {
+                w.units[n][k].d_(w.lo[n][k] + Math.max(0, Math.min(1, pct / 100.0)) * (w.hi[n][k] - w.lo[n][k]));
+            }
+        } catch (Throwable t) {
+            MOD.log("could not drive the unit from knob " + n + "." + (k + 1), t);
+        } finally {
+            SYNCING.set(false);
+        }
+    }
+
+    private static void unitToKnob(Watch w, int n, int k, bitwig.obf.xdh source) {
+        if (w.knobs[n][k] == null) return;
+        double pct;
+        if (isEnhance(w, n, k)) pct = Math.max(0, Math.min(1, source.GwM() / ENHANCE_DB)) * 100.0;
+        else {
+            double span = w.hi[n][k] - w.lo[n][k];
+            pct = span == 0 ? 0 : Math.max(0, Math.min(1, (source.GwM() - w.lo[n][k]) / span)) * 100.0;
+        }
+        SYNCING.set(true);
+        try {
+            w.knobs[n][k].d_(pct);
+        } catch (Throwable t) {
+            MOD.log("could not move knob " + n + "." + (k + 1), t);
+        } finally {
+            SYNCING.set(false);
+        }
+    }
+
+    private static final ThreadLocal<Boolean> RESETTING = ThreadLocal.withInitial(() -> false);
+    private static long lastButton;
+
+    /** Called after one of the strip's buttons is set: Reset, A/B or a slot-move arrow. */
+    static void buttonSet(bitwig.obf.cbF atom, String via) {
+        if (RESETTING.get()) return;
+        if (oversamplingSet(atom)) return;
+        long now = System.currentTimeMillis();
+        if (now - lastButton < 500) return;
+        String ident = identifierOf(atom);
+        if ("LUFS_RESET".equals(ident)) {
+            lastButton = now;
+            springBack(atom);     // the meter restarts on each change; the icon just flashes
+            return;
+        }
+        if ("AB".equals(ident)) {
+            abSet(atom);
+            return;
+        }
+        if (ident != null && ident.matches("MOVE_[1-5]")) {
+            MOD.log("button " + ident + " pressed (" + via + ")");
+            lastButton = now;
+            moveSet(atom, Integer.parseInt(ident.substring(5)));
+            return;
+        }
+    }
+
+    // ---- strip-wide 2x: the strip's switch sets the OVERSAMPLING switch of every slot's unit that has one ----
+
+    /** True when this is a strip's own 2x switch (then every slot's unit follows it). */
+    private static boolean oversamplingSet(bitwig.obf.cbF atom) {
+        if (!"OVERSAMPLING".equals(identifierOf(atom))) return false;
+        boolean known;
+        synchronized (WATCHES) { known = WATCHES.stream().anyMatch(w -> w.os == atom || w.strip == null); }
+        if (!known && !AUTO_FAILED.contains(atom)) autoArm(atom);   // a strip not watched yet (or a unit's own switch)
+        List<Watch> copy;
+        synchronized (WATCHES) { copy = new ArrayList<>(WATCHES); }
+        for (Watch w : copy) {
+            if (w.os != atom) continue;
+            // The switch holds its new value only once the click has finished (as with A/B), so read it then.
+            final Watch watch = w;
+            drf.EO().runAtEndOfCurrentEvent(() -> {
+                MOD.log("strip 2x " + (atom.Anf() ? "on" : "off"));
+                for (int n = 1; n <= 6; n++) pushOversampling(watch, n);
+            });
+            return true;
+        }
+        AUTO_FAILED.add(atom);   // a unit's own switch: don't search for its strip again
+        return false;
+    }
+
+    /** Gives slot n's unit the strip's 2x setting, if the unit has an OVERSAMPLING switch. */
+    private static void pushOversampling(Watch w, int n) {
+        try {
+            if (!(w.os instanceof bitwig.obf.cbF strip) || w.chains[n] == null) return;
+            List<?> devices = new ArrayList<>(w.chains[n].qJX());
+            if (devices.isEmpty() || !(devices.get(0) instanceof utt unit)) return;
+            if (findByIdentifier(unit, "OVERSAMPLING") instanceof bitwig.obf.cbF b && b.Anf() != strip.Anf()) b.Gef(strip.Anf());
+        } catch (Throwable t) {
+            MOD.log("could not pass 2x to slot " + n, t);
+        }
+    }
+
+    // ---- header window button: the strip declares a maximized panel, so Bitwig shows its window icon ----
+    // A panel can't show device chains (Bitwig's nested_device_chain_slot_panel_item is only a slot button), so the
+    // click opens the mod's expanded view and Bitwig's own window is closed straight away.
+
+    private static final Map<Object, utt> WINDOW_OWNERS = Collections.synchronizedMap(new java.util.WeakHashMap<>());
+
+    /** Called (by the hook) after a device's window is opened or closed from its header button. */
+    static void windowSet(Object device, boolean open) {
+        if (!open || RESETTING.get()) return;
+        utt strip = windowOwner(device);
+        if (strip == null) return;
+        MOD.log("header window button pressed");
+        drf.EO().runAtEndOfCurrentEvent(() -> {
+            try {
+                RESETTING.set(true);
+                ((com.bitwig.flt.document.core.master.device.JHy) device).MgQ(false);
+            } catch (Throwable t) {
+                MOD.log("could not close Bitwig's window", t);
+            } finally {
+                RESETTING.set(false);
+            }
+        });
+        if (StripViews.hasOpen()) { // pressing the button again closes the view
+            StripViews.closeAll();
+            return;
+        }
+        Watch watch = null;
+        synchronized (WATCHES) {
+            for (Watch w : WATCHES) if (w.strip == strip) watch = w;
+        }
+        if (watch == null) watch = armStrip(strip);
+        if (watch != null) openViewFor(watch);
+    }
+
+    /** The strip whose document model (Bitwig's GJP, which owns the window state) this is; null for other devices. */
+    private static utt windowOwner(Object device) {
+        utt known = WINDOW_OWNERS.get(device);
+        if (known != null) return known;
+        synchronized (WATCHES) {
+            for (Watch w : WATCHES) if (modelOf(w.strip) == device) { WINDOW_OWNERS.put(device, w.strip); return w.strip; }
+        }
+        Object found = findUp(device, o -> o instanceof utt u && STRIP_UUIDS.contains(String.valueOf(u.beI())) && modelOf(u) == device, 8, 6000);
+        if (found instanceof utt u) { WINDOW_OWNERS.put(device, u); return u; }
+        MOD.log("window button: not a strip (" + device.getClass().getName() + ")");
+        return null;
+    }
+
+    private static Object modelOf(utt strip) {
+        try {
+            return strip.getClass().getMethod("edx").invoke(strip);
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    // ---- reorder: the arrows between neighbouring slots swap their units, settings included ----
+
+    private static void springBack(bitwig.obf.cbF atom) {
+        drf.EO().runAtEndOfCurrentEvent(() -> {
+            try {
+                RESETTING.set(true);
+                atom.MgQ(false);
+            } catch (Throwable t) {
+                MOD.log("could not reset a button", t);
+            } finally {
+                RESETTING.set(false);
+            }
+        });
+    }
+
+    private static void moveSet(bitwig.obf.cbF atom, int a) {
+        Watch w = null;
+        synchronized (WATCHES) { for (Watch o : WATCHES) if (o.moves[a] == atom) w = o; }
+        if (w == null && !AUTO_FAILED.contains(atom)) {
+            autoArm(atom);
+            synchronized (WATCHES) { for (Watch o : WATCHES) if (o.moves[a] == atom) w = o; }
+        }
+        springBack(atom);
+        if (w == null) { MOD.log("move: no watched strip owns this button"); return; }
+        final Watch watch = w;
+        drf.EO().runAtEndOfCurrentEvent(() -> swapSlots(watch, a));
+    }
+
+    /** The current settings of the unit loaded in slot n (empty for a bypassed slot). */
+    private static Map<String, Object> capture(Watch w, int n) {
+        Map<String, Object> values = new LinkedHashMap<>();
+        List<?> devices = new ArrayList<>(w.chains[n].qJX());
+        Set<String> ids = UNIT_PARAMS.get(("eb " + w.types[n].sSO()).toLowerCase());
+        if (devices.isEmpty() || ids == null) return values;
+        for (Map.Entry<String, Object> e : params((utt) devices.get(0), ids).entrySet()) {
+            if (e.getValue() instanceof bitwig.obf.xdh x) values.put(e.getKey(), x.GwM());
+            else if (e.getValue() instanceof lpr c) values.put(e.getKey(), c.sSO());
+            else if (e.getValue() instanceof bitwig.obf.cbF b) values.put(e.getKey(), b.Anf());
+        }
+        return values;
+    }
+
+    private static void setChoice(lpr c, String text) {
+        for (int i = 0; i < 16 && !text.equals(c.sSO()); i++) c.MgQ(i);
+    }
+
+    /** Swaps slot a and slot a + 1: units, their settings, and the macro knobs. One undo step per slot. */
+    static void swapSlots(Watch w, int a) {
+        int b = a + 1;
+        try {
+            String ta = w.types[a].sSO(), tb = w.types[b].sSO();
+            Map<String, Object> va = capture(w, a), vb = capture(w, b);
+            MOD.log("swap slots " + a + " (" + ta + ") and " + b + " (" + tb + ")");
+            if (ta.equals(tb)) {
+                // same unit in both: just trade the settings
+                CmH changes = w.c.root.cc_();
+                changes.beI("Swap slots " + a + " and " + b, false);
+                try {
+                    List<?> da = new ArrayList<>(w.chains[a].qJX()), db = new ArrayList<>(w.chains[b].qJX());
+                    if (!da.isEmpty() && !db.isEmpty()) {
+                        apply((utt) da.get(0), vb);
+                        apply((utt) db.get(0), va);
+                    }
+                } finally {
+                    changes.beI(false);
+                }
+                relink(w, a, true);
+                relink(w, b, true);
+                return;
+            }
+            // different units: the swap that follows the dropdowns restores these settings in their new slots
+            Map<String, Map<String, Object>> mem = MEMORY.computeIfAbsent(w.strip, k -> new java.util.concurrent.ConcurrentHashMap<>());
+            if (!"Bypass".equals(ta)) mem.put(b + "|eb " + ta.toLowerCase(), va);
+            if (!"Bypass".equals(tb)) mem.put(a + "|eb " + tb.toLowerCase(), vb);
+            BUSY.set(true);
+            CmH changes = w.c.root.cc_();
+            changes.beI("Swap slots " + a + " and " + b, false);
+            try {
+                setChoice(w.types[a], tb);
+                setChoice(w.types[b], ta);
+            } finally {
+                changes.beI(false);
+                BUSY.set(false);
+            }
+            // the old units are remembered under their old slots by swap(); keep the moved settings for the new ones
+            swapNow(w, a, mem, tb, vb);
+            swapNow(w, b, mem, ta, va);
+        } catch (Throwable t) {
+            MOD.log("swap slots failed", t);
+            Notifications.toast("EB Strip: could not swap the slots (see the log)");
+        }
+    }
+
+    private static void swapNow(Watch w, int n, Map<String, Map<String, Object>> mem, String type, Map<String, Object> values) {
+        if (!"Bypass".equals(type)) mem.put(n + "|eb " + type.toLowerCase(), values);
+        onChangesEnded();
+    }
+
+    private static void apply(utt device, Map<String, Object> values) {
+        for (Map.Entry<String, Object> e : params(device, values.keySet()).entrySet()) {
+            Object saved = values.get(e.getKey());
+            try {
+                if (e.getValue() instanceof bitwig.obf.xdh x && saved instanceof Double d) x.d_(d);
+                else if (e.getValue() instanceof lpr c && saved instanceof String text) setChoice(c, text);
+                else if (e.getValue() instanceof bitwig.obf.cbF bt && saved instanceof Boolean on) bt.Gef(on.booleanValue());
+            } catch (Throwable t) {
+                MOD.log("could not set " + e.getKey(), t);
+            }
+        }
+    }
+
+    // ---- A/B snapshots of the whole strip ----
+
+    private static final String[] STRIP_PARAMS = {"OUTPUT_GAIN", "MATCH", "CHARACTER", "CHARACTER_AMOUNT", "CHARACTER_INPUT", "OVERSAMPLING"};
+
+    private record Snapshot(String[] types, List<Map<String, Object>> units, Map<String, Object> strip) {}
+
+    private static Object atomValue(Object a) {
+        if (a instanceof bitwig.obf.xdh x) return x.GwM();
+        if (a instanceof lpr c) return c.sSO();
+        if (a instanceof bitwig.obf.cbF b) return b.Anf();
+        return null;
+    }
+
+    private static void setAtom(Object a, Object value) {
+        if (a instanceof bitwig.obf.xdh x && value instanceof Double d) x.d_(d);
+        else if (a instanceof lpr c && value instanceof String text) setChoice(c, text);
+        else if (a instanceof bitwig.obf.cbF b && value instanceof Boolean on) b.Gef(on.booleanValue());
+    }
+
+    private static Snapshot snapshot(Watch w) {
+        String[] types = new String[7];
+        List<Map<String, Object>> units = new ArrayList<>();
+        units.add(null);
+        for (int n = 1; n <= 6; n++) { types[n] = w.types[n].sSO(); units.add(capture(w, n)); }
+        Map<String, Object> strip = new LinkedHashMap<>();
+        for (String id : STRIP_PARAMS) {
+            Object a = findByIdentifier(w.strip, id);
+            Object val = a == null ? null : atomValue(a);
+            if (val != null) strip.put(id, val);
+        }
+        return new Snapshot(types, units, strip);
+    }
+
+    private static void restore(Watch w, Snapshot snap) {
+        Map<String, Map<String, Object>> mem = MEMORY.computeIfAbsent(w.strip, k -> new java.util.concurrent.ConcurrentHashMap<>());
+        BUSY.set(true);
+        CmH changes = w.c.root.cc_();
+        changes.beI("Strip A/B", false);
+        try {
+            for (int n = 1; n <= 6; n++) {
+                String want = snap.types[n];
+                if (want.equals(w.types[n].sSO())) {
+                    List<?> devices = new ArrayList<>(w.chains[n].qJX());
+                    if (!devices.isEmpty()) apply((utt) devices.get(0), snap.units.get(n));
+                } else {
+                    // a different unit: the swap that follows the dropdown restores these settings
+                    if (!"Bypass".equals(want)) mem.put(n + "|eb " + want.toLowerCase(), snap.units.get(n));
+                    setChoice(w.types[n], want);
+                }
+            }
+            for (Map.Entry<String, Object> e : snap.strip.entrySet()) {
+                Object a = findByIdentifier(w.strip, e.getKey());
+                if (a != null) setAtom(a, e.getValue());
+            }
+        } finally {
+            changes.beI(false);
+            BUSY.set(false);
+        }
+        onChangesEnded();
+        for (int n = 1; n <= 6; n++) relink(w, n, true);
+    }
+
+    /** The A/B switch flipped: keep the side being left, show the other (B starts as a copy of A). */
+    private static void abSet(bitwig.obf.cbF atom) {
+        Watch w = null;
+        synchronized (WATCHES) { for (Watch o : WATCHES) if (o.ab == atom) w = o; }
+        if (w == null && !AUTO_FAILED.contains(atom)) {
+            autoArm(atom);
+            synchronized (WATCHES) { for (Watch o : WATCHES) if (o.ab == atom) w = o; }
+        }
+        if (w == null) { MOD.log("A/B: no watched strip owns this switch"); return; }
+        final Watch watch = w;
+        drf.EO().runAtEndOfCurrentEvent(() -> {
+            try {
+                int to = atom.Anf() ? 1 : 0;
+                if (to == watch.side) return;
+                watch.snaps[watch.side] = snapshot(watch);
+                watch.side = to;
+                Snapshot target = watch.snaps[to];
+                if (target == null) {
+                    watch.snaps[to] = watch.snaps[1 - to];
+                    MOD.log("A/B: " + (to == 1 ? "B" : "A") + " starts as a copy");
+                    Notifications.toast("EB Strip: " + (to == 1 ? "B" : "A") + " starts as a copy of " + (to == 1 ? "A" : "B"));
+                    return;
+                }
+                MOD.log("A/B: showing " + (to == 1 ? "B" : "A"));
+                restore(watch, target);
+            } catch (Throwable t) {
+                MOD.log("A/B failed", t);
+                Notifications.toast("EB Strip: A/B failed (see the log)");
+            }
+        });
+    }
+
+    private static final Set<Object> AUTO_FAILED = Collections.newSetFromMap(new java.util.WeakHashMap<>());
+
+    /** Finds the strip that owns this dropdown by following Bitwig's own references upwards, and starts watching it. */
+    private static boolean autoArm(Object atom) {
+        try {
+            String id = identifierOf(atom);
+            if (id == null || !id.matches("SLOT[1-6]_TYPE|MOVE_[1-5]|AB|SLOT[1-6]_K[1-3]|OVERSAMPLING")) return false;
+            utt strip = (utt) findUp(atom, o -> o instanceof utt u && STRIP_UUIDS.contains(String.valueOf(u.beI())), 8, 6000);
+            if (strip == null || armStrip(strip) == null) { AUTO_FAILED.add(atom); return false; }
+            return true;
+        } catch (Throwable t) {
+            AUTO_FAILED.add(atom);
+            MOD.log("auto-arm failed", t);
+            return false;
+        }
+    }
+
+    /** Starts watching this strip (found without a menu selection); null if its track, project or slots can't be found. */
+    private static Watch armStrip(utt strip) {
+        PiT track = (PiT) findUp(strip, o -> o instanceof PiT, 8, 6000);
+        GJy root = track == null ? null : (GJy) findUp(track, o -> o instanceof GJy, 8, 6000);
+        if (track == null || root == null) {
+            MOD.log("arm: track=" + (track != null) + " root=" + (root != null));
+            return null;
+        }
+        Watch w = new Watch(new Ctx(null, root, track), strip);
+        for (int n = 1; n <= 6; n++) {
+            Object a = findByIdentifier(strip, "SLOT" + n + "_TYPE");
+            Hit chain = slotChain(strip, n);
+            if (!(a instanceof lpr) || chain == null) { MOD.log("arm: slot " + n + " incomplete"); return null; }
+            w.types[n] = (lpr) a;
+            w.chains[n] = (k3K) chain.object;
+        }
+        for (int n = 1; n <= 5; n++) w.moves[n] = findByIdentifier(strip, "MOVE_" + n);
+        w.ab = findByIdentifier(strip, "AB");
+        w.os = findByIdentifier(strip, "OVERSAMPLING");
+        if (w.ab instanceof bitwig.obf.cbF b) w.side = b.Anf() ? 1 : 0;
+        for (int n = 1; n <= 6; n++) for (int k = 1; k <= 3; k++) {
+            Object a = findByIdentifier(strip, "SLOT" + n + "_K" + k);
+            if (a instanceof bitwig.obf.xdh x) w.knobs[n][k - 1] = x;
+        }
+        synchronized (WATCHES) {
+            WATCHES.removeIf(o -> o.strip == strip);
+            WATCHES.add(w);
+        }
+        for (int n = 1; n <= 6; n++) relink(w, n, false);
+        return w;
+    }
+
+    // ---- default chain: a newly inserted strip gets the units its dropdowns name ----
+
+    /** Called (by the hook) when any device is about to be added to a chain. */
+    static void deviceAdded(Object device) {
+        if (!(device instanceof utt strip) || !STRIP_UUIDS.contains(String.valueOf(strip.beI()))) return;
+        // wait until the insert (or a project load) has finished, then look
+        drf.EO().beI(() -> {
+            try {
+                fillNew(strip);
+            } catch (Throwable t) {
+                MOD.log("default chain failed", t);
+            }
+        }, 400L);
+    }
+
+    private static void fillNew(utt strip) {
+        synchronized (WATCHES) {
+            for (Watch w : WATCHES) if (w.strip == strip) return;
+        }
+        for (int n = 1; n <= 6; n++) {
+            Hit chain = slotChain(strip, n);
+            if (chain == null) return;                                   // not (or no longer) a whole strip
+            if (!((k3K) chain.object).qJX().isEmpty()) return;          // loaded, duplicated or undone: has its units
+        }
+        Watch w = armStrip(strip);
+        if (w == null) return;
+        MOD.log("new strip: loading its default chain");
+        onChangesEnded();
+    }
+
+    /** Breadth-first search along Bitwig's references, in any direction, for the first object the test accepts. */
+    private static Object findUp(Object start, java.util.function.Predicate<Object> test, int maxDepth, int maxNodes) {
+        Map<Object, Boolean> seen = new IdentityHashMap<>();
+        List<Hit> level = new ArrayList<>();
+        level.add(new Hit(start, ""));
+        seen.put(start, true);
+        int nodes = 0;
+        for (int depth = 0; depth <= maxDepth && !level.isEmpty() && nodes < maxNodes; depth++) {
+            List<Hit> next = new ArrayList<>();
+            for (Hit hit : level) {
+                if (++nodes > maxNodes) break;
+                if (hit.object != start && test.test(hit.object)) return hit.object;
+                for (Hit child : children(hit, true)) {
+                    if (child.object == null || seen.put(child.object, true) != null) continue;
+                    next.add(child);
+                }
+            }
+            level = next;
+        }
+        return null;
+    }
+
+    static void onChangesEnded() {
+        if (WATCHES.isEmpty() || BUSY.get()) return;
+        BUSY.set(true);
+        try {
+            List<Watch> copy;
+            synchronized (WATCHES) { copy = new ArrayList<>(WATCHES); }
+            Map<UUID, String> names = null;
+            for (Watch w : copy) {
+                try {
+                    for (int n = 1; n <= 6; n++) {
+                        String want = w.types[n].sSO();
+                        List<?> devices = new ArrayList<>(w.chains[n].qJX());
+                        String have = "Bypass";
+                        if (!devices.isEmpty()) {
+                            if (names == null) names = registry();
+                            have = names.getOrDefault(((utt) devices.get(0)).beI(), "?");
+                        }
+                        String wantDevice = "Bypass".equals(want) ? "Bypass" : "EB " + want;
+                        if (devices.size() > 1) {
+                            if (names == null) names = registry();
+                            devices = tidy(w, n, devices, wantDevice, names);
+                            have = devices.isEmpty() ? "Bypass" : names.getOrDefault(((utt) devices.get(0)).beI(), "?");
+                        }
+                        if (wantDevice.equalsIgnoreCase(have)) {
+                            Object first = devices.isEmpty() ? null : devices.get(0);
+                            if (first != w.linked[n]) relink(w, n, false);
+                            continue;
+                        }
+                        swap(w, n, devices, have, wantDevice);
+                    }
+                } catch (Throwable t) {
+                    MOD.log("watch dropped (strip gone or changed)", t);
+                    synchronized (WATCHES) { WATCHES.remove(w); }
+                }
+            }
+        } finally {
+            BUSY.set(false);
+        }
+    }
+
+    /**
+     * A slot holds one unit. Projects saved before the delete fix kept every unit a slot ever had; keep the newest one
+     * that matches the dropdown (or none) and delete the rest, as one undo step.
+     */
+    private static List<?> tidy(Watch w, int n, List<?> devices, String wantDevice, Map<UUID, String> names) {
+        Object keep = null;
+        for (Object d : devices) if (wantDevice.equalsIgnoreCase(names.getOrDefault(((utt) d).beI(), "?"))) keep = d;
+        k3K chain = w.chains[n];
+        CmH changes = w.c.root.cc_();
+        changes.beI("Slot " + n + ": remove leftover units", false);
+        int removed = 0;
+        try {
+            for (Object d : devices) if (d != keep && chain.qJX().contains(d)) { chain.beI((utt) d); removed++; }
+        } finally {
+            changes.beI(false);
+        }
+        MOD.log("slot " + n + ": removed " + removed + " leftover units");
+        relink(w, n, false);
+        return new ArrayList<>(chain.qJX());
+    }
+
+    private static void swap(Watch w, int n, List<?> devices, String haveDevice, String wantDevice) {
+        odK unit = null;
+        if (!"Bypass".equals(wantDevice)) {
+            for (Object candidate : SJF.beI()) {
+                if (((odK) candidate).Gef().equalsIgnoreCase(wantDevice)) { unit = (odK) candidate; break; }
+            }
+            if (unit == null) { MOD.log("swap: no registered device " + wantDevice); return; }
+        }
+        k3K chain = w.chains[n];
+        CmH changes = w.c.root.cc_();
+        changes.beI("Slot " + n + ": " + wantDevice, false);
+        try {
+            if (!devices.isEmpty()) remember(w, n, haveDevice, (utt) devices.get(0));
+            for (Object d : devices) if (chain.qJX().contains(d)) chain.beI((utt) d);  // Bitwig's own delete (MgQ only hid it)
+            if (unit != null) {
+                chain.Gef(utt.byf(unit.beI()), chain.qJX().size(), false, null);
+                List<?> now = new ArrayList<>(chain.qJX());
+                if (!now.isEmpty()) recall(w, n, wantDevice, (utt) now.get(now.size() - 1));
+            }
+        } finally {
+            changes.beI(false);
+        }
+        MOD.log("slot " + n + " now " + wantDevice);
+        relink(w, n, true);
+        StripViews.refreshAll();
+    }
+
+    // ---- remember each slot's settings per unit type, so swapping away and back keeps them ----
+
+    private static final Map<String, Set<String>> UNIT_PARAMS = Map.of(
+        "eb gain", Set.of("GAIN", "PAN", "WIDTH", "INVERT_L", "INVERT_R", "MONO"),
+        "eb eq", Set.of("HPF", "LOW_GAIN", "LOW_FREQ", "LOW_Q", "LM_GAIN", "LM_FREQ", "LM_Q", "HM_GAIN", "HM_FREQ", "HM_Q",
+                        "HIGH_GAIN", "HIGH_FREQ", "HIGH_Q", "LPF", "LOW_SHAPE", "HIGH_SHAPE", "HP_SLOPE", "LP_SLOPE", "MODE", "AIR"),
+        "eb compressor", Set.of("THRESHOLD", "RATIO", "ATTACK", "RELEASE", "MAKEUP", "KNEE", "MIX", "SC_HPF", "STEREO_LINK",
+                                "DETECTOR", "MODE"),
+        "eb saturation", Set.of("DRIVE", "BIAS", "TONE", "MIX", "OUTPUT", "TYPE", "AUTO_GAIN", "OVERSAMPLING"),
+        "eb limiter", Set.of("INPUT_GAIN", "CEILING", "RELEASE", "LOOKAHEAD", "STEREO_LINK", "MODE", "AUTO_RELEASE", "TRUE_PEAK"),
+        "eb gate", Set.of("THRESHOLD", "RANGE", "HYSTERESIS", "ATTACK", "HOLD", "RELEASE", "SC_HPF", "MODE"),
+        "eb de-esser", Set.of("FREQ", "THRESHOLD", "RANGE", "RELEASE", "MODE"),
+        "eb transient", Set.of("ATTACK", "SUSTAIN", "OUTPUT", "MIX", "SPEED"),
+        "eb clipper", Set.of("INPUT_GAIN", "CEILING", "SOFTNESS", "TILT", "DELTA", "AUTO_GAIN", "OVERSAMPLING"));
+
+    /** strip -> "slot|unit" -> identifier -> value (Double for knobs, String for choices). Lives for the session. */
+    private static final Map<Object, Map<String, Map<String, Object>>> MEMORY =
+        Collections.synchronizedMap(new java.util.WeakHashMap<>());
+
+    /** The unit's knob and choice atoms by identifier, found in one walk. */
+    private static Map<String, Object> params(utt device, Set<String> ids) {
+        Map<String, Object> found = new LinkedHashMap<>();
+        Map<Object, Boolean> seen = new IdentityHashMap<>();
+        List<Hit> level = new ArrayList<>();
+        level.add(new Hit(device, ""));
+        seen.put(device, true);
+        int nodes = 0;
+        for (int depth = 0; depth <= 9 && !level.isEmpty() && nodes < 40000 && found.size() < ids.size(); depth++) {
+            List<Hit> next = new ArrayList<>();
+            for (Hit hit : level) {
+                if (++nodes > 40000) break;
+                Object o = hit.object;
+                if (o != device && o instanceof utt) continue;
+                if (o instanceof bitwig.obf.xdh || o instanceof lpr || o instanceof bitwig.obf.cbF) {
+                    String id = identifierOf(o, ids::contains);
+                    if (id != null && !found.containsKey(id)) found.put(id, o);
+                }
+                for (Hit child : children(hit)) {
+                    if (child.object == null || seen.put(child.object, true) != null) continue;
+                    next.add(child);
+                }
+            }
+            level = next;
+        }
+        return found;
+    }
+
+    private static void remember(Watch w, int n, String unitName, utt device) {
+        try {
+            Set<String> ids = UNIT_PARAMS.get(unitName.toLowerCase());
+            if (ids == null) return;
+            Map<String, Object> values = new LinkedHashMap<>();
+            for (Map.Entry<String, Object> e : params(device, ids).entrySet()) {
+                if (e.getValue() instanceof bitwig.obf.xdh x) values.put(e.getKey(), x.GwM());
+                else if (e.getValue() instanceof lpr c) values.put(e.getKey(), c.sSO());
+                else if (e.getValue() instanceof bitwig.obf.cbF b) values.put(e.getKey(), b.Anf());   // on/off switch
+            }
+            MEMORY.computeIfAbsent(w.strip, k -> new java.util.concurrent.ConcurrentHashMap<>()).put(n + "|" + unitName.toLowerCase(), values);
+            MOD.log("slot " + n + ": remembered " + values.size() + " settings of " + unitName);
+        } catch (Throwable t) {
+            MOD.log("could not remember slot " + n + " settings", t);
+        }
+    }
+
+    private static void recall(Watch w, int n, String unitName, utt device) {
+        try {
+            Map<String, Map<String, Object>> byStrip = MEMORY.get(w.strip);
+            Map<String, Object> values = byStrip == null ? null : byStrip.get(n + "|" + unitName.toLowerCase());
+            if (values == null) return;
+            int set = 0;
+            for (Map.Entry<String, Object> e : params(device, values.keySet()).entrySet()) {
+                Object saved = values.get(e.getKey());
+                try {
+                    if (e.getValue() instanceof bitwig.obf.xdh x && saved instanceof Double d) { x.d_(d); set++; }
+                    else if (e.getValue() instanceof lpr c && saved instanceof String text) {
+                        // choices are set by index; step through until the label matches
+                        for (int i = 0; i < 16 && !text.equals(c.sSO()); i++) c.MgQ(i);
+                        if (text.equals(c.sSO())) set++;
+                    }
+                    else if (e.getValue() instanceof bitwig.obf.cbF b && saved instanceof Boolean on) { b.Gef(on.booleanValue()); set++; }
+                } catch (Throwable t) {
+                    MOD.log("slot " + n + ": could not restore " + e.getKey(), t);
+                }
+            }
+            MOD.log("slot " + n + ": restored " + set + " of " + values.size() + " settings of " + unitName);
+        } catch (Throwable t) {
+            MOD.log("could not restore slot " + n + " settings", t);
+        }
+    }
+
+    private static Map<UUID, String> registry() {
+        Map<UUID, String> names = new LinkedHashMap<>();
+        for (Object candidate : SJF.beI()) {
+            odK entry = (odK) candidate;
+            names.put(entry.beI(), entry.Gef());
+        }
+        return names;
+    }
+
+    /**
+     * Breadth-first walk through Bitwig's own objects, reporting every instance of {@code type} below the root. It does not
+     * look inside a reported object, and keeps out of tracks, containers and the project so it cannot wander upwards.
+     */
+    private static List<Hit> walk(Object root, Class<?> type, int maxDepth, int maxNodes) {
+        List<Hit> found = new ArrayList<>();
+        Map<Object, Boolean> seen = new IdentityHashMap<>();
+        List<Hit> level = new ArrayList<>();
+        level.add(new Hit(root, ""));
+        seen.put(root, true);
+        int nodes = 0;
+        for (int depth = 0; depth <= maxDepth && !level.isEmpty() && nodes < maxNodes; depth++) {
+            List<Hit> next = new ArrayList<>();
+            for (Hit hit : level) {
+                if (++nodes > maxNodes) break;
+                Object o = hit.object;
+                if (o != root && type.isInstance(o)) { found.add(hit); continue; }
+                for (Hit child : children(hit)) {
+                    if (child.object == null || seen.put(child.object, true) != null) continue;
+                    next.add(child);
+                }
+            }
+            level = next;
+        }
+        return found;
+    }
+
+    private static List<Hit> children(Hit hit) { return children(hit, false); }
+
+    private static List<Hit> children(Hit hit, boolean unrestricted) {
+        List<Hit> out = new ArrayList<>();
+        Object o = hit.object;
+        if (o instanceof Collection<?> items) {
+            int i = 0;
+            for (Object item : items) out.add(new Hit(item, hit.path + "[" + i++ + "]"));
+            return out;
+        }
+        if (o instanceof Map<?, ?> map) {
+            for (Map.Entry<?, ?> e : map.entrySet()) out.add(new Hit(e.getValue(), hit.path + "{" + e.getKey() + "}"));
+            return out;
+        }
+        if (o instanceof Object[] items) {
+            for (int i = 0; i < items.length; i++) out.add(new Hit(items[i], hit.path + "[" + i + "]"));
+            return out;
+        }
+        String name = o.getClass().getName();
+        if (name.contains(".") && !name.startsWith("com.bitwig.")) return out;
+        if (!unrestricted && (o instanceof PiT || o instanceof GJy || o instanceof uVN || o instanceof aCG || o instanceof bMt || o instanceof dwe)) {
+            if (!hit.path.isEmpty()) return out;
+        }
+        for (Class<?> c = o.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
+            for (Field f : c.getDeclaredFields()) {
+                if (Modifier.isStatic(f.getModifiers()) || f.getType().isPrimitive() || f.getType() == String.class) continue;
+                try {
+                    f.setAccessible(true);
+                    Object value = f.get(o);
+                    if (value != null) out.add(new Hit(value, hit.path + "." + f.getName()));
+                } catch (Throwable ignored) {
+                    // unreadable: skip
+                }
+            }
+        }
+        return out;
+    }
+
+    private static Ctx context(Object widget, Object menuSelection) {
+        dwe window = findWindow(widget);
+        aCG project = window instanceof aDs projectWindow ? projectWindow.DYQ() : null;
+        if (project == null) {
+            MOD.log("no project");
+            Notifications.toast("EB Strip: no project");
+            return null;
+        }
+        uVN root = project.Anf().vNR().GwM();
+        if (!(root instanceof GJy rootTracks)) {
+            MOD.log("unexpected track container " + root.getClass().getName());
+            return null;
+        }
+        List<Object> sources = new ArrayList<>();
+        sources.add(menuSelection);
+        sources.add(windowSelection(window));
+        for (Object source : sources) {
+            List<Object> tracks = TrackSelection.tracksIn(source);
+            for (Object t : tracks) {
+                if (t instanceof PiT track) return new Ctx(project, rootTracks, track);
+            }
+        }
+        Notifications.toast("EB Strip: select a track first");
+        return null;
+    }
+
+    private static dwe findWindow(Object widget) {
+        if (widget instanceof aDs window) return window;
+        try {
+            if (widget instanceof dwF clicked && clicked.jg_() instanceof aDs owner) return owner;
+        } catch (Throwable t) {
+            MOD.log("no owning window: " + t);
+        }
+        try {
+            for (Field f : dwe.class.getDeclaredFields()) {
+                if (Modifier.isStatic(f.getModifiers()) && dwe.class.isAssignableFrom(f.getType())) {
+                    f.setAccessible(true);
+                    if (f.get(null) instanceof aDs window) return window;
+                }
+            }
+        } catch (Throwable t) {
+            MOD.log("no active window: " + t);
+        }
+        return null;
+    }
+
+    private static Object windowSelection(dwe window) {
+        if (window == null) return null;
+        for (Class<?> c = window.getClass(); c != null; c = c.getSuperclass()) {
+            try {
+                Method m = c.getDeclaredMethod("scr");
+                m.setAccessible(true);
+                return m.invoke(window);
+            } catch (NoSuchMethodException next) {
+                // look in the superclass
+            } catch (Throwable t) {
+                MOD.log("window selection failed: " + t);
+                return null;
+            }
+        }
+        return null;
+    }
+}

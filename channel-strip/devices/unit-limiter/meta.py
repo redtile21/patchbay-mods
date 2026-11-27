@@ -1,0 +1,5 @@
+NAME = "EB Limiter"
+PROJECT_ID = "elodea-blackstar.limiter"
+UUID = "e08b3f62-1a7d-4c95-9e24-b6d1a73c05f8"
+DESCRIPTION = "Elodea Blackstar lookahead peak limiter with a hard output ceiling."
+NITRO = "limiter.nitro"

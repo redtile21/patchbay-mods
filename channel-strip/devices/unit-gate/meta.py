@@ -1,0 +1,5 @@
+NAME = "EB Gate"
+PROJECT_ID = "elodea-blackstar.gate"
+UUID = "593bfe9d-85d2-4190-9af6-51e1ef133967"
+DESCRIPTION = "Elodea Blackstar noise gate and downward expander with hold, hysteresis and sidechain filter."
+NITRO = "gate.nitro"

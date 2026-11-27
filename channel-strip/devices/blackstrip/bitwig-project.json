@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "projectId": "elodea-blackstar.blackstrip",
+  "name": "EB BlackStrip",
+  "surface": "device",
+  "target": {"bitwigVersion": "6.1.7", "platform": "macos-arm64"},
+  "identity": {
+    "uuid": "5d0c6a52-3c5e-4f0b-9a58-2f1d4b7e6c31",
+    "creator": "Elodea Blackstar",
+    "category": "Container"
+  },
+  "presentation": {
+    "type": "audio-fx",
+    "description": "Six swappable unit slots (Gain, EQ, Compressor, Saturation, Limiter) with macro knobs, meters and an expanded view."
+  },
+  "sources": {"nitro": ["gain_stage.nitro", "tap.nitro", "meter.nitro"], "sksl": ["flow.sksl", "meter.sksl", "backdrop.sksl"]},
+  "adapter": {
+    "type": "external-builder",
+    "argv": ["python", "{workspace}/build.py", "--out", "{output}"]
+  },
+  "output": {
+    "path": "build/macos-6.1.7/EB BlackStrip.bwdevice",
+    "libraryPath": "EB BlackStrip.bwdevice"
+  },
+  "preflight": {"profile": "source-document"}
+}

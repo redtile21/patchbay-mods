@@ -1,0 +1,5 @@
+NAME = "EB Saturation"
+PROJECT_ID = "elodea-blackstar.saturation"
+UUID = "c3a95d17-84e2-4f60-b7d1-5a06e9c2481f"
+DESCRIPTION = "Elodea Blackstar saturation with tape, tube, soft clip and hard clip curves."
+NITRO = "saturation.nitro"

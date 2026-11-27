@@ -1,0 +1,290 @@
+component eb_character
+{
+    audio_inport in;
+    audio_inport f32 amount = 50.0;
+    value_inport i32 character;
+    value_inport bool enabled;
+    value_inport bool oversampling;
+
+    audio_outport out;
+
+    f32 p_sr = 0.0;
+    // one-pole high cut, tape low bump, DC blocker
+    f32<2> hc = 0.0;
+    f32<2> lb = 0.0;
+    f32<2> dc_x = 0.0;
+    f32<2> dc_y = 0.0;
+    // 2x oversampling: half-band filters around the curve
+    f32 osu_l_x0 = 0.0;
+    f32 osu_l_y0 = 0.0;
+    f32 osu_l_x1 = 0.0;
+    f32 osu_l_y1 = 0.0;
+    f32 osu_l_x2 = 0.0;
+    f32 osu_l_y2 = 0.0;
+    f32 osu_l_x3 = 0.0;
+    f32 osu_l_y3 = 0.0;
+    f32 osu_l_x4 = 0.0;
+    f32 osu_l_y4 = 0.0;
+    f32 osu_l_x5 = 0.0;
+    f32 osu_l_y5 = 0.0;
+    f32 osu_l_x6 = 0.0;
+    f32 osu_l_y6 = 0.0;
+    f32 osu_l_x7 = 0.0;
+    f32 osu_l_y7 = 0.0;
+    f32 osd_l_x0 = 0.0;
+    f32 osd_l_y0 = 0.0;
+    f32 osd_l_x1 = 0.0;
+    f32 osd_l_y1 = 0.0;
+    f32 osd_l_x2 = 0.0;
+    f32 osd_l_y2 = 0.0;
+    f32 osd_l_x3 = 0.0;
+    f32 osd_l_y3 = 0.0;
+    f32 osd_l_x4 = 0.0;
+    f32 osd_l_y4 = 0.0;
+    f32 osd_l_x5 = 0.0;
+    f32 osd_l_y5 = 0.0;
+    f32 osd_l_x6 = 0.0;
+    f32 osd_l_y6 = 0.0;
+    f32 osd_l_x7 = 0.0;
+    f32 osd_l_y7 = 0.0;
+    f32 osu_r_x0 = 0.0;
+    f32 osu_r_y0 = 0.0;
+    f32 osu_r_x1 = 0.0;
+    f32 osu_r_y1 = 0.0;
+    f32 osu_r_x2 = 0.0;
+    f32 osu_r_y2 = 0.0;
+    f32 osu_r_x3 = 0.0;
+    f32 osu_r_y3 = 0.0;
+    f32 osu_r_x4 = 0.0;
+    f32 osu_r_y4 = 0.0;
+    f32 osu_r_x5 = 0.0;
+    f32 osu_r_y5 = 0.0;
+    f32 osu_r_x6 = 0.0;
+    f32 osu_r_y6 = 0.0;
+    f32 osu_r_x7 = 0.0;
+    f32 osu_r_y7 = 0.0;
+    f32 osd_r_x0 = 0.0;
+    f32 osd_r_y0 = 0.0;
+    f32 osd_r_x1 = 0.0;
+    f32 osd_r_y1 = 0.0;
+    f32 osd_r_x2 = 0.0;
+    f32 osd_r_y2 = 0.0;
+    f32 osd_r_x3 = 0.0;
+    f32 osd_r_y3 = 0.0;
+    f32 osd_r_x4 = 0.0;
+    f32 osd_r_y4 = 0.0;
+    f32 osd_r_x5 = 0.0;
+    f32 osd_r_y5 = 0.0;
+    f32 osd_r_x6 = 0.0;
+    f32 osd_r_y6 = 0.0;
+    f32 osd_r_x7 = 0.0;
+    f32 osd_r_y7 = 0.0;
+    f32 k_hc_an = 0.0;
+    f32 k_hc_tu = 0.0;
+    f32 k_hc_ta = 0.0;
+    f32 k_lb = 0.0;
+    f32 k_dc = 0.0;
+
+    // Exact hyperbolic tangent from exp (Nitro folds tanh only on constants); clamped so exp cannot overflow.
+    f32 soft(f32 v)
+    {
+        f32 e = exp(2.0 * fmax(-10.0, fmin(10.0, v)));
+        return (e - 1.0) / (e + 1.0);
+    }
+
+    // The voiced curve at one point, level kept at low levels.
+    f32 sat(f32 v, f32 drive, f32 bias, f32 sb)
+    {
+        return (soft(v * drive + bias) - sb) / drive;
+    }
+
+    process
+    {
+        f32 sr = EC.samplerate;
+        if (sr != p_sr)
+        {
+            p_sr = sr;
+            k_hc_an = 1.0 - exp(-6.283185307 * fmin(20000.0, 0.45 * sr) / sr);
+            k_hc_tu = 1.0 - exp(-6.283185307 * fmin(16000.0, 0.45 * sr) / sr);
+            k_hc_ta = 1.0 - exp(-6.283185307 * 12000.0 / sr);
+            k_lb = 1.0 - exp(-6.283185307 * 90.0 / sr);
+            k_dc = exp(-6.283185307 * 8.0 / sr);
+        }
+        f32<> x = in;
+
+        // Character (0 Clean, 1 Analog, 2 Tube, 3 Tape): gentle saturation with level kept at low levels.
+        // Amount 50 % is the voicing below; 0 % is clean, 100 % doubles the drive, bias and colour.
+        f32 am = fmax(0.0, fmin(100.0, amount)) * 0.02;
+        if (character > 0 && enabled && am > 0.0001)
+        {
+            f32 drive = 1.4;
+            f32 bias = 0.03;
+            f32 khc = k_hc_an;
+            if (character == 2) { drive = 1.8; bias = 0.15; khc = k_hc_tu; }
+            if (character == 3) { drive = 1.6; bias = 0.05; khc = k_hc_ta; }
+            drive = 1.0 + (drive - 1.0) * am;
+            bias = bias * am;
+            f32 sb = soft(bias);
+            f32 y_l = sat(x[0], drive, bias, sb);
+            f32 y_r = sat(x[1], drive, bias, sb);
+            if (oversampling)
+            {
+                // 2x: the curve runs at twice the rate between half-band filters (far less aliasing).
+                f32 osu_l_e = x[0];
+                f32 osu_l_o = x[0];
+                f32 osu_l_t0 = (osu_l_e - osu_l_y0) * 0.040633460924 + osu_l_x0;
+                osu_l_x0 = osu_l_e;
+                osu_l_y0 = osu_l_t0;
+                osu_l_e = osu_l_t0;
+                f32 osu_l_t1 = (osu_l_o - osu_l_y1) * 0.150505129023 + osu_l_x1;
+                osu_l_x1 = osu_l_o;
+                osu_l_y1 = osu_l_t1;
+                osu_l_o = osu_l_t1;
+                f32 osu_l_t2 = (osu_l_e - osu_l_y2) * 0.300757055992 + osu_l_x2;
+                osu_l_x2 = osu_l_e;
+                osu_l_y2 = osu_l_t2;
+                osu_l_e = osu_l_t2;
+                f32 osu_l_t3 = (osu_l_o - osu_l_y3) * 0.460774504961 + osu_l_x3;
+                osu_l_x3 = osu_l_o;
+                osu_l_y3 = osu_l_t3;
+                osu_l_o = osu_l_t3;
+                f32 osu_l_t4 = (osu_l_e - osu_l_y4) * 0.609524314896 + osu_l_x4;
+                osu_l_x4 = osu_l_e;
+                osu_l_y4 = osu_l_t4;
+                osu_l_e = osu_l_t4;
+                f32 osu_l_t5 = (osu_l_o - osu_l_y5) * 0.738503841119 + osu_l_x5;
+                osu_l_x5 = osu_l_o;
+                osu_l_y5 = osu_l_t5;
+                osu_l_o = osu_l_t5;
+                f32 osu_l_t6 = (osu_l_e - osu_l_y6) * 0.849223810392 + osu_l_x6;
+                osu_l_x6 = osu_l_e;
+                osu_l_y6 = osu_l_t6;
+                osu_l_e = osu_l_t6;
+                f32 osu_l_t7 = (osu_l_o - osu_l_y7) * 0.949742783705 + osu_l_x7;
+                osu_l_x7 = osu_l_o;
+                osu_l_y7 = osu_l_t7;
+                osu_l_o = osu_l_t7;
+                f32 osd_l_s0 = sat(osu_l_o, drive, bias, sb);
+                f32 osd_l_s1 = sat(osu_l_e, drive, bias, sb);
+                f32 osd_l_t0 = (osd_l_s0 - osd_l_y0) * 0.040633460924 + osd_l_x0;
+                osd_l_x0 = osd_l_s0;
+                osd_l_y0 = osd_l_t0;
+                osd_l_s0 = osd_l_t0;
+                f32 osd_l_t1 = (osd_l_s1 - osd_l_y1) * 0.150505129023 + osd_l_x1;
+                osd_l_x1 = osd_l_s1;
+                osd_l_y1 = osd_l_t1;
+                osd_l_s1 = osd_l_t1;
+                f32 osd_l_t2 = (osd_l_s0 - osd_l_y2) * 0.300757055992 + osd_l_x2;
+                osd_l_x2 = osd_l_s0;
+                osd_l_y2 = osd_l_t2;
+                osd_l_s0 = osd_l_t2;
+                f32 osd_l_t3 = (osd_l_s1 - osd_l_y3) * 0.460774504961 + osd_l_x3;
+                osd_l_x3 = osd_l_s1;
+                osd_l_y3 = osd_l_t3;
+                osd_l_s1 = osd_l_t3;
+                f32 osd_l_t4 = (osd_l_s0 - osd_l_y4) * 0.609524314896 + osd_l_x4;
+                osd_l_x4 = osd_l_s0;
+                osd_l_y4 = osd_l_t4;
+                osd_l_s0 = osd_l_t4;
+                f32 osd_l_t5 = (osd_l_s1 - osd_l_y5) * 0.738503841119 + osd_l_x5;
+                osd_l_x5 = osd_l_s1;
+                osd_l_y5 = osd_l_t5;
+                osd_l_s1 = osd_l_t5;
+                f32 osd_l_t6 = (osd_l_s0 - osd_l_y6) * 0.849223810392 + osd_l_x6;
+                osd_l_x6 = osd_l_s0;
+                osd_l_y6 = osd_l_t6;
+                osd_l_s0 = osd_l_t6;
+                f32 osd_l_t7 = (osd_l_s1 - osd_l_y7) * 0.949742783705 + osd_l_x7;
+                osd_l_x7 = osd_l_s1;
+                osd_l_y7 = osd_l_t7;
+                osd_l_s1 = osd_l_t7;
+                f32 osd_l = 0.5 * (osd_l_s0 + osd_l_s1);
+                f32 osu_r_e = x[1];
+                f32 osu_r_o = x[1];
+                f32 osu_r_t0 = (osu_r_e - osu_r_y0) * 0.040633460924 + osu_r_x0;
+                osu_r_x0 = osu_r_e;
+                osu_r_y0 = osu_r_t0;
+                osu_r_e = osu_r_t0;
+                f32 osu_r_t1 = (osu_r_o - osu_r_y1) * 0.150505129023 + osu_r_x1;
+                osu_r_x1 = osu_r_o;
+                osu_r_y1 = osu_r_t1;
+                osu_r_o = osu_r_t1;
+                f32 osu_r_t2 = (osu_r_e - osu_r_y2) * 0.300757055992 + osu_r_x2;
+                osu_r_x2 = osu_r_e;
+                osu_r_y2 = osu_r_t2;
+                osu_r_e = osu_r_t2;
+                f32 osu_r_t3 = (osu_r_o - osu_r_y3) * 0.460774504961 + osu_r_x3;
+                osu_r_x3 = osu_r_o;
+                osu_r_y3 = osu_r_t3;
+                osu_r_o = osu_r_t3;
+                f32 osu_r_t4 = (osu_r_e - osu_r_y4) * 0.609524314896 + osu_r_x4;
+                osu_r_x4 = osu_r_e;
+                osu_r_y4 = osu_r_t4;
+                osu_r_e = osu_r_t4;
+                f32 osu_r_t5 = (osu_r_o - osu_r_y5) * 0.738503841119 + osu_r_x5;
+                osu_r_x5 = osu_r_o;
+                osu_r_y5 = osu_r_t5;
+                osu_r_o = osu_r_t5;
+                f32 osu_r_t6 = (osu_r_e - osu_r_y6) * 0.849223810392 + osu_r_x6;
+                osu_r_x6 = osu_r_e;
+                osu_r_y6 = osu_r_t6;
+                osu_r_e = osu_r_t6;
+                f32 osu_r_t7 = (osu_r_o - osu_r_y7) * 0.949742783705 + osu_r_x7;
+                osu_r_x7 = osu_r_o;
+                osu_r_y7 = osu_r_t7;
+                osu_r_o = osu_r_t7;
+                f32 osd_r_s0 = sat(osu_r_o, drive, bias, sb);
+                f32 osd_r_s1 = sat(osu_r_e, drive, bias, sb);
+                f32 osd_r_t0 = (osd_r_s0 - osd_r_y0) * 0.040633460924 + osd_r_x0;
+                osd_r_x0 = osd_r_s0;
+                osd_r_y0 = osd_r_t0;
+                osd_r_s0 = osd_r_t0;
+                f32 osd_r_t1 = (osd_r_s1 - osd_r_y1) * 0.150505129023 + osd_r_x1;
+                osd_r_x1 = osd_r_s1;
+                osd_r_y1 = osd_r_t1;
+                osd_r_s1 = osd_r_t1;
+                f32 osd_r_t2 = (osd_r_s0 - osd_r_y2) * 0.300757055992 + osd_r_x2;
+                osd_r_x2 = osd_r_s0;
+                osd_r_y2 = osd_r_t2;
+                osd_r_s0 = osd_r_t2;
+                f32 osd_r_t3 = (osd_r_s1 - osd_r_y3) * 0.460774504961 + osd_r_x3;
+                osd_r_x3 = osd_r_s1;
+                osd_r_y3 = osd_r_t3;
+                osd_r_s1 = osd_r_t3;
+                f32 osd_r_t4 = (osd_r_s0 - osd_r_y4) * 0.609524314896 + osd_r_x4;
+                osd_r_x4 = osd_r_s0;
+                osd_r_y4 = osd_r_t4;
+                osd_r_s0 = osd_r_t4;
+                f32 osd_r_t5 = (osd_r_s1 - osd_r_y5) * 0.738503841119 + osd_r_x5;
+                osd_r_x5 = osd_r_s1;
+                osd_r_y5 = osd_r_t5;
+                osd_r_s1 = osd_r_t5;
+                f32 osd_r_t6 = (osd_r_s0 - osd_r_y6) * 0.849223810392 + osd_r_x6;
+                osd_r_x6 = osd_r_s0;
+                osd_r_y6 = osd_r_t6;
+                osd_r_s0 = osd_r_t6;
+                f32 osd_r_t7 = (osd_r_s1 - osd_r_y7) * 0.949742783705 + osd_r_x7;
+                osd_r_x7 = osd_r_s1;
+                osd_r_y7 = osd_r_t7;
+                osd_r_s1 = osd_r_t7;
+                f32 osd_r = 0.5 * (osd_r_s0 + osd_r_s1);
+                y_l = osd_l;
+                y_r = osd_r;
+            }
+            f32<> y = <y_l, y_r>;
+            // DC blocker (the bias adds a little offset)
+            f32<> yb = y - dc_x + dc_y * k_dc;
+            dc_x = y;
+            dc_y = yb;
+            hc = hc + khc * (yb - hc);
+            y = yb + (hc - yb) * fmin(1.0, am);
+            if (character == 3)
+            {
+                lb = lb + k_lb * (y - lb);
+                y = y + lb * (0.19 * am);          // about +1.5 dB below 90 Hz at 50 %
+            }
+            x = y;
+        }
+        out = x;
+    }
+}

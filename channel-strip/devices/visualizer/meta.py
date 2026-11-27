@@ -1,0 +1,5 @@
+PROJECT_ID = "eb-visualizer"
+NAME = "EB Visualizer"
+UUID = "f6b84227-a522-4b92-89cd-43a8a16134e2"
+DESCRIPTION = "Elodea Blackstar visualizer: spectrum, sonogram, oscilloscope, stereo field and level history"
+NITRO = "visualizer.nitro"

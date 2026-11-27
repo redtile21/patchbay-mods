@@ -1,0 +1,217 @@
+// EB Visualizer stereo field: eight bands (60 Hz bottom .. 14 kHz top), each a dot placed by pan and sized and
+// coloured by level, over a bar showing its width (mono: no bar; uncorrelated: the full field; out of phase: red).
+// Frequency labels on the left, overall correlation bar at the bottom. 36 x 46 grid units -> 144 x 184 design units.
+// audioLow: bands 0-3, audioMedium: bands 4-7. Each lane: (((corr6 * 64 + level6) * 64 + pan6) * 64 + width6) / 2^24;
+// only band 0 carries the overall correlation.
+uniform float4 audioLow;
+uniform float4 audioMedium;
+
+float sdseg(float2 p, float2 a, float2 b) {
+    float2 pa = p - a;
+    float2 ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0., 1.);
+    return length(pa - ba * h);
+}
+// @frame
+
+// Monoline sans-serif digit in a 1 x 2 box; d < 0 draws nothing.
+float digit(float2 q, float d) {
+    if (d < 0.) return 0.;
+    float m = 10.;
+    if (d < 0.5) {
+        m = min(m, sdseg(q, float2(0.25, 0.05), float2(0.75, 0.05)));
+        m = min(m, sdseg(q, float2(0.75, 0.05), float2(0.92, 0.35)));
+        m = min(m, sdseg(q, float2(0.92, 0.35), float2(0.92, 1.65)));
+        m = min(m, sdseg(q, float2(0.92, 1.65), float2(0.75, 1.95)));
+        m = min(m, sdseg(q, float2(0.75, 1.95), float2(0.25, 1.95)));
+        m = min(m, sdseg(q, float2(0.25, 1.95), float2(0.08, 1.65)));
+        m = min(m, sdseg(q, float2(0.08, 1.65), float2(0.08, 0.35)));
+        m = min(m, sdseg(q, float2(0.08, 0.35), float2(0.25, 0.05)));
+    }
+    else if (d < 1.5) {
+        m = min(m, sdseg(q, float2(0.18, 0.45), float2(0.55, 0.05)));
+        m = min(m, sdseg(q, float2(0.55, 0.05), float2(0.55, 1.95)));
+    }
+    else if (d < 2.5) {
+        m = min(m, sdseg(q, float2(0.1, 0.4), float2(0.25, 0.1)));
+        m = min(m, sdseg(q, float2(0.25, 0.1), float2(0.5, 0.05)));
+        m = min(m, sdseg(q, float2(0.5, 0.05), float2(0.75, 0.1)));
+        m = min(m, sdseg(q, float2(0.75, 0.1), float2(0.9, 0.4)));
+        m = min(m, sdseg(q, float2(0.9, 0.4), float2(0.85, 0.75)));
+        m = min(m, sdseg(q, float2(0.85, 0.75), float2(0.1, 1.95)));
+        m = min(m, sdseg(q, float2(0.1, 1.95), float2(0.92, 1.95)));
+    }
+    else if (d < 3.5) {
+        m = min(m, sdseg(q, float2(0.12, 0.12), float2(0.5, 0.05)));
+        m = min(m, sdseg(q, float2(0.5, 0.05), float2(0.85, 0.25)));
+        m = min(m, sdseg(q, float2(0.85, 0.25), float2(0.85, 0.65)));
+        m = min(m, sdseg(q, float2(0.85, 0.65), float2(0.45, 0.95)));
+        m = min(m, sdseg(q, float2(0.45, 0.95), float2(0.88, 1.25)));
+        m = min(m, sdseg(q, float2(0.88, 1.25), float2(0.9, 1.7)));
+        m = min(m, sdseg(q, float2(0.9, 1.7), float2(0.5, 1.95)));
+        m = min(m, sdseg(q, float2(0.5, 1.95), float2(0.1, 1.85)));
+    }
+    else if (d < 4.5) {
+        m = min(m, sdseg(q, float2(0.75, 1.95), float2(0.75, 0.05)));
+        m = min(m, sdseg(q, float2(0.75, 0.05), float2(0.05, 1.35)));
+        m = min(m, sdseg(q, float2(0.05, 1.35), float2(0.95, 1.35)));
+    }
+    else if (d < 5.5) {
+        m = min(m, sdseg(q, float2(0.9, 0.05), float2(0.2, 0.05)));
+        m = min(m, sdseg(q, float2(0.2, 0.05), float2(0.12, 0.95)));
+        m = min(m, sdseg(q, float2(0.12, 0.95), float2(0.5, 0.85)));
+        m = min(m, sdseg(q, float2(0.5, 0.85), float2(0.85, 0.95)));
+        m = min(m, sdseg(q, float2(0.85, 0.95), float2(0.92, 1.5)));
+        m = min(m, sdseg(q, float2(0.92, 1.5), float2(0.75, 1.9)));
+        m = min(m, sdseg(q, float2(0.75, 1.9), float2(0.45, 1.97)));
+        m = min(m, sdseg(q, float2(0.45, 1.97), float2(0.1, 1.8)));
+    }
+    else if (d < 6.5) {
+        m = min(m, sdseg(q, float2(0.85, 0.15), float2(0.5, 0.05)));
+        m = min(m, sdseg(q, float2(0.5, 0.05), float2(0.18, 0.35)));
+        m = min(m, sdseg(q, float2(0.18, 0.35), float2(0.1, 1.0)));
+        m = min(m, sdseg(q, float2(0.1, 1.0), float2(0.1, 1.6)));
+        m = min(m, sdseg(q, float2(0.1, 1.6), float2(0.4, 1.95)));
+        m = min(m, sdseg(q, float2(0.4, 1.95), float2(0.75, 1.9)));
+        m = min(m, sdseg(q, float2(0.75, 1.9), float2(0.92, 1.55)));
+        m = min(m, sdseg(q, float2(0.92, 1.55), float2(0.8, 1.15)));
+        m = min(m, sdseg(q, float2(0.8, 1.15), float2(0.45, 1.05)));
+        m = min(m, sdseg(q, float2(0.45, 1.05), float2(0.12, 1.3)));
+    }
+    else if (d < 7.5) {
+        m = min(m, sdseg(q, float2(0.08, 0.05), float2(0.92, 0.05)));
+        m = min(m, sdseg(q, float2(0.92, 0.05), float2(0.4, 1.95)));
+    }
+    else if (d < 8.5) {
+        m = min(m, sdseg(q, float2(0.5, 0.95), float2(0.15, 0.7)));
+        m = min(m, sdseg(q, float2(0.15, 0.7), float2(0.15, 0.3)));
+        m = min(m, sdseg(q, float2(0.15, 0.3), float2(0.5, 0.05)));
+        m = min(m, sdseg(q, float2(0.5, 0.05), float2(0.85, 0.3)));
+        m = min(m, sdseg(q, float2(0.85, 0.3), float2(0.85, 0.7)));
+        m = min(m, sdseg(q, float2(0.85, 0.7), float2(0.5, 0.95)));
+        m = min(m, sdseg(q, float2(0.5, 0.95), float2(0.1, 1.25)));
+        m = min(m, sdseg(q, float2(0.1, 1.25), float2(0.1, 1.7)));
+        m = min(m, sdseg(q, float2(0.1, 1.7), float2(0.5, 1.95)));
+        m = min(m, sdseg(q, float2(0.5, 1.95), float2(0.9, 1.7)));
+        m = min(m, sdseg(q, float2(0.9, 1.7), float2(0.9, 1.25)));
+        m = min(m, sdseg(q, float2(0.9, 1.25), float2(0.5, 0.95)));
+    }
+    else {
+        m = min(m, sdseg(q, float2(0.15, 1.85), float2(0.5, 1.95)));
+        m = min(m, sdseg(q, float2(0.5, 1.95), float2(0.82, 1.65)));
+        m = min(m, sdseg(q, float2(0.82, 1.65), float2(0.9, 1.0)));
+        m = min(m, sdseg(q, float2(0.9, 1.0), float2(0.9, 0.4)));
+        m = min(m, sdseg(q, float2(0.9, 0.4), float2(0.6, 0.05)));
+        m = min(m, sdseg(q, float2(0.6, 0.05), float2(0.25, 0.1)));
+        m = min(m, sdseg(q, float2(0.25, 0.1), float2(0.08, 0.45)));
+        m = min(m, sdseg(q, float2(0.08, 0.45), float2(0.2, 0.85)));
+        m = min(m, sdseg(q, float2(0.2, 0.85), float2(0.55, 0.95)));
+        m = min(m, sdseg(q, float2(0.55, 0.95), float2(0.88, 0.7)));
+    }
+    return 1. - smoothstep(.09, .16, m);
+}
+
+float3 ramp(float t) {
+    float3 c = mix(float3(.22, .52, .82), float3(.42, .74, .95), smoothstep(0., .75, t));
+    c = mix(c, float3(.98, .60, .16), smoothstep(.78, .88, t));
+    return t > .93 ? float3(.95, .32, .20) : c;
+}
+float lane(int i) {
+    if (i == 0) return audioLow.x;
+    if (i == 1) return audioLow.y;
+    if (i == 2) return audioLow.z;
+    if (i == 3) return audioLow.w;
+    if (i == 4) return audioMedium.x;
+    if (i == 5) return audioMedium.y;
+    if (i == 6) return audioMedium.z;
+    return audioMedium.w;
+}
+
+// One glyph of a frequency label: 0-9 digits, 10 a decimal point, 11 the letter K; returns its advance.
+float glyph(float2 p, float x, float y, float g, float h, inout float lit) {
+    float w = h * .5;
+    if (g < -.5) return 0.;
+    if (g > 10.5) { lit = max(lit, letter((p - float2(x, y)) / w, 11.)); return w * 1.35; }
+    if (g > 9.5) { if (length(p - float2(x + w * .3, y + h * .93)) < h * .1) lit = 1.; return w * .7; }
+    lit = max(lit, digit((p - float2(x, y)) / w, g));
+    return w * 1.35;
+}
+// A label of up to four glyphs, right-aligned at xr, glyph tops at y.
+float flabel(float2 p, float xr, float y, float a, float b, float c, float d) {
+    float h = 6.;
+    if (abs(p.y - y - h * .5) > h || p.x > xr + 2. || p.x < xr - 26.) return 0.;
+    float dummy = 0.;
+    float total = glyph(p, 0., -100., a, h, dummy) + glyph(p, 0., -100., b, h, dummy) + glyph(p, 0., -100., c, h, dummy) + glyph(p, 0., -100., d, h, dummy);
+    float x = xr - total;
+    float lit = 0.;
+    x += glyph(p, x, y, a, h, lit);
+    x += glyph(p, x, y, b, h, lit);
+    x += glyph(p, x, y, c, h, lit);
+    x += glyph(p, x, y, d, h, lit);
+    return lit;
+}
+
+half4 main(float2 fragCoord) {
+    float2 p = fragCoord / iResolution.xy * float2(144., 184.);
+    float3 color = float3(.060, .064, .072);
+    const float X0 = 30.;
+    const float X1 = 140.;
+    const float CX = 85.;
+    const float HW = 53.;
+    const float T = 22.;
+    const float RH = 18.;
+    // guides: centre, half left and half right
+    if (p.y > T - 4. && p.y < T + 8. * RH + 4.) {
+        if (abs(p.x - CX) < .5) color = float3(.20, .22, .25);
+        if (abs(abs(p.x - CX) - HW * .5) < .4) color = float3(.12, .13, .15);
+    }
+    float c0 = audioLow.x * 16777216.;
+    float corr = floor(c0 / 262144. + .0001) / 63. * 2. - 1.;
+    for (int i = 0; i < 8; i++) {
+        float c = lane(i) * 16777216.;
+        if (i == 0) c -= floor(c / 262144. + .0001) * 262144.;
+        float lq = floor(c / 4096. + .0001);
+        float pq = floor((c - lq * 4096.) / 64. + .0001);
+        float wq = c - lq * 4096. - pq * 64.;
+        float lv = lq / 63.;
+        float pan = pq / 63. * 2. - 1.;
+        float wd = wq / 63.;
+        float y = T + (7. - float(i)) * RH + RH * .5;
+        if (abs(p.y - y) < .4 && p.x > X0 && p.x < X1) color = max(color, float3(.10, .11, .13));
+        if (lv > .02) {
+            float cx = CX + pan * HW;
+            // width bar: half-length grows to the whole field at uncorrelated; red as it goes out of phase
+            float hl = min(wd * 2., 1.) * HW;
+            float th = 1.2 + lv * 2.5;
+            float bx = clamp(p.x, max(cx - hl, X0), min(cx + hl, X1));
+            float bd = length(p - float2(bx, y));
+            float3 bc = mix(ramp(lv), float3(.95, .32, .20), clamp((wd - .5) * 2.5, 0., 1.));
+            if (hl > .5 && bd < th) color = mix(color, bc, .45 * (1. - smoothstep(th - 1., th, bd)));
+            float r = 1.5 + lv * 7.;
+            float d = length(p - float2(cx, y));
+            if (d < r) color = mix(color, ramp(lv), 1. - smoothstep(r - 1., r, d));
+        }
+    }
+    // frequency labels, right-aligned left of the field
+    float fl = 0.;
+    float lx = 25.;
+    fl = max(fl, flabel(p, lx, T + 7. * RH + 6., 6., 0., -1., -1.));
+    fl = max(fl, flabel(p, lx, T + 6. * RH + 6., 1., 5., 0., -1.));
+    fl = max(fl, flabel(p, lx, T + 5. * RH + 6., 3., 5., 0., -1.));
+    fl = max(fl, flabel(p, lx, T + 4. * RH + 6., 8., 0., 0., -1.));
+    fl = max(fl, flabel(p, lx, T + 3. * RH + 6., 1., 10., 8., 11.));
+    fl = max(fl, flabel(p, lx, T + 2. * RH + 6., 4., 11., -1., -1.));
+    fl = max(fl, flabel(p, lx, T + 1. * RH + 6., 8., 11., -1., -1.));
+    fl = max(fl, flabel(p, lx, T + 6., 1., 4., 11., -1.));
+    if (fl > .5) color = float3(.50, .52, .56);
+    // correlation: -1 .. +1, red below zero, green above
+    if (p.y > 172. && p.y < 180. && p.x > X0 && p.x < X1) {
+        color = float3(.040, .042, .048);
+        float px = CX + corr * HW;
+        if ((p.x > CX && p.x < px) || (p.x < CX && p.x > px)) color = corr < 0. ? float3(.95, .32, .20) : float3(.35, .78, .45);
+        if (abs(p.x - CX) < .5) color = float3(.35, .37, .40);
+    }
+    color = caption_at(p, color, X0 + 5., 15., 12., 0., 0., 0., 0.);
+    color = caption_at(p, color, X1 - 5., 15., 18., 0., 0., 0., 0.);
+    return half4(half3(color), 1.);
+}

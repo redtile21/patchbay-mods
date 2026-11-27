@@ -1,0 +1,234 @@
+// audioLow:    threshold (0..1 = -60..0 dB), ratio step and knee packed, makeup (0..1 = 0..24 dB), input level (-60..0 dB)
+// audioMedium: gain reduction (0..1 = 0..24 dB), output level (-60..0 dB), input peak hold, output peak hold
+uniform float4 audioLow;
+uniform float4 audioMedium;
+
+float sdseg(float2 p, float2 a, float2 b) {
+    float2 pa = p - a;
+    float2 ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0., 1.);
+    return length(pa - ba * h);
+}
+// Monoline sans-serif digit in a 1 x 2 box; d < 0 draws nothing.
+float digit(float2 q, float d) {
+    if (d < 0.) return 0.;
+    float m = 10.;
+    if (d < 0.5) {
+        m = min(m, sdseg(q, float2(0.25, 0.05), float2(0.75, 0.05)));
+        m = min(m, sdseg(q, float2(0.75, 0.05), float2(0.92, 0.35)));
+        m = min(m, sdseg(q, float2(0.92, 0.35), float2(0.92, 1.65)));
+        m = min(m, sdseg(q, float2(0.92, 1.65), float2(0.75, 1.95)));
+        m = min(m, sdseg(q, float2(0.75, 1.95), float2(0.25, 1.95)));
+        m = min(m, sdseg(q, float2(0.25, 1.95), float2(0.08, 1.65)));
+        m = min(m, sdseg(q, float2(0.08, 1.65), float2(0.08, 0.35)));
+        m = min(m, sdseg(q, float2(0.08, 0.35), float2(0.25, 0.05)));
+    }
+    else if (d < 1.5) {
+        m = min(m, sdseg(q, float2(0.18, 0.45), float2(0.55, 0.05)));
+        m = min(m, sdseg(q, float2(0.55, 0.05), float2(0.55, 1.95)));
+    }
+    else if (d < 2.5) {
+        m = min(m, sdseg(q, float2(0.1, 0.4), float2(0.25, 0.1)));
+        m = min(m, sdseg(q, float2(0.25, 0.1), float2(0.5, 0.05)));
+        m = min(m, sdseg(q, float2(0.5, 0.05), float2(0.75, 0.1)));
+        m = min(m, sdseg(q, float2(0.75, 0.1), float2(0.9, 0.4)));
+        m = min(m, sdseg(q, float2(0.9, 0.4), float2(0.85, 0.75)));
+        m = min(m, sdseg(q, float2(0.85, 0.75), float2(0.1, 1.95)));
+        m = min(m, sdseg(q, float2(0.1, 1.95), float2(0.92, 1.95)));
+    }
+    else if (d < 3.5) {
+        m = min(m, sdseg(q, float2(0.12, 0.12), float2(0.5, 0.05)));
+        m = min(m, sdseg(q, float2(0.5, 0.05), float2(0.85, 0.25)));
+        m = min(m, sdseg(q, float2(0.85, 0.25), float2(0.85, 0.65)));
+        m = min(m, sdseg(q, float2(0.85, 0.65), float2(0.45, 0.95)));
+        m = min(m, sdseg(q, float2(0.45, 0.95), float2(0.88, 1.25)));
+        m = min(m, sdseg(q, float2(0.88, 1.25), float2(0.9, 1.7)));
+        m = min(m, sdseg(q, float2(0.9, 1.7), float2(0.5, 1.95)));
+        m = min(m, sdseg(q, float2(0.5, 1.95), float2(0.1, 1.85)));
+    }
+    else if (d < 4.5) {
+        m = min(m, sdseg(q, float2(0.75, 1.95), float2(0.75, 0.05)));
+        m = min(m, sdseg(q, float2(0.75, 0.05), float2(0.05, 1.35)));
+        m = min(m, sdseg(q, float2(0.05, 1.35), float2(0.95, 1.35)));
+    }
+    else if (d < 5.5) {
+        m = min(m, sdseg(q, float2(0.9, 0.05), float2(0.2, 0.05)));
+        m = min(m, sdseg(q, float2(0.2, 0.05), float2(0.12, 0.95)));
+        m = min(m, sdseg(q, float2(0.12, 0.95), float2(0.5, 0.85)));
+        m = min(m, sdseg(q, float2(0.5, 0.85), float2(0.85, 0.95)));
+        m = min(m, sdseg(q, float2(0.85, 0.95), float2(0.92, 1.5)));
+        m = min(m, sdseg(q, float2(0.92, 1.5), float2(0.75, 1.9)));
+        m = min(m, sdseg(q, float2(0.75, 1.9), float2(0.45, 1.97)));
+        m = min(m, sdseg(q, float2(0.45, 1.97), float2(0.1, 1.8)));
+    }
+    else if (d < 6.5) {
+        m = min(m, sdseg(q, float2(0.85, 0.15), float2(0.5, 0.05)));
+        m = min(m, sdseg(q, float2(0.5, 0.05), float2(0.18, 0.35)));
+        m = min(m, sdseg(q, float2(0.18, 0.35), float2(0.1, 1.0)));
+        m = min(m, sdseg(q, float2(0.1, 1.0), float2(0.1, 1.6)));
+        m = min(m, sdseg(q, float2(0.1, 1.6), float2(0.4, 1.95)));
+        m = min(m, sdseg(q, float2(0.4, 1.95), float2(0.75, 1.9)));
+        m = min(m, sdseg(q, float2(0.75, 1.9), float2(0.92, 1.55)));
+        m = min(m, sdseg(q, float2(0.92, 1.55), float2(0.8, 1.15)));
+        m = min(m, sdseg(q, float2(0.8, 1.15), float2(0.45, 1.05)));
+        m = min(m, sdseg(q, float2(0.45, 1.05), float2(0.12, 1.3)));
+    }
+    else if (d < 7.5) {
+        m = min(m, sdseg(q, float2(0.08, 0.05), float2(0.92, 0.05)));
+        m = min(m, sdseg(q, float2(0.92, 0.05), float2(0.4, 1.95)));
+    }
+    else if (d < 8.5) {
+        m = min(m, sdseg(q, float2(0.5, 0.95), float2(0.15, 0.7)));
+        m = min(m, sdseg(q, float2(0.15, 0.7), float2(0.15, 0.3)));
+        m = min(m, sdseg(q, float2(0.15, 0.3), float2(0.5, 0.05)));
+        m = min(m, sdseg(q, float2(0.5, 0.05), float2(0.85, 0.3)));
+        m = min(m, sdseg(q, float2(0.85, 0.3), float2(0.85, 0.7)));
+        m = min(m, sdseg(q, float2(0.85, 0.7), float2(0.5, 0.95)));
+        m = min(m, sdseg(q, float2(0.5, 0.95), float2(0.1, 1.25)));
+        m = min(m, sdseg(q, float2(0.1, 1.25), float2(0.1, 1.7)));
+        m = min(m, sdseg(q, float2(0.1, 1.7), float2(0.5, 1.95)));
+        m = min(m, sdseg(q, float2(0.5, 1.95), float2(0.9, 1.7)));
+        m = min(m, sdseg(q, float2(0.9, 1.7), float2(0.9, 1.25)));
+        m = min(m, sdseg(q, float2(0.9, 1.25), float2(0.5, 0.95)));
+    }
+    else {
+        m = min(m, sdseg(q, float2(0.15, 1.85), float2(0.5, 1.95)));
+        m = min(m, sdseg(q, float2(0.5, 1.95), float2(0.82, 1.65)));
+        m = min(m, sdseg(q, float2(0.82, 1.65), float2(0.9, 1.0)));
+        m = min(m, sdseg(q, float2(0.9, 1.0), float2(0.9, 0.4)));
+        m = min(m, sdseg(q, float2(0.9, 0.4), float2(0.6, 0.05)));
+        m = min(m, sdseg(q, float2(0.6, 0.05), float2(0.25, 0.1)));
+        m = min(m, sdseg(q, float2(0.25, 0.1), float2(0.08, 0.45)));
+        m = min(m, sdseg(q, float2(0.08, 0.45), float2(0.2, 0.85)));
+        m = min(m, sdseg(q, float2(0.2, 0.85), float2(0.55, 0.95)));
+        m = min(m, sdseg(q, float2(0.55, 0.95), float2(0.88, 0.7)));
+    }
+    return 1. - smoothstep(.09, .16, m);
+}
+// Signed number with one decimal (|val| < 100), top-left at o, digit height h.
+float number(float2 p, float2 o, float h, float val) {
+    float w = h * .5;
+    float adv = w * 1.45;
+    float2 s = p - o;
+    float a = abs(val);
+    float t10 = floor(a * 10. + .5);
+    float hund = floor(t10 / 100.);
+    float ones = mod(floor(t10 / 10.), 10.);
+    float tenth = mod(t10, 10.);
+    float lit = 0.;
+    if (val < -.049) lit = 1. - smoothstep(.09, .16, sdseg(s / w, float2(.1, 1.), float2(.8, 1.)));
+    lit = max(lit, digit((s - float2(adv, 0.)) / w, hund > .5 ? hund : -1.));
+    lit = max(lit, digit((s - float2(2. * adv, 0.)) / w, ones));
+    float dd = length(s - float2(2. * adv + w * 1.25, h * .93));
+    lit = max(lit, 1. - smoothstep(h * .07, h * .11, dd));
+    lit = max(lit, digit((s - float2(2. * adv + w * 1.5, 0.)) / w, tenth));
+    return lit;
+}
+
+float curve(float x, float t, float r, float w) {
+    float over = x - t;
+    float y = x;
+    if (2. * over > w) {
+        y = t + over / r;
+    } else if (2. * over > -w) {
+        float k = over + w * .5;
+        y = x + (1. / r - 1.) * k * k / (2. * max(w, .0001));
+    }
+    return y;
+}
+
+// @frame
+
+const float MT = 22.;
+const float MB = 186.;
+const float MH = 164.;
+// Meter fill shared with the EB BlackStrip meters: blue, light blue, amber near the top, red at the very top.
+float3 ramp(float t) {
+    float3 c = mix(float3(.22, .52, .82), float3(.42, .74, .95), smoothstep(0., .75, t));
+    c = mix(c, float3(.98, .60, .16), smoothstep(.78, .88, t));
+    return t > .93 ? float3(.95, .32, .20) : c;
+}
+float3 numcol(float v, float lim) {
+    return v > lim ? float3(.98, .52, .14) : float3(.42, .74, .95);
+}
+float3 meterpx(float2 p, float3 color, float x0, float x1, float lvl, float pk, float ln) {
+    if (p.x >= x0 && p.x < x1 && p.y >= MT && p.y <= MB) {
+        float lv = (MB - p.y) / MH;
+        color = float3(.040, .042, .048);
+        if (lv < lvl) color = ramp(lv);
+        if (abs(mod(lv * 6., 1.)) < .03 && lv > .01 && lv < .99 && lv >= lvl) color = float3(.10, .12, .14);
+        if (abs(lv - pk) < .006 && pk > .01) color = float3(1., .62, .16);
+    }
+    if (ln >= 0. && p.x >= x0 - 3. && p.x < x1 + 3. && abs(p.y - (MB - ln * MH)) < 1.2) color = float3(.30, .68, .92);
+    return color;
+}
+
+half4 main(float2 fragCoord) {
+    // 80 x 51 grid units -> 320 x 204 design units.
+    float2 p = fragCoord / iResolution.xy * float2(320., 204.);
+    float3 color = float3(.060, .064, .072);
+    float3 grid = float3(.150, .160, .175);
+    float3 blue = float3(.30, .68, .92);
+    float3 red = float3(.98, .52, .14);
+    float3 txt = float3(.80, .82, .84);
+
+    float thr = -60. + audioLow.x * 60.;
+    float rk = audioLow.y * 32.;
+    float ratio = 1. + floor(rk + .001) / 31. * 19.;
+    float knee = fract(rk + .001) / .99 * 24.;
+    float makeup = audioLow.z * 24.;
+    float gcode = audioMedium.x * 65536.;
+    float gri = floor(gcode / 256. + .0001);
+    float ghi = gcode - gri * 256.;
+    float grbar = gri / 240.;
+    float gr = ghi / 10.;
+    float grlive = gri / 10.;
+    float inlv = audioLow.w;
+
+    // Meters: input (left, threshold line) and output (right).
+    color = meterpx(p, color, 6., 30., inlv, audioMedium.z, audioLow.x);
+    color = meterpx(p, color, 290., 314., audioMedium.y, audioMedium.w, -1.);
+
+    // Gain reduction bar, growing downward from the top.
+    if (p.x >= 266. && p.x < 278. && p.y >= MT && p.y <= MB) {
+        float lv = (p.y - MT) / MH;
+        color = float3(.040, .042, .048);
+        if (lv < grbar) color = red;
+    }
+
+    // Transfer curve: x = input -60..0 dB, y = output -60..+12 dB.
+    if (p.x >= 36. && p.x <= 260. && p.y >= MT && p.y <= MB) {
+        color = float3(.038, .046, .056);
+        float gx = (p.x - 36.) / 224.;
+        float gy = (MB - p.y) / MH;
+        for (int i = 1; i < 6; i++) {
+            if (abs(gx - float(i) / 6.) < .002) color = grid;
+        }
+        for (int j = 1; j < 6; j++) {
+            if (abs(gy - float(j) / 6.) < .004) color = grid;
+        }
+        float xdb = -60. + gx * 60.;
+        float yc = (curve(xdb, thr, ratio, knee) + makeup + 60.) / 72.;
+        if (abs(gx - audioLow.x) < .0022) color = blue * .55;
+        if (gy < yc) color = color * .65 + float3(.05, .10, .16) * .55;
+        if (abs(gy - yc) < .01) color = float3(.50, .76, 1.);
+        float inx = inlv;
+        float iny = (curve(-60. + inx * 60., thr, ratio, knee) + makeup + 60.) / 72.;
+        float2 d = float2((gx - inx) * 224., (gy - iny) * MH);
+        if (length(d) < 3.2) color = grlive > .4 ? red : float3(.95, .96, .98);
+    }
+
+    // Numeric readouts: input peak, gain reduction, output peak.
+    float inpk = audioMedium.z * 60. - 60.;
+    float outpk = audioMedium.w * 60. - 60.;
+    if (number(p, float2(8., 6.), 10., inpk) > .5) color = numcol(inpk, -.1);
+    if (number(p, float2(292., 6.), 10., outpk) > .5) color = numcol(outpk, -.1);
+    if (number(p, float2(250., 6.), 10., -gr) > .5) color = gr > .05 ? red : txt;
+    if (number(p, float2(74., 6.), 10., thr) > .5) color = blue;
+    // Captions (shared frame): meters and bars in the bottom row, the header readout's name beside it.
+    color = caption(p, color, 18., 9., 14., 0., 0., 0.);
+    color = caption(p, color, 272., 7., 18., 0., 0., 0.);
+    color = caption(p, color, 302., 15., 21., 20., 0., 0.);
+    color = caption_at(p, color, 59., 16., 20., 8., 18., 0., 0.);
+    return half4(half3(color), 1.);
+}

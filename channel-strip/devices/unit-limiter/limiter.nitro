@@ -1,0 +1,291 @@
+component eb_limiter
+{
+    audio_inport in;
+    audio_inport f32 input_gain = 0.0;
+    audio_inport f32 ceiling = -1.0;
+    audio_inport f32 release = 100.0;
+    audio_inport f32 lookahead = 2.0;
+    audio_inport f32 stereo_link = 100.0;
+    value_inport i32 mode;
+    value_inport bool auto_release;
+    value_inport bool true_peak;
+
+    audio_outport out;
+    audio_outport f32<4> display;
+    audio_outport f32<4> display2;
+
+    f32<2>[1024] dl;
+    f32[1024] gt_buf;
+    i32 runtime_magic = 0;
+    i32 wp = 0;
+    f32 gain = 1.0;
+    f32 meter_l = 0.0;
+    f32 meter_r = 0.0;
+    f32 in_hold = 0.0;
+    f32 in_pk = 0.0;
+    f32 out_pk = 0.0;
+    f32 gr_pk = 0.0;
+    f32 t_in = 0.0;
+    f32 t_out = 0.0;
+    f32 t_gr = 0.0;
+    f32 t_disp = 0.0;
+    f32 disp_gr = 0.0;
+    f32<2> h1 = 0.0;
+    f32<2> h2 = 0.0;
+    f32 slow = 1.0;
+
+    f32 dbgain(f32 v)
+    {
+        return exp(v * 0.11512925464970229);
+    }
+    f32 bound(f32 v, f32 lo, f32 hi)
+    {
+        return fmax(lo, fmin(hi, v));
+    }
+    f32 th(f32 v)
+    {
+        f32 e = exp(2.0 * fmax(-10.0, fmin(10.0, v)));
+        return (e - 1.0) / (e + 1.0);
+    }
+    // Soft clip: linear below k, then a tanh curve that approaches lim.
+    f32 sclip(f32 v, f32 k, f32 lim)
+    {
+        f32 m = fabs(v);
+        if (m <= k)
+        {
+            return v;
+        }
+        return copysign(k + (lim - k) * th((m - k) / (lim - k)), v);
+    }
+    // Catmull-Rom between p1 and p2 at t (0 .. 1).
+    f32 cr(f32 p0, f32 p1, f32 p2, f32 p3, f32 t)
+    {
+        f32 t2 = t * t;
+        f32 t3 = t2 * t;
+        return 0.5 * (2.0 * p1 + (p2 - p0) * t + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2 + (3.0 * p1 - p0 - 3.0 * p2 + p3) * t3);
+    }
+    // Largest of the sample and three points between the previous sample and this one.
+    f32 tpeak(f32 m2, f32 m1, f32 c)
+    {
+        f32 nx = 2.0 * c - m1;
+        f32 pk = fabs(c);
+        pk = fmax(pk, fabs(cr(m2, m1, c, nx, 0.25)));
+        pk = fmax(pk, fabs(cr(m2, m1, c, nx, 0.5)));
+        pk = fmax(pk, fabs(cr(m2, m1, c, nx, 0.75)));
+        return pk;
+    }
+
+    reset
+    {
+        runtime_magic = 0;
+    }
+
+    process
+    {
+        if (runtime_magic != 715203)
+        {
+            runtime_magic = 715203;
+            wp = 0;
+            gain = 1.0;
+            meter_l = 0.0;
+            meter_r = 0.0;
+            in_hold = 0.0;
+            in_pk = 0.0;
+            out_pk = 0.0;
+            gr_pk = 0.0;
+            t_in = 0.0;
+            t_out = 0.0;
+            t_gr = 0.0;
+            t_disp = 0.0;
+            disp_gr = 0.0;
+            h1 = 0.0;
+            h2 = 0.0;
+            slow = 1.0;
+            i32 j = 0;
+            while (j < 1024)
+            {
+                dl[j] = 0.0;
+                gt_buf[j] = 1.0;
+                j = j + 1;
+            }
+        }
+        f32 sr = EC.samplerate;
+        f32 ceil_lin = dbgain(bound(ceiling, -12.0, 0.0));
+        f32<> x = in * dbgain(bound(input_gain, 0.0, 24.0));
+        // Punchy and Loud round the peaks off before the limiter sees them.
+        f32 rel_scale = 1.0;
+        if (mode == 1)
+        {
+            x = <sclip(x[0], 0.7 * ceil_lin, 1.6 * ceil_lin), sclip(x[1], 0.7 * ceil_lin, 1.6 * ceil_lin)>;
+        }
+        if (mode == 2)
+        {
+            x = <sclip(x[0], 0.45 * ceil_lin, 1.25 * ceil_lin), sclip(x[1], 0.45 * ceil_lin, 1.25 * ceil_lin)>;
+            rel_scale = 0.5;
+        }
+
+        // Detector with stereo link.
+        f32 a = fabs(x[0]);
+        f32 b = fabs(x[1]);
+        if (true_peak)
+        {
+            // True peak: also catch the overs between samples (about 4x oversampled).
+            a = tpeak(h2[0], h1[0], x[0]);
+            b = tpeak(h2[1], h1[1], x[1]);
+        }
+        h2 = h1;
+        h1 = x;
+        f32 lk = bound(stereo_link, 0.0, 100.0) * 0.01;
+        f32 peak = lk * fmax(a, b) + (1.0 - lk) * (a + b) * 0.5;
+        f32 gt = 1.0;
+        if (peak > ceil_lin)
+        {
+            gt = ceil_lin / peak;
+        }
+
+        // Lookahead length in samples (at least 1).
+        i32 n = 1;
+        f32 nf = floor(bound(lookahead, 0.0, 5.0) * 0.001 * sr);
+        if (nf >= 1.0)
+        {
+            n = cast(fmin(nf, 1000.0), i32);
+        }
+
+        dl[wp] = x;
+        gt_buf[wp] = gt;
+
+        // Minimum gain over the lookahead window.
+        f32 gmin = 1.0;
+        i32 k = 0;
+        while (k < n)
+        {
+            i32 idx = wp - k;
+            if (idx < 0)
+            {
+                idx = idx + 1024;
+            }
+            gmin = fmin(gmin, gt_buf[idx]);
+            k = k + 1;
+        }
+
+        // Attack reaches the target within the lookahead; release is a one-pole.
+        f32 att = exp(-3.0 / cast(n, f32));
+        f32 rel_ms = bound(release, 1.0, 1000.0) * rel_scale;
+        if (auto_release)
+        {
+            // Two stages: a fast one follows the peaks and recovers at a quarter of Release; a slow one (50 ms
+            // attack, three times Release) only moves under sustained limiting and holds the gain down there.
+            f32 rf = exp(-1.0 / (0.25 * rel_ms * 0.001 * sr));
+            if (gmin < gain)
+            {
+                gain = att * gain + (1.0 - att) * gmin;
+            }
+            else
+            {
+                gain = rf * gain + (1.0 - rf) * gmin;
+            }
+            f32 sa = exp(-1.0 / (0.05 * sr));
+            f32 sr2 = exp(-1.0 / (3.0 * rel_ms * 0.001 * sr));
+            if (gmin < slow)
+            {
+                slow = sa * slow + (1.0 - sa) * gmin;
+            }
+            else
+            {
+                slow = sr2 * slow + (1.0 - sr2) * gmin;
+            }
+            gain = fmin(gain, slow);
+        }
+        else
+        {
+            f32 rel = exp(-1.0 / (rel_ms * 0.001 * sr));
+            if (gmin < gain)
+            {
+                gain = att * gain + (1.0 - att) * gmin;
+            }
+            else
+            {
+                gain = rel * gain + (1.0 - rel) * gmin;
+            }
+            slow = gain;
+        }
+
+        // Delayed audio.
+        i32 rp = wp - n + 1;
+        if (rp < 0)
+        {
+            rp = rp + 1024;
+        }
+        f32<> d = dl[rp];
+        f32<> y = d * gain;
+        y = <bound(y[0], -ceil_lin, ceil_lin), bound(y[1], -ceil_lin, ceil_lin)>;
+        out = y;
+
+        wp = wp + 1;
+        if (wp >= 1024)
+        {
+            wp = 0;
+        }
+
+        meter_l = fmax(fabs(y[0]), meter_l * 0.9998);
+        meter_r = fmax(fabs(y[1]), meter_r * 0.9998);
+        in_hold = fmax(peak, in_hold * 0.9998);
+        f32 omax = fmax(fabs(y[0]), fabs(y[1]));
+        f32 hold_len = 5.0 * sr;
+        if (peak >= in_pk)
+        {
+            in_pk = peak;
+            t_in = 0.0;
+        }
+        else
+        {
+            t_in = t_in + 1.0;
+            if (t_in > hold_len)
+            {
+                in_pk = peak;
+                t_in = 0.0;
+            }
+        }
+        if (omax >= out_pk)
+        {
+            out_pk = omax;
+            t_out = 0.0;
+        }
+        else
+        {
+            t_out = t_out + 1.0;
+            if (t_out > hold_len)
+            {
+                out_pk = omax;
+                t_out = 0.0;
+            }
+        }
+        f32 in_db = 20.0 * log10(fmax(0.000001, in_hold));
+        f32 out_db = 20.0 * log10(fmax(0.000001, fmax(meter_l, meter_r)));
+        f32 gr_db = -20.0 * log10(fmax(0.001, gain));
+        if (gr_db >= gr_pk)
+        {
+            gr_pk = gr_db;
+            t_gr = 0.0;
+        }
+        else
+        {
+            t_gr = t_gr + 1.0;
+            if (t_gr > hold_len)
+            {
+                gr_pk = gr_db;
+                t_gr = 0.0;
+            }
+        }
+        t_disp = t_disp + 1.0;
+        if (t_disp > 1.0 * sr)
+        {
+            disp_gr = gr_pk;
+            t_disp = 0.0;
+        }
+        f32 ipk_db = 20.0 * log10(fmax(0.000001, in_pk));
+        f32 opk_db = 20.0 * log10(fmax(0.000001, out_pk));
+        display = <bound((bound(ceiling, -12.0, 0.0) + 30.0) / 36.0, 0.0, 1.0), bound((in_db + 30.0) / 36.0, 0.0, 1.0), bound((out_db + 30.0) / 36.0, 0.0, 1.0), bound(gr_db / 12.0, 0.0, 1.0)>;
+        display2 = <bound((ipk_db + 30.0) / 36.0, 0.0, 1.0), bound((opk_db + 30.0) / 36.0, 0.0, 1.0), bound(disp_gr / 12.0, 0.0, 1.0), 0.0>;
+    }
+}

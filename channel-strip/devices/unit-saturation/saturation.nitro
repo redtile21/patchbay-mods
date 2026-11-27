@@ -1,0 +1,886 @@
+component eb_saturation
+{
+    audio_inport in;
+    audio_inport f32 drive = 0.0;
+    audio_inport f32 bias = 0.0;
+    audio_inport f32 tone = 0.0;
+    audio_inport f32 mix = 100.0;
+    audio_inport f32 output = 0.0;
+    value_inport i32 sat_type;
+    value_inport bool auto_gain;
+    value_inport bool oversampling;
+
+    audio_outport out;
+    audio_outport f32<4> display;
+    audio_outport f32<4> display2;
+
+    f32 prev_l = 0.0;
+    f32 prev_r = 0.0;
+    f32 lp_l = 0.0;
+    f32 lp_r = 0.0;
+    f32 meter_l = 0.0;
+    f32 meter_r = 0.0;
+    f32 in_env = 0.0;
+    f32 in_pk = 0.0;
+    f32 out_pk = 0.0;
+    f32 t_in = 0.0;
+    f32 t_out = 0.0;
+    f32 tl_l = 0.0;
+    f32 tl_r = 0.0;
+    f32 tc_l = 0.0;
+    f32 tc_r = 0.0;
+    f32 xh_l = 0.0;
+    f32 xh_r = 0.0;
+    f32 dc_l = 0.0;
+    f32 dc_r = 0.0;
+    f32 xe_l = 0.0;
+    f32 xe_r = 0.0;
+    f32 pe_l = 0.0;
+    f32 pe_r = 0.0;
+    f32 de_l = 0.0;
+    f32 de_r = 0.0;
+    f32 hf_l = 0.0;
+    f32 hf_r = 0.0;
+    f32 env_l = 0.0;
+    f32 env_r = 0.0;
+    f32 hb_x1_l = 0.0;
+    f32 hb_x2_l = 0.0;
+    f32 hb_y1_l = 0.0;
+    f32 hb_y2_l = 0.0;
+    f32 hb_x1_r = 0.0;
+    f32 hb_x2_r = 0.0;
+    f32 hb_y1_r = 0.0;
+    f32 hb_y2_r = 0.0;
+    f32 p_sr = 0.0;
+    // 2x oversampling: half-band filters up and down for the curve, and a matching pair for the dry signal
+    f32 osu_l_x0 = 0.0;
+    f32 osu_l_y0 = 0.0;
+    f32 osu_l_x1 = 0.0;
+    f32 osu_l_y1 = 0.0;
+    f32 osu_l_x2 = 0.0;
+    f32 osu_l_y2 = 0.0;
+    f32 osu_l_x3 = 0.0;
+    f32 osu_l_y3 = 0.0;
+    f32 osu_l_x4 = 0.0;
+    f32 osu_l_y4 = 0.0;
+    f32 osu_l_x5 = 0.0;
+    f32 osu_l_y5 = 0.0;
+    f32 osu_l_x6 = 0.0;
+    f32 osu_l_y6 = 0.0;
+    f32 osu_l_x7 = 0.0;
+    f32 osu_l_y7 = 0.0;
+    f32 osd_l_x0 = 0.0;
+    f32 osd_l_y0 = 0.0;
+    f32 osd_l_x1 = 0.0;
+    f32 osd_l_y1 = 0.0;
+    f32 osd_l_x2 = 0.0;
+    f32 osd_l_y2 = 0.0;
+    f32 osd_l_x3 = 0.0;
+    f32 osd_l_y3 = 0.0;
+    f32 osd_l_x4 = 0.0;
+    f32 osd_l_y4 = 0.0;
+    f32 osd_l_x5 = 0.0;
+    f32 osd_l_y5 = 0.0;
+    f32 osd_l_x6 = 0.0;
+    f32 osd_l_y6 = 0.0;
+    f32 osd_l_x7 = 0.0;
+    f32 osd_l_y7 = 0.0;
+    f32 dru_l_x0 = 0.0;
+    f32 dru_l_y0 = 0.0;
+    f32 dru_l_x1 = 0.0;
+    f32 dru_l_y1 = 0.0;
+    f32 dru_l_x2 = 0.0;
+    f32 dru_l_y2 = 0.0;
+    f32 dru_l_x3 = 0.0;
+    f32 dru_l_y3 = 0.0;
+    f32 dru_l_x4 = 0.0;
+    f32 dru_l_y4 = 0.0;
+    f32 dru_l_x5 = 0.0;
+    f32 dru_l_y5 = 0.0;
+    f32 dru_l_x6 = 0.0;
+    f32 dru_l_y6 = 0.0;
+    f32 dru_l_x7 = 0.0;
+    f32 dru_l_y7 = 0.0;
+    f32 drd_l_x0 = 0.0;
+    f32 drd_l_y0 = 0.0;
+    f32 drd_l_x1 = 0.0;
+    f32 drd_l_y1 = 0.0;
+    f32 drd_l_x2 = 0.0;
+    f32 drd_l_y2 = 0.0;
+    f32 drd_l_x3 = 0.0;
+    f32 drd_l_y3 = 0.0;
+    f32 drd_l_x4 = 0.0;
+    f32 drd_l_y4 = 0.0;
+    f32 drd_l_x5 = 0.0;
+    f32 drd_l_y5 = 0.0;
+    f32 drd_l_x6 = 0.0;
+    f32 drd_l_y6 = 0.0;
+    f32 drd_l_x7 = 0.0;
+    f32 drd_l_y7 = 0.0;
+    f32 osu_r_x0 = 0.0;
+    f32 osu_r_y0 = 0.0;
+    f32 osu_r_x1 = 0.0;
+    f32 osu_r_y1 = 0.0;
+    f32 osu_r_x2 = 0.0;
+    f32 osu_r_y2 = 0.0;
+    f32 osu_r_x3 = 0.0;
+    f32 osu_r_y3 = 0.0;
+    f32 osu_r_x4 = 0.0;
+    f32 osu_r_y4 = 0.0;
+    f32 osu_r_x5 = 0.0;
+    f32 osu_r_y5 = 0.0;
+    f32 osu_r_x6 = 0.0;
+    f32 osu_r_y6 = 0.0;
+    f32 osu_r_x7 = 0.0;
+    f32 osu_r_y7 = 0.0;
+    f32 osd_r_x0 = 0.0;
+    f32 osd_r_y0 = 0.0;
+    f32 osd_r_x1 = 0.0;
+    f32 osd_r_y1 = 0.0;
+    f32 osd_r_x2 = 0.0;
+    f32 osd_r_y2 = 0.0;
+    f32 osd_r_x3 = 0.0;
+    f32 osd_r_y3 = 0.0;
+    f32 osd_r_x4 = 0.0;
+    f32 osd_r_y4 = 0.0;
+    f32 osd_r_x5 = 0.0;
+    f32 osd_r_y5 = 0.0;
+    f32 osd_r_x6 = 0.0;
+    f32 osd_r_y6 = 0.0;
+    f32 osd_r_x7 = 0.0;
+    f32 osd_r_y7 = 0.0;
+    f32 dru_r_x0 = 0.0;
+    f32 dru_r_y0 = 0.0;
+    f32 dru_r_x1 = 0.0;
+    f32 dru_r_y1 = 0.0;
+    f32 dru_r_x2 = 0.0;
+    f32 dru_r_y2 = 0.0;
+    f32 dru_r_x3 = 0.0;
+    f32 dru_r_y3 = 0.0;
+    f32 dru_r_x4 = 0.0;
+    f32 dru_r_y4 = 0.0;
+    f32 dru_r_x5 = 0.0;
+    f32 dru_r_y5 = 0.0;
+    f32 dru_r_x6 = 0.0;
+    f32 dru_r_y6 = 0.0;
+    f32 dru_r_x7 = 0.0;
+    f32 dru_r_y7 = 0.0;
+    f32 drd_r_x0 = 0.0;
+    f32 drd_r_y0 = 0.0;
+    f32 drd_r_x1 = 0.0;
+    f32 drd_r_y1 = 0.0;
+    f32 drd_r_x2 = 0.0;
+    f32 drd_r_y2 = 0.0;
+    f32 drd_r_x3 = 0.0;
+    f32 drd_r_y3 = 0.0;
+    f32 drd_r_x4 = 0.0;
+    f32 drd_r_y4 = 0.0;
+    f32 drd_r_x5 = 0.0;
+    f32 drd_r_y5 = 0.0;
+    f32 drd_r_x6 = 0.0;
+    f32 drd_r_y6 = 0.0;
+    f32 drd_r_x7 = 0.0;
+    f32 drd_r_y7 = 0.0;
+    f32 hb_b0 = 1.0;
+    f32 hb_b1 = 0.0;
+    f32 hb_b2 = 0.0;
+    f32 hb_a1 = 0.0;
+    f32 hb_a2 = 0.0;
+
+    f32 dbgain(f32 v)
+    {
+        return exp(v * 0.11512925464970229);
+    }
+    f32 bound(f32 v, f32 lo, f32 hi)
+    {
+        return fmax(lo, fmin(hi, v));
+    }
+    f32 tanh_(f32 v)
+    {
+        f32 e = exp(2.0 * bound(v, -12.0, 12.0));
+        return (e - 1.0) / (e + 1.0);
+    }
+    // Diode pair: clean up to the knee, then the current rises steeply and the voltage only logarithmically.
+    // Silicon (7): knee 0.7, hard. Germanium (8): knee 0.3 (0.22 on the negative side), soft and early.
+    f32 diode(f32 v, f32 kind)
+    {
+        f32 t = 0.7;
+        f32 sl = 0.08;
+        if (kind > 7.5)
+        {
+            t = 0.3;
+            sl = 0.25;
+            if (v < 0.0)
+            {
+                t = 0.22;
+            }
+        }
+        f32 a = fabs(v);
+        f32 r = a;
+        if (a > t)
+        {
+            r = t + sl * log(1.0 + (a - t) / sl);
+        }
+        if (v < 0.0)
+        {
+            r = 0.0 - r;
+        }
+        return r;
+    }
+    f32 shape(f32 v, f32 kind)
+    {
+        f32 r = 0.0;
+        if (kind < 0.5)
+        {
+            r = tanh_(v);
+        }
+        else
+        {
+            if (kind < 1.5)
+            {
+                if (v >= 0.0)
+                {
+                    r = tanh_(v);
+                }
+                else
+                {
+                    r = tanh_(v * 0.7) / 0.7;
+                }
+            }
+            else
+            {
+                if (kind < 2.5)
+                {
+                    f32 c = bound(v, -1.0, 1.0);
+                    r = 1.5 * c - 0.5 * c * c * c;
+                }
+                else
+                {
+                    if (kind < 3.5)
+                    {
+                        r = bound(v, -1.0, 1.0);
+                    }
+                    else
+                    {
+                        if (kind < 4.5)
+                        {
+                            // Transformer: a soft core, a little asymmetric.
+                            if (v >= 0.0)
+                            {
+                                r = tanh_(v);
+                            }
+                            else
+                            {
+                                r = tanh_(v * 0.85) / 0.85;
+                            }
+                        }
+                        else
+                        {
+                            if (kind < 5.5)
+                            {
+                                // Console: a gentle knee, the negative side a little softer (even harmonics).
+                                f32 kc = 1.0;
+                                if (v < 0.0)
+                                {
+                                    kc = 0.8;
+                                }
+                                r = v / sqrt(1.0 + kc * kc * v * v);
+                            }
+                            else
+                            {
+                                if (kind < 6.5)
+                                {
+                                    r = tanh_(v);
+                                }
+                                else
+                                {
+                                    r = diode(v, kind);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return r;
+    }
+
+    reset
+    {
+        prev_l = 0.0;
+        prev_r = 0.0;
+        lp_l = 0.0;
+        lp_r = 0.0;
+        meter_l = 0.0;
+        meter_r = 0.0;
+        in_env = 0.0;
+        in_pk = 0.0;
+        out_pk = 0.0;
+        t_in = 0.0;
+        t_out = 0.0;
+        tl_l = 0.0;
+        tl_r = 0.0;
+        tc_l = 0.0;
+        tc_r = 0.0;
+        xh_l = 0.0;
+        xh_r = 0.0;
+        dc_l = 0.0;
+        dc_r = 0.0;
+        xe_l = 0.0;
+        xe_r = 0.0;
+        pe_l = 0.0;
+        pe_r = 0.0;
+        de_l = 0.0;
+        de_r = 0.0;
+        hf_l = 0.0;
+        hf_r = 0.0;
+        env_l = 0.0;
+        env_r = 0.0;
+        hb_x1_l = 0.0;
+        hb_x2_l = 0.0;
+        hb_y1_l = 0.0;
+        hb_y2_l = 0.0;
+        hb_x1_r = 0.0;
+        hb_x2_r = 0.0;
+        hb_y1_r = 0.0;
+        hb_y2_r = 0.0;
+        p_sr = 0.0;
+    }
+
+    process
+    {
+        f32<> x = in;
+        f32 sr = EC.samplerate;
+        f32 dr = bound(drive, 0.0, 36.0);
+        f32 drive_lin = dbgain(dr);
+        f32 kind = cast(sat_type, f32);
+        f32 bias_v = bound(bias, -1.0, 1.0) * 0.5;
+        f32 bias_off = shape(bias_v, kind);
+        f32 tn = bound(tone, -6.0, 6.0);
+        f32 tone_lo = dbgain(-tn * 0.5);
+        f32 tone_hi = dbgain(tn * 0.5);
+        f32 tone_a = 1.0 - exp(-6.283185307 * 1000.0 / sr);
+        f32 m = bound(mix, 0.0, 100.0) * 0.01;
+        f32 ag = 0.0;
+        if (auto_gain && sat_type != 6)
+        {
+            ag = -dr * 0.6;
+        }
+        f32 tf_a = 1.0 - exp(-6.283185307 * 150.0 / sr);
+        f32 ex_a = 1.0 - exp(-6.283185307 * 3000.0 / sr);
+        f32 dc_a = 1.0 - exp(-6.283185307 * 8.0 / sr);
+        // Exciter: Drive pushes the high band into tanh; Bias adds even harmonics.
+        f32 ex_tb = tanh_(bias_v);
+        f32 out_lin = dbgain(bound(output, -24.0, 6.0) + ag);
+        f32 env_att = 1.0 - exp(-1.0 / (0.005 * sr));
+        f32 env_rel = 1.0 - exp(-1.0 / (0.08 * sr));
+        // Pre/de-emphasis: Tape +4 dB above 3 kHz, Console +2 dB above 5 kHz (the de-emphasis corner is fc / (1 + k)).
+        f32 emph = 0.0;
+        f32 pe_fc = 3000.0;
+        if (sat_type == 0)
+        {
+            emph = 0.6;
+        }
+        if (sat_type == 5)
+        {
+            emph = 0.4;
+            pe_fc = 5000.0;
+        }
+        f32 pe_a = 1.0 - exp(-6.283185307 * pe_fc / sr);
+        f32 de_a = 1.0 - exp(-6.283185307 * pe_fc / (1.0 + emph) / sr);
+        f32 hf_a = 1.0 - exp(-6.283185307 * fmin(20000.0 * exp(-0.0192540644 * dr), 0.45 * sr) / sr);
+        if (sr != p_sr)
+        {
+            // Head bump: peaking filter, 75 Hz, +1.5 dB, Q 0.9 (RBJ cookbook)
+            p_sr = sr;
+            f32 hb_w = 6.283185307 * 75.0 / sr;
+            f32 hb_al = sin(hb_w) / (2.0 * 0.9);
+            f32 hb_A = exp(1.5 * 0.0575646273);
+            f32 hb_a0 = 1.0 + hb_al / hb_A;
+            hb_b0 = (1.0 + hb_al * hb_A) / hb_a0;
+            hb_b1 = -2.0 * cos(hb_w) / hb_a0;
+            hb_b2 = (1.0 - hb_al * hb_A) / hb_a0;
+            hb_a1 = -2.0 * cos(hb_w) / hb_a0;
+            hb_a2 = (1.0 - hb_al / hb_A) / hb_a0;
+        }
+
+        // ---- channel l ----
+        f32 d_l = x[0] * drive_lin + bias_v;
+        f32 boff_l = bias_off;
+        if (sat_type == 1)
+        {
+            // Tube: the bias moves with the level (like grid current), so the even harmonics grow as it's driven.
+            f32 lv_l = fabs(x[0] * drive_lin);
+            if (lv_l > env_l)
+            {
+                env_l = env_l + env_att * (lv_l - env_l);
+            }
+            else
+            {
+                env_l = env_l + env_rel * (lv_l - env_l);
+            }
+            f32 bd_l = 0.06 * fmin(env_l, 5.0);
+            d_l = d_l + bd_l;
+            boff_l = shape(bias_v + bd_l, kind);
+        }
+        if (sat_type == 4)
+        {
+            // Transformer: the lows (below about 150 Hz) hit the core twice as hard.
+            tl_l = tl_l + tf_a * (d_l - tl_l);
+            d_l = d_l + tl_l;
+        }
+        if (emph > 0.0)
+        {
+            // Tape and Console: the highs are lifted into the curve and lowered after it, so they saturate first.
+            pe_l = pe_l + pe_a * (d_l - pe_l);
+            d_l = d_l + emph * (d_l - pe_l);
+        }
+        f32 s_l = shape(d_l, kind) - boff_l;
+        f32 dry_l = x[0];
+        if (oversampling && sat_type != 6)
+        {
+            // 2x: the curve runs at twice the rate between half-band filters (far less aliasing); the dry signal
+            // goes through a matching pair so Mix stays in phase.
+            f32 osu_l_e = d_l;
+            f32 osu_l_o = d_l;
+            f32 osu_l_t0 = (osu_l_e - osu_l_y0) * 0.040633460924 + osu_l_x0;
+            osu_l_x0 = osu_l_e;
+            osu_l_y0 = osu_l_t0;
+            osu_l_e = osu_l_t0;
+            f32 osu_l_t1 = (osu_l_o - osu_l_y1) * 0.150505129023 + osu_l_x1;
+            osu_l_x1 = osu_l_o;
+            osu_l_y1 = osu_l_t1;
+            osu_l_o = osu_l_t1;
+            f32 osu_l_t2 = (osu_l_e - osu_l_y2) * 0.300757055992 + osu_l_x2;
+            osu_l_x2 = osu_l_e;
+            osu_l_y2 = osu_l_t2;
+            osu_l_e = osu_l_t2;
+            f32 osu_l_t3 = (osu_l_o - osu_l_y3) * 0.460774504961 + osu_l_x3;
+            osu_l_x3 = osu_l_o;
+            osu_l_y3 = osu_l_t3;
+            osu_l_o = osu_l_t3;
+            f32 osu_l_t4 = (osu_l_e - osu_l_y4) * 0.609524314896 + osu_l_x4;
+            osu_l_x4 = osu_l_e;
+            osu_l_y4 = osu_l_t4;
+            osu_l_e = osu_l_t4;
+            f32 osu_l_t5 = (osu_l_o - osu_l_y5) * 0.738503841119 + osu_l_x5;
+            osu_l_x5 = osu_l_o;
+            osu_l_y5 = osu_l_t5;
+            osu_l_o = osu_l_t5;
+            f32 osu_l_t6 = (osu_l_e - osu_l_y6) * 0.849223810392 + osu_l_x6;
+            osu_l_x6 = osu_l_e;
+            osu_l_y6 = osu_l_t6;
+            osu_l_e = osu_l_t6;
+            f32 osu_l_t7 = (osu_l_o - osu_l_y7) * 0.949742783705 + osu_l_x7;
+            osu_l_x7 = osu_l_o;
+            osu_l_y7 = osu_l_t7;
+            osu_l_o = osu_l_t7;
+            f32 osd_l_s0 = shape(osu_l_o, kind) - boff_l;
+            f32 osd_l_s1 = shape(osu_l_e, kind) - boff_l;
+            f32 osd_l_t0 = (osd_l_s0 - osd_l_y0) * 0.040633460924 + osd_l_x0;
+            osd_l_x0 = osd_l_s0;
+            osd_l_y0 = osd_l_t0;
+            osd_l_s0 = osd_l_t0;
+            f32 osd_l_t1 = (osd_l_s1 - osd_l_y1) * 0.150505129023 + osd_l_x1;
+            osd_l_x1 = osd_l_s1;
+            osd_l_y1 = osd_l_t1;
+            osd_l_s1 = osd_l_t1;
+            f32 osd_l_t2 = (osd_l_s0 - osd_l_y2) * 0.300757055992 + osd_l_x2;
+            osd_l_x2 = osd_l_s0;
+            osd_l_y2 = osd_l_t2;
+            osd_l_s0 = osd_l_t2;
+            f32 osd_l_t3 = (osd_l_s1 - osd_l_y3) * 0.460774504961 + osd_l_x3;
+            osd_l_x3 = osd_l_s1;
+            osd_l_y3 = osd_l_t3;
+            osd_l_s1 = osd_l_t3;
+            f32 osd_l_t4 = (osd_l_s0 - osd_l_y4) * 0.609524314896 + osd_l_x4;
+            osd_l_x4 = osd_l_s0;
+            osd_l_y4 = osd_l_t4;
+            osd_l_s0 = osd_l_t4;
+            f32 osd_l_t5 = (osd_l_s1 - osd_l_y5) * 0.738503841119 + osd_l_x5;
+            osd_l_x5 = osd_l_s1;
+            osd_l_y5 = osd_l_t5;
+            osd_l_s1 = osd_l_t5;
+            f32 osd_l_t6 = (osd_l_s0 - osd_l_y6) * 0.849223810392 + osd_l_x6;
+            osd_l_x6 = osd_l_s0;
+            osd_l_y6 = osd_l_t6;
+            osd_l_s0 = osd_l_t6;
+            f32 osd_l_t7 = (osd_l_s1 - osd_l_y7) * 0.949742783705 + osd_l_x7;
+            osd_l_x7 = osd_l_s1;
+            osd_l_y7 = osd_l_t7;
+            osd_l_s1 = osd_l_t7;
+            f32 osd_l = 0.5 * (osd_l_s0 + osd_l_s1);
+            s_l = osd_l;
+            f32 dru_l_e = x[0];
+            f32 dru_l_o = x[0];
+            f32 dru_l_t0 = (dru_l_e - dru_l_y0) * 0.040633460924 + dru_l_x0;
+            dru_l_x0 = dru_l_e;
+            dru_l_y0 = dru_l_t0;
+            dru_l_e = dru_l_t0;
+            f32 dru_l_t1 = (dru_l_o - dru_l_y1) * 0.150505129023 + dru_l_x1;
+            dru_l_x1 = dru_l_o;
+            dru_l_y1 = dru_l_t1;
+            dru_l_o = dru_l_t1;
+            f32 dru_l_t2 = (dru_l_e - dru_l_y2) * 0.300757055992 + dru_l_x2;
+            dru_l_x2 = dru_l_e;
+            dru_l_y2 = dru_l_t2;
+            dru_l_e = dru_l_t2;
+            f32 dru_l_t3 = (dru_l_o - dru_l_y3) * 0.460774504961 + dru_l_x3;
+            dru_l_x3 = dru_l_o;
+            dru_l_y3 = dru_l_t3;
+            dru_l_o = dru_l_t3;
+            f32 dru_l_t4 = (dru_l_e - dru_l_y4) * 0.609524314896 + dru_l_x4;
+            dru_l_x4 = dru_l_e;
+            dru_l_y4 = dru_l_t4;
+            dru_l_e = dru_l_t4;
+            f32 dru_l_t5 = (dru_l_o - dru_l_y5) * 0.738503841119 + dru_l_x5;
+            dru_l_x5 = dru_l_o;
+            dru_l_y5 = dru_l_t5;
+            dru_l_o = dru_l_t5;
+            f32 dru_l_t6 = (dru_l_e - dru_l_y6) * 0.849223810392 + dru_l_x6;
+            dru_l_x6 = dru_l_e;
+            dru_l_y6 = dru_l_t6;
+            dru_l_e = dru_l_t6;
+            f32 dru_l_t7 = (dru_l_o - dru_l_y7) * 0.949742783705 + dru_l_x7;
+            dru_l_x7 = dru_l_o;
+            dru_l_y7 = dru_l_t7;
+            dru_l_o = dru_l_t7;
+            f32 drd_l_s0 = dru_l_o;
+            f32 drd_l_s1 = dru_l_e;
+            f32 drd_l_t0 = (drd_l_s0 - drd_l_y0) * 0.040633460924 + drd_l_x0;
+            drd_l_x0 = drd_l_s0;
+            drd_l_y0 = drd_l_t0;
+            drd_l_s0 = drd_l_t0;
+            f32 drd_l_t1 = (drd_l_s1 - drd_l_y1) * 0.150505129023 + drd_l_x1;
+            drd_l_x1 = drd_l_s1;
+            drd_l_y1 = drd_l_t1;
+            drd_l_s1 = drd_l_t1;
+            f32 drd_l_t2 = (drd_l_s0 - drd_l_y2) * 0.300757055992 + drd_l_x2;
+            drd_l_x2 = drd_l_s0;
+            drd_l_y2 = drd_l_t2;
+            drd_l_s0 = drd_l_t2;
+            f32 drd_l_t3 = (drd_l_s1 - drd_l_y3) * 0.460774504961 + drd_l_x3;
+            drd_l_x3 = drd_l_s1;
+            drd_l_y3 = drd_l_t3;
+            drd_l_s1 = drd_l_t3;
+            f32 drd_l_t4 = (drd_l_s0 - drd_l_y4) * 0.609524314896 + drd_l_x4;
+            drd_l_x4 = drd_l_s0;
+            drd_l_y4 = drd_l_t4;
+            drd_l_s0 = drd_l_t4;
+            f32 drd_l_t5 = (drd_l_s1 - drd_l_y5) * 0.738503841119 + drd_l_x5;
+            drd_l_x5 = drd_l_s1;
+            drd_l_y5 = drd_l_t5;
+            drd_l_s1 = drd_l_t5;
+            f32 drd_l_t6 = (drd_l_s0 - drd_l_y6) * 0.849223810392 + drd_l_x6;
+            drd_l_x6 = drd_l_s0;
+            drd_l_y6 = drd_l_t6;
+            drd_l_s0 = drd_l_t6;
+            f32 drd_l_t7 = (drd_l_s1 - drd_l_y7) * 0.949742783705 + drd_l_x7;
+            drd_l_x7 = drd_l_s1;
+            drd_l_y7 = drd_l_t7;
+            drd_l_s1 = drd_l_t7;
+            f32 drd_l = 0.5 * (drd_l_s0 + drd_l_s1);
+            dry_l = drd_l;
+        }
+        if (emph > 0.0)
+        {
+            de_l = de_l + de_a * (s_l - de_l);
+            s_l = s_l - emph / (1.0 + emph) * (s_l - de_l);
+        }
+        if (sat_type == 0)
+        {
+            // Tape: head bump around 75 Hz, and the highs soften as it's driven harder (20 kHz down to 10 kHz).
+            f32 hb_l = hb_b0 * s_l + hb_b1 * hb_x1_l + hb_b2 * hb_x2_l - hb_a1 * hb_y1_l - hb_a2 * hb_y2_l;
+            hb_x2_l = hb_x1_l;
+            hb_x1_l = s_l;
+            hb_y2_l = hb_y1_l;
+            hb_y1_l = hb_l;
+            hf_l = hf_l + hf_a * (hb_l - hf_l);
+            s_l = hf_l;
+        }
+        if (sat_type == 4)
+        {
+            // Undo the low boost on the way out (half the lows), so the level stays put.
+            tc_l = tc_l + tf_a * (s_l - tc_l);
+            s_l = s_l - 0.5 * tc_l;
+        }
+        if (sat_type == 6)
+        {
+            // Exciter: the dry signal plus harmonics made from the highs (above about 3 kHz) only.
+            xh_l = xh_l + ex_a * (x[0] - xh_l);
+            f32 hp_l = x[0] - xh_l;
+            f32 hm_l = tanh_(drive_lin * hp_l + bias_v) - ex_tb;
+            // High-pass the result again so only the upper harmonics are added.
+            xe_l = xe_l + ex_a * (hm_l - xe_l);
+            s_l = x[0] + 0.15 * (hm_l - xe_l);
+        }
+        // DC blocker (the asymmetric curves add a small offset)
+        dc_l = dc_l + dc_a * (s_l - dc_l);
+        s_l = s_l - dc_l;
+        // tone: tilt around 1 kHz
+        lp_l = lp_l + tone_a * (s_l - lp_l);
+        f32 t_l = lp_l * tone_lo + (s_l - lp_l) * tone_hi;
+        f32 o_l = (dry_l * (1.0 - m) + t_l * m) * out_lin;
+        // ---- channel r ----
+        f32 d_r = x[1] * drive_lin + bias_v;
+        f32 boff_r = bias_off;
+        if (sat_type == 1)
+        {
+            // Tube: the bias moves with the level (like grid current), so the even harmonics grow as it's driven.
+            f32 lv_r = fabs(x[1] * drive_lin);
+            if (lv_r > env_r)
+            {
+                env_r = env_r + env_att * (lv_r - env_r);
+            }
+            else
+            {
+                env_r = env_r + env_rel * (lv_r - env_r);
+            }
+            f32 bd_r = 0.06 * fmin(env_r, 5.0);
+            d_r = d_r + bd_r;
+            boff_r = shape(bias_v + bd_r, kind);
+        }
+        if (sat_type == 4)
+        {
+            // Transformer: the lows (below about 150 Hz) hit the core twice as hard.
+            tl_r = tl_r + tf_a * (d_r - tl_r);
+            d_r = d_r + tl_r;
+        }
+        if (emph > 0.0)
+        {
+            // Tape and Console: the highs are lifted into the curve and lowered after it, so they saturate first.
+            pe_r = pe_r + pe_a * (d_r - pe_r);
+            d_r = d_r + emph * (d_r - pe_r);
+        }
+        f32 s_r = shape(d_r, kind) - boff_r;
+        f32 dry_r = x[1];
+        if (oversampling && sat_type != 6)
+        {
+            // 2x: the curve runs at twice the rate between half-band filters (far less aliasing); the dry signal
+            // goes through a matching pair so Mix stays in phase.
+            f32 osu_r_e = d_r;
+            f32 osu_r_o = d_r;
+            f32 osu_r_t0 = (osu_r_e - osu_r_y0) * 0.040633460924 + osu_r_x0;
+            osu_r_x0 = osu_r_e;
+            osu_r_y0 = osu_r_t0;
+            osu_r_e = osu_r_t0;
+            f32 osu_r_t1 = (osu_r_o - osu_r_y1) * 0.150505129023 + osu_r_x1;
+            osu_r_x1 = osu_r_o;
+            osu_r_y1 = osu_r_t1;
+            osu_r_o = osu_r_t1;
+            f32 osu_r_t2 = (osu_r_e - osu_r_y2) * 0.300757055992 + osu_r_x2;
+            osu_r_x2 = osu_r_e;
+            osu_r_y2 = osu_r_t2;
+            osu_r_e = osu_r_t2;
+            f32 osu_r_t3 = (osu_r_o - osu_r_y3) * 0.460774504961 + osu_r_x3;
+            osu_r_x3 = osu_r_o;
+            osu_r_y3 = osu_r_t3;
+            osu_r_o = osu_r_t3;
+            f32 osu_r_t4 = (osu_r_e - osu_r_y4) * 0.609524314896 + osu_r_x4;
+            osu_r_x4 = osu_r_e;
+            osu_r_y4 = osu_r_t4;
+            osu_r_e = osu_r_t4;
+            f32 osu_r_t5 = (osu_r_o - osu_r_y5) * 0.738503841119 + osu_r_x5;
+            osu_r_x5 = osu_r_o;
+            osu_r_y5 = osu_r_t5;
+            osu_r_o = osu_r_t5;
+            f32 osu_r_t6 = (osu_r_e - osu_r_y6) * 0.849223810392 + osu_r_x6;
+            osu_r_x6 = osu_r_e;
+            osu_r_y6 = osu_r_t6;
+            osu_r_e = osu_r_t6;
+            f32 osu_r_t7 = (osu_r_o - osu_r_y7) * 0.949742783705 + osu_r_x7;
+            osu_r_x7 = osu_r_o;
+            osu_r_y7 = osu_r_t7;
+            osu_r_o = osu_r_t7;
+            f32 osd_r_s0 = shape(osu_r_o, kind) - boff_r;
+            f32 osd_r_s1 = shape(osu_r_e, kind) - boff_r;
+            f32 osd_r_t0 = (osd_r_s0 - osd_r_y0) * 0.040633460924 + osd_r_x0;
+            osd_r_x0 = osd_r_s0;
+            osd_r_y0 = osd_r_t0;
+            osd_r_s0 = osd_r_t0;
+            f32 osd_r_t1 = (osd_r_s1 - osd_r_y1) * 0.150505129023 + osd_r_x1;
+            osd_r_x1 = osd_r_s1;
+            osd_r_y1 = osd_r_t1;
+            osd_r_s1 = osd_r_t1;
+            f32 osd_r_t2 = (osd_r_s0 - osd_r_y2) * 0.300757055992 + osd_r_x2;
+            osd_r_x2 = osd_r_s0;
+            osd_r_y2 = osd_r_t2;
+            osd_r_s0 = osd_r_t2;
+            f32 osd_r_t3 = (osd_r_s1 - osd_r_y3) * 0.460774504961 + osd_r_x3;
+            osd_r_x3 = osd_r_s1;
+            osd_r_y3 = osd_r_t3;
+            osd_r_s1 = osd_r_t3;
+            f32 osd_r_t4 = (osd_r_s0 - osd_r_y4) * 0.609524314896 + osd_r_x4;
+            osd_r_x4 = osd_r_s0;
+            osd_r_y4 = osd_r_t4;
+            osd_r_s0 = osd_r_t4;
+            f32 osd_r_t5 = (osd_r_s1 - osd_r_y5) * 0.738503841119 + osd_r_x5;
+            osd_r_x5 = osd_r_s1;
+            osd_r_y5 = osd_r_t5;
+            osd_r_s1 = osd_r_t5;
+            f32 osd_r_t6 = (osd_r_s0 - osd_r_y6) * 0.849223810392 + osd_r_x6;
+            osd_r_x6 = osd_r_s0;
+            osd_r_y6 = osd_r_t6;
+            osd_r_s0 = osd_r_t6;
+            f32 osd_r_t7 = (osd_r_s1 - osd_r_y7) * 0.949742783705 + osd_r_x7;
+            osd_r_x7 = osd_r_s1;
+            osd_r_y7 = osd_r_t7;
+            osd_r_s1 = osd_r_t7;
+            f32 osd_r = 0.5 * (osd_r_s0 + osd_r_s1);
+            s_r = osd_r;
+            f32 dru_r_e = x[1];
+            f32 dru_r_o = x[1];
+            f32 dru_r_t0 = (dru_r_e - dru_r_y0) * 0.040633460924 + dru_r_x0;
+            dru_r_x0 = dru_r_e;
+            dru_r_y0 = dru_r_t0;
+            dru_r_e = dru_r_t0;
+            f32 dru_r_t1 = (dru_r_o - dru_r_y1) * 0.150505129023 + dru_r_x1;
+            dru_r_x1 = dru_r_o;
+            dru_r_y1 = dru_r_t1;
+            dru_r_o = dru_r_t1;
+            f32 dru_r_t2 = (dru_r_e - dru_r_y2) * 0.300757055992 + dru_r_x2;
+            dru_r_x2 = dru_r_e;
+            dru_r_y2 = dru_r_t2;
+            dru_r_e = dru_r_t2;
+            f32 dru_r_t3 = (dru_r_o - dru_r_y3) * 0.460774504961 + dru_r_x3;
+            dru_r_x3 = dru_r_o;
+            dru_r_y3 = dru_r_t3;
+            dru_r_o = dru_r_t3;
+            f32 dru_r_t4 = (dru_r_e - dru_r_y4) * 0.609524314896 + dru_r_x4;
+            dru_r_x4 = dru_r_e;
+            dru_r_y4 = dru_r_t4;
+            dru_r_e = dru_r_t4;
+            f32 dru_r_t5 = (dru_r_o - dru_r_y5) * 0.738503841119 + dru_r_x5;
+            dru_r_x5 = dru_r_o;
+            dru_r_y5 = dru_r_t5;
+            dru_r_o = dru_r_t5;
+            f32 dru_r_t6 = (dru_r_e - dru_r_y6) * 0.849223810392 + dru_r_x6;
+            dru_r_x6 = dru_r_e;
+            dru_r_y6 = dru_r_t6;
+            dru_r_e = dru_r_t6;
+            f32 dru_r_t7 = (dru_r_o - dru_r_y7) * 0.949742783705 + dru_r_x7;
+            dru_r_x7 = dru_r_o;
+            dru_r_y7 = dru_r_t7;
+            dru_r_o = dru_r_t7;
+            f32 drd_r_s0 = dru_r_o;
+            f32 drd_r_s1 = dru_r_e;
+            f32 drd_r_t0 = (drd_r_s0 - drd_r_y0) * 0.040633460924 + drd_r_x0;
+            drd_r_x0 = drd_r_s0;
+            drd_r_y0 = drd_r_t0;
+            drd_r_s0 = drd_r_t0;
+            f32 drd_r_t1 = (drd_r_s1 - drd_r_y1) * 0.150505129023 + drd_r_x1;
+            drd_r_x1 = drd_r_s1;
+            drd_r_y1 = drd_r_t1;
+            drd_r_s1 = drd_r_t1;
+            f32 drd_r_t2 = (drd_r_s0 - drd_r_y2) * 0.300757055992 + drd_r_x2;
+            drd_r_x2 = drd_r_s0;
+            drd_r_y2 = drd_r_t2;
+            drd_r_s0 = drd_r_t2;
+            f32 drd_r_t3 = (drd_r_s1 - drd_r_y3) * 0.460774504961 + drd_r_x3;
+            drd_r_x3 = drd_r_s1;
+            drd_r_y3 = drd_r_t3;
+            drd_r_s1 = drd_r_t3;
+            f32 drd_r_t4 = (drd_r_s0 - drd_r_y4) * 0.609524314896 + drd_r_x4;
+            drd_r_x4 = drd_r_s0;
+            drd_r_y4 = drd_r_t4;
+            drd_r_s0 = drd_r_t4;
+            f32 drd_r_t5 = (drd_r_s1 - drd_r_y5) * 0.738503841119 + drd_r_x5;
+            drd_r_x5 = drd_r_s1;
+            drd_r_y5 = drd_r_t5;
+            drd_r_s1 = drd_r_t5;
+            f32 drd_r_t6 = (drd_r_s0 - drd_r_y6) * 0.849223810392 + drd_r_x6;
+            drd_r_x6 = drd_r_s0;
+            drd_r_y6 = drd_r_t6;
+            drd_r_s0 = drd_r_t6;
+            f32 drd_r_t7 = (drd_r_s1 - drd_r_y7) * 0.949742783705 + drd_r_x7;
+            drd_r_x7 = drd_r_s1;
+            drd_r_y7 = drd_r_t7;
+            drd_r_s1 = drd_r_t7;
+            f32 drd_r = 0.5 * (drd_r_s0 + drd_r_s1);
+            dry_r = drd_r;
+        }
+        if (emph > 0.0)
+        {
+            de_r = de_r + de_a * (s_r - de_r);
+            s_r = s_r - emph / (1.0 + emph) * (s_r - de_r);
+        }
+        if (sat_type == 0)
+        {
+            // Tape: head bump around 75 Hz, and the highs soften as it's driven harder (20 kHz down to 10 kHz).
+            f32 hb_r = hb_b0 * s_r + hb_b1 * hb_x1_r + hb_b2 * hb_x2_r - hb_a1 * hb_y1_r - hb_a2 * hb_y2_r;
+            hb_x2_r = hb_x1_r;
+            hb_x1_r = s_r;
+            hb_y2_r = hb_y1_r;
+            hb_y1_r = hb_r;
+            hf_r = hf_r + hf_a * (hb_r - hf_r);
+            s_r = hf_r;
+        }
+        if (sat_type == 4)
+        {
+            // Undo the low boost on the way out (half the lows), so the level stays put.
+            tc_r = tc_r + tf_a * (s_r - tc_r);
+            s_r = s_r - 0.5 * tc_r;
+        }
+        if (sat_type == 6)
+        {
+            // Exciter: the dry signal plus harmonics made from the highs (above about 3 kHz) only.
+            xh_r = xh_r + ex_a * (x[1] - xh_r);
+            f32 hp_r = x[1] - xh_r;
+            f32 hm_r = tanh_(drive_lin * hp_r + bias_v) - ex_tb;
+            // High-pass the result again so only the upper harmonics are added.
+            xe_r = xe_r + ex_a * (hm_r - xe_r);
+            s_r = x[1] + 0.15 * (hm_r - xe_r);
+        }
+        // DC blocker (the asymmetric curves add a small offset)
+        dc_r = dc_r + dc_a * (s_r - dc_r);
+        s_r = s_r - dc_r;
+        // tone: tilt around 1 kHz
+        lp_r = lp_r + tone_a * (s_r - lp_r);
+        f32 t_r = lp_r * tone_lo + (s_r - lp_r) * tone_hi;
+        f32 o_r = (dry_r * (1.0 - m) + t_r * m) * out_lin;
+        f32<> y = <o_l, o_r>;
+        out = y;
+        meter_l = fmax(fabs(o_l), meter_l * 0.999);
+        meter_r = fmax(fabs(o_r), meter_r * 0.999);
+        f32 pin = fmax(fabs(x[0]), fabs(x[1]));
+        f32 pout = fmax(fabs(o_l), fabs(o_r));
+        in_env = fmax(pin, in_env * 0.999);
+        f32 hold_len = 5.0 * sr;
+        if (pin >= in_pk)
+        {
+            in_pk = pin;
+            t_in = 0.0;
+        }
+        else
+        {
+            t_in = t_in + 1.0;
+            if (t_in > hold_len)
+            {
+                in_pk = pin;
+                t_in = 0.0;
+            }
+        }
+        if (pout >= out_pk)
+        {
+            out_pk = pout;
+            t_out = 0.0;
+        }
+        else
+        {
+            t_out = t_out + 1.0;
+            if (t_out > hold_len)
+            {
+                out_pk = pout;
+                t_out = 0.0;
+            }
+        }
+        f32 ine = bound((20.0 * log10(fmax(0.000001, in_env)) + 60.0) / 66.0, 0.0, 1.0);
+        f32 oute = bound((20.0 * log10(fmax(0.000001, fmax(meter_l, meter_r))) + 60.0) / 66.0, 0.0, 1.0);
+        f32 inp = bound((20.0 * log10(fmax(0.000001, in_pk)) + 60.0) / 66.0, 0.0, 1.0);
+        f32 outp = bound((20.0 * log10(fmax(0.000001, out_pk)) + 60.0) / 66.0, 0.0, 1.0);
+        // Type and mix share a lane: floor(lane * 16) = type, fract(lane * 16) = mix.
+        f32 tm = (kind + m * 0.99) / 16.0;
+        display = <dr / 36.0, (bound(bias, -1.0, 1.0) + 1.0) * 0.5, tm, ine>;
+        display2 = <oute, inp, outp, 0.0>;
+    }
+}

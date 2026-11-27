@@ -1,0 +1,620 @@
+component eb_clipper
+{
+    audio_inport in;
+    audio_inport f32 input_gain = 0.0;
+    audio_inport f32 ceiling = -1.0;
+    audio_inport f32 softness = 30.0;
+    audio_inport f32 tilt = 0.0;
+    value_inport bool delta;
+    value_inport bool auto_gain;
+    value_inport bool oversampling;
+
+    audio_outport out;
+    audio_outport f32<4> display;
+    audio_outport f32<4> display2;
+
+    i32 runtime_magic = 0;
+    f32 in_env = 0.0;
+    f32 out_env = 0.0;
+    f32 in_pk = 0.0;
+    f32 out_pk = 0.0;
+    f32 t_in = 0.0;
+    f32 t_out = 0.0;
+    f32 gr_pk = 0.0;
+    f32 t_gr = 0.0;
+    f32 t_disp = 0.0;
+    f32 disp_gr = 0.0;
+
+    // Tilt: a first-order shelf around 1 kHz before the clipper and its exact inverse after it.
+    f32 p_tilt = -999.0;
+    // 2x oversampling: half-band filters around the clipper, and a matching pair for Delta's dry signal
+    f32 osu_l_x0 = 0.0;
+    f32 osu_l_y0 = 0.0;
+    f32 osu_l_x1 = 0.0;
+    f32 osu_l_y1 = 0.0;
+    f32 osu_l_x2 = 0.0;
+    f32 osu_l_y2 = 0.0;
+    f32 osu_l_x3 = 0.0;
+    f32 osu_l_y3 = 0.0;
+    f32 osu_l_x4 = 0.0;
+    f32 osu_l_y4 = 0.0;
+    f32 osu_l_x5 = 0.0;
+    f32 osu_l_y5 = 0.0;
+    f32 osu_l_x6 = 0.0;
+    f32 osu_l_y6 = 0.0;
+    f32 osu_l_x7 = 0.0;
+    f32 osu_l_y7 = 0.0;
+    f32 osd_l_x0 = 0.0;
+    f32 osd_l_y0 = 0.0;
+    f32 osd_l_x1 = 0.0;
+    f32 osd_l_y1 = 0.0;
+    f32 osd_l_x2 = 0.0;
+    f32 osd_l_y2 = 0.0;
+    f32 osd_l_x3 = 0.0;
+    f32 osd_l_y3 = 0.0;
+    f32 osd_l_x4 = 0.0;
+    f32 osd_l_y4 = 0.0;
+    f32 osd_l_x5 = 0.0;
+    f32 osd_l_y5 = 0.0;
+    f32 osd_l_x6 = 0.0;
+    f32 osd_l_y6 = 0.0;
+    f32 osd_l_x7 = 0.0;
+    f32 osd_l_y7 = 0.0;
+    f32 osu_r_x0 = 0.0;
+    f32 osu_r_y0 = 0.0;
+    f32 osu_r_x1 = 0.0;
+    f32 osu_r_y1 = 0.0;
+    f32 osu_r_x2 = 0.0;
+    f32 osu_r_y2 = 0.0;
+    f32 osu_r_x3 = 0.0;
+    f32 osu_r_y3 = 0.0;
+    f32 osu_r_x4 = 0.0;
+    f32 osu_r_y4 = 0.0;
+    f32 osu_r_x5 = 0.0;
+    f32 osu_r_y5 = 0.0;
+    f32 osu_r_x6 = 0.0;
+    f32 osu_r_y6 = 0.0;
+    f32 osu_r_x7 = 0.0;
+    f32 osu_r_y7 = 0.0;
+    f32 osd_r_x0 = 0.0;
+    f32 osd_r_y0 = 0.0;
+    f32 osd_r_x1 = 0.0;
+    f32 osd_r_y1 = 0.0;
+    f32 osd_r_x2 = 0.0;
+    f32 osd_r_y2 = 0.0;
+    f32 osd_r_x3 = 0.0;
+    f32 osd_r_y3 = 0.0;
+    f32 osd_r_x4 = 0.0;
+    f32 osd_r_y4 = 0.0;
+    f32 osd_r_x5 = 0.0;
+    f32 osd_r_y5 = 0.0;
+    f32 osd_r_x6 = 0.0;
+    f32 osd_r_y6 = 0.0;
+    f32 osd_r_x7 = 0.0;
+    f32 osd_r_y7 = 0.0;
+    f32 dmu_l_x0 = 0.0;
+    f32 dmu_l_y0 = 0.0;
+    f32 dmu_l_x1 = 0.0;
+    f32 dmu_l_y1 = 0.0;
+    f32 dmu_l_x2 = 0.0;
+    f32 dmu_l_y2 = 0.0;
+    f32 dmu_l_x3 = 0.0;
+    f32 dmu_l_y3 = 0.0;
+    f32 dmu_l_x4 = 0.0;
+    f32 dmu_l_y4 = 0.0;
+    f32 dmu_l_x5 = 0.0;
+    f32 dmu_l_y5 = 0.0;
+    f32 dmu_l_x6 = 0.0;
+    f32 dmu_l_y6 = 0.0;
+    f32 dmu_l_x7 = 0.0;
+    f32 dmu_l_y7 = 0.0;
+    f32 dmd_l_x0 = 0.0;
+    f32 dmd_l_y0 = 0.0;
+    f32 dmd_l_x1 = 0.0;
+    f32 dmd_l_y1 = 0.0;
+    f32 dmd_l_x2 = 0.0;
+    f32 dmd_l_y2 = 0.0;
+    f32 dmd_l_x3 = 0.0;
+    f32 dmd_l_y3 = 0.0;
+    f32 dmd_l_x4 = 0.0;
+    f32 dmd_l_y4 = 0.0;
+    f32 dmd_l_x5 = 0.0;
+    f32 dmd_l_y5 = 0.0;
+    f32 dmd_l_x6 = 0.0;
+    f32 dmd_l_y6 = 0.0;
+    f32 dmd_l_x7 = 0.0;
+    f32 dmd_l_y7 = 0.0;
+    f32 dmu_r_x0 = 0.0;
+    f32 dmu_r_y0 = 0.0;
+    f32 dmu_r_x1 = 0.0;
+    f32 dmu_r_y1 = 0.0;
+    f32 dmu_r_x2 = 0.0;
+    f32 dmu_r_y2 = 0.0;
+    f32 dmu_r_x3 = 0.0;
+    f32 dmu_r_y3 = 0.0;
+    f32 dmu_r_x4 = 0.0;
+    f32 dmu_r_y4 = 0.0;
+    f32 dmu_r_x5 = 0.0;
+    f32 dmu_r_y5 = 0.0;
+    f32 dmu_r_x6 = 0.0;
+    f32 dmu_r_y6 = 0.0;
+    f32 dmu_r_x7 = 0.0;
+    f32 dmu_r_y7 = 0.0;
+    f32 dmd_r_x0 = 0.0;
+    f32 dmd_r_y0 = 0.0;
+    f32 dmd_r_x1 = 0.0;
+    f32 dmd_r_y1 = 0.0;
+    f32 dmd_r_x2 = 0.0;
+    f32 dmd_r_y2 = 0.0;
+    f32 dmd_r_x3 = 0.0;
+    f32 dmd_r_y3 = 0.0;
+    f32 dmd_r_x4 = 0.0;
+    f32 dmd_r_y4 = 0.0;
+    f32 dmd_r_x5 = 0.0;
+    f32 dmd_r_y5 = 0.0;
+    f32 dmd_r_x6 = 0.0;
+    f32 dmd_r_y6 = 0.0;
+    f32 dmd_r_x7 = 0.0;
+    f32 dmd_r_y7 = 0.0;
+    f32 p_sr = 0.0;
+    f32 pb0 = 1.0;
+    f32 pb1 = 0.0;
+    f32 pa1 = 0.0;
+    f32 qb0 = 1.0;
+    f32 qb1 = 0.0;
+    f32 qa1 = 0.0;
+    f32<2> zpre = 0.0;
+    f32<2> zpost = 0.0;
+
+    f32 dbgain(f32 v)
+    {
+        return exp(v * 0.11512925464970229);
+    }
+    f32 bound(f32 v, f32 lo, f32 hi)
+    {
+        return fmax(lo, fmin(hi, v));
+    }
+    f32 todb(f32 v)
+    {
+        return 20.0 * log10(fmax(0.000001, v));
+    }
+
+    // Linear below the knee, then a curve that meets the ceiling smoothly (slope 1 where it starts).
+    f32 clipv(f32 v, f32 c, f32 t)
+    {
+        f32 a = fabs(v);
+        f32 r = a;
+        if (a > t)
+        {
+            f32 u = (a - t) / fmax(c - t, 0.000001);
+            r = fmin(c, t + (c - t) * u / (1.0 + u));
+        }
+        if (v < 0.0)
+        {
+            r = 0.0 - r;
+        }
+        return r;
+    }
+
+    reset
+    {
+        runtime_magic = 0;
+    }
+
+    process
+    {
+        if (runtime_magic != 715344)
+        {
+            runtime_magic = 715344;
+            in_env = 0.0;
+            out_env = 0.0;
+            in_pk = 0.0;
+            out_pk = 0.0;
+            t_in = 0.0;
+            t_out = 0.0;
+            gr_pk = 0.0;
+            t_gr = 0.0;
+            t_disp = 0.0;
+            disp_gr = 0.0;
+            zpre = 0.0;
+            zpost = 0.0;
+            p_tilt = -999.0;
+        }
+        f32 sr = EC.samplerate;
+        f32 ing = bound(input_gain, 0.0, 24.0);
+        f32 cdb = bound(ceiling, -12.0, 0.0);
+        f32 c = dbgain(cdb);
+        f32 k = bound(softness, 0.0, 100.0) * 0.01;
+        f32 t = c * (1.0 - 0.75 * k);
+        f32 tl = bound(tilt, -12.0, 12.0);
+        if (tl != p_tilt || sr != p_sr)
+        {
+            p_tilt = tl;
+            p_sr = sr;
+            // H(s) = gh (s + q) / (s + p) with s in units of 1 kHz, p = sqrt(gh / gl), q = 1 / p; bilinear transform.
+            f32 gh = dbgain(0.5 * tl);
+            f32 pp = dbgain(0.5 * tl);
+            f32 qq = 1.0 / pp;
+            f32 kk = sin(3.141592654 * 1000.0 / sr) / cos(3.141592654 * 1000.0 / sr);
+            f32 dp = 1.0 + pp * kk;
+            f32 dq = 1.0 + qq * kk;
+            pb0 = gh * dq / dp;
+            pb1 = gh * (qq * kk - 1.0) / dp;
+            pa1 = (pp * kk - 1.0) / dp;
+            qb0 = dp / (gh * dq);
+            qb1 = (pp * kk - 1.0) / (gh * dq);
+            qa1 = (qq * kk - 1.0) / dq;
+        }
+        f32<> v = in * dbgain(ing);
+        f32<> vt = pb0 * v + zpre;
+        zpre = pb1 * v - pa1 * vt;
+        f32 c_l = clipv(vt[0], c, t);
+        f32 c_r = clipv(vt[1], c, t);
+        f32<> vd = v;
+        if (oversampling)
+        {
+            // 2x: the clipper runs at twice the rate between half-band filters (far less aliasing); Delta's dry
+            // signal goes through a matching pair so the difference stays exact.
+            f32 osu_l_e = vt[0];
+            f32 osu_l_o = vt[0];
+            f32 osu_l_t0 = (osu_l_e - osu_l_y0) * 0.040633460924 + osu_l_x0;
+            osu_l_x0 = osu_l_e;
+            osu_l_y0 = osu_l_t0;
+            osu_l_e = osu_l_t0;
+            f32 osu_l_t1 = (osu_l_o - osu_l_y1) * 0.150505129023 + osu_l_x1;
+            osu_l_x1 = osu_l_o;
+            osu_l_y1 = osu_l_t1;
+            osu_l_o = osu_l_t1;
+            f32 osu_l_t2 = (osu_l_e - osu_l_y2) * 0.300757055992 + osu_l_x2;
+            osu_l_x2 = osu_l_e;
+            osu_l_y2 = osu_l_t2;
+            osu_l_e = osu_l_t2;
+            f32 osu_l_t3 = (osu_l_o - osu_l_y3) * 0.460774504961 + osu_l_x3;
+            osu_l_x3 = osu_l_o;
+            osu_l_y3 = osu_l_t3;
+            osu_l_o = osu_l_t3;
+            f32 osu_l_t4 = (osu_l_e - osu_l_y4) * 0.609524314896 + osu_l_x4;
+            osu_l_x4 = osu_l_e;
+            osu_l_y4 = osu_l_t4;
+            osu_l_e = osu_l_t4;
+            f32 osu_l_t5 = (osu_l_o - osu_l_y5) * 0.738503841119 + osu_l_x5;
+            osu_l_x5 = osu_l_o;
+            osu_l_y5 = osu_l_t5;
+            osu_l_o = osu_l_t5;
+            f32 osu_l_t6 = (osu_l_e - osu_l_y6) * 0.849223810392 + osu_l_x6;
+            osu_l_x6 = osu_l_e;
+            osu_l_y6 = osu_l_t6;
+            osu_l_e = osu_l_t6;
+            f32 osu_l_t7 = (osu_l_o - osu_l_y7) * 0.949742783705 + osu_l_x7;
+            osu_l_x7 = osu_l_o;
+            osu_l_y7 = osu_l_t7;
+            osu_l_o = osu_l_t7;
+            f32 osd_l_s0 = clipv(osu_l_o, c, t);
+            f32 osd_l_s1 = clipv(osu_l_e, c, t);
+            f32 osd_l_t0 = (osd_l_s0 - osd_l_y0) * 0.040633460924 + osd_l_x0;
+            osd_l_x0 = osd_l_s0;
+            osd_l_y0 = osd_l_t0;
+            osd_l_s0 = osd_l_t0;
+            f32 osd_l_t1 = (osd_l_s1 - osd_l_y1) * 0.150505129023 + osd_l_x1;
+            osd_l_x1 = osd_l_s1;
+            osd_l_y1 = osd_l_t1;
+            osd_l_s1 = osd_l_t1;
+            f32 osd_l_t2 = (osd_l_s0 - osd_l_y2) * 0.300757055992 + osd_l_x2;
+            osd_l_x2 = osd_l_s0;
+            osd_l_y2 = osd_l_t2;
+            osd_l_s0 = osd_l_t2;
+            f32 osd_l_t3 = (osd_l_s1 - osd_l_y3) * 0.460774504961 + osd_l_x3;
+            osd_l_x3 = osd_l_s1;
+            osd_l_y3 = osd_l_t3;
+            osd_l_s1 = osd_l_t3;
+            f32 osd_l_t4 = (osd_l_s0 - osd_l_y4) * 0.609524314896 + osd_l_x4;
+            osd_l_x4 = osd_l_s0;
+            osd_l_y4 = osd_l_t4;
+            osd_l_s0 = osd_l_t4;
+            f32 osd_l_t5 = (osd_l_s1 - osd_l_y5) * 0.738503841119 + osd_l_x5;
+            osd_l_x5 = osd_l_s1;
+            osd_l_y5 = osd_l_t5;
+            osd_l_s1 = osd_l_t5;
+            f32 osd_l_t6 = (osd_l_s0 - osd_l_y6) * 0.849223810392 + osd_l_x6;
+            osd_l_x6 = osd_l_s0;
+            osd_l_y6 = osd_l_t6;
+            osd_l_s0 = osd_l_t6;
+            f32 osd_l_t7 = (osd_l_s1 - osd_l_y7) * 0.949742783705 + osd_l_x7;
+            osd_l_x7 = osd_l_s1;
+            osd_l_y7 = osd_l_t7;
+            osd_l_s1 = osd_l_t7;
+            f32 osd_l = 0.5 * (osd_l_s0 + osd_l_s1);
+            f32 osu_r_e = vt[1];
+            f32 osu_r_o = vt[1];
+            f32 osu_r_t0 = (osu_r_e - osu_r_y0) * 0.040633460924 + osu_r_x0;
+            osu_r_x0 = osu_r_e;
+            osu_r_y0 = osu_r_t0;
+            osu_r_e = osu_r_t0;
+            f32 osu_r_t1 = (osu_r_o - osu_r_y1) * 0.150505129023 + osu_r_x1;
+            osu_r_x1 = osu_r_o;
+            osu_r_y1 = osu_r_t1;
+            osu_r_o = osu_r_t1;
+            f32 osu_r_t2 = (osu_r_e - osu_r_y2) * 0.300757055992 + osu_r_x2;
+            osu_r_x2 = osu_r_e;
+            osu_r_y2 = osu_r_t2;
+            osu_r_e = osu_r_t2;
+            f32 osu_r_t3 = (osu_r_o - osu_r_y3) * 0.460774504961 + osu_r_x3;
+            osu_r_x3 = osu_r_o;
+            osu_r_y3 = osu_r_t3;
+            osu_r_o = osu_r_t3;
+            f32 osu_r_t4 = (osu_r_e - osu_r_y4) * 0.609524314896 + osu_r_x4;
+            osu_r_x4 = osu_r_e;
+            osu_r_y4 = osu_r_t4;
+            osu_r_e = osu_r_t4;
+            f32 osu_r_t5 = (osu_r_o - osu_r_y5) * 0.738503841119 + osu_r_x5;
+            osu_r_x5 = osu_r_o;
+            osu_r_y5 = osu_r_t5;
+            osu_r_o = osu_r_t5;
+            f32 osu_r_t6 = (osu_r_e - osu_r_y6) * 0.849223810392 + osu_r_x6;
+            osu_r_x6 = osu_r_e;
+            osu_r_y6 = osu_r_t6;
+            osu_r_e = osu_r_t6;
+            f32 osu_r_t7 = (osu_r_o - osu_r_y7) * 0.949742783705 + osu_r_x7;
+            osu_r_x7 = osu_r_o;
+            osu_r_y7 = osu_r_t7;
+            osu_r_o = osu_r_t7;
+            f32 osd_r_s0 = clipv(osu_r_o, c, t);
+            f32 osd_r_s1 = clipv(osu_r_e, c, t);
+            f32 osd_r_t0 = (osd_r_s0 - osd_r_y0) * 0.040633460924 + osd_r_x0;
+            osd_r_x0 = osd_r_s0;
+            osd_r_y0 = osd_r_t0;
+            osd_r_s0 = osd_r_t0;
+            f32 osd_r_t1 = (osd_r_s1 - osd_r_y1) * 0.150505129023 + osd_r_x1;
+            osd_r_x1 = osd_r_s1;
+            osd_r_y1 = osd_r_t1;
+            osd_r_s1 = osd_r_t1;
+            f32 osd_r_t2 = (osd_r_s0 - osd_r_y2) * 0.300757055992 + osd_r_x2;
+            osd_r_x2 = osd_r_s0;
+            osd_r_y2 = osd_r_t2;
+            osd_r_s0 = osd_r_t2;
+            f32 osd_r_t3 = (osd_r_s1 - osd_r_y3) * 0.460774504961 + osd_r_x3;
+            osd_r_x3 = osd_r_s1;
+            osd_r_y3 = osd_r_t3;
+            osd_r_s1 = osd_r_t3;
+            f32 osd_r_t4 = (osd_r_s0 - osd_r_y4) * 0.609524314896 + osd_r_x4;
+            osd_r_x4 = osd_r_s0;
+            osd_r_y4 = osd_r_t4;
+            osd_r_s0 = osd_r_t4;
+            f32 osd_r_t5 = (osd_r_s1 - osd_r_y5) * 0.738503841119 + osd_r_x5;
+            osd_r_x5 = osd_r_s1;
+            osd_r_y5 = osd_r_t5;
+            osd_r_s1 = osd_r_t5;
+            f32 osd_r_t6 = (osd_r_s0 - osd_r_y6) * 0.849223810392 + osd_r_x6;
+            osd_r_x6 = osd_r_s0;
+            osd_r_y6 = osd_r_t6;
+            osd_r_s0 = osd_r_t6;
+            f32 osd_r_t7 = (osd_r_s1 - osd_r_y7) * 0.949742783705 + osd_r_x7;
+            osd_r_x7 = osd_r_s1;
+            osd_r_y7 = osd_r_t7;
+            osd_r_s1 = osd_r_t7;
+            f32 osd_r = 0.5 * (osd_r_s0 + osd_r_s1);
+            c_l = osd_l;
+            c_r = osd_r;
+            f32 dmu_l_e = v[0];
+            f32 dmu_l_o = v[0];
+            f32 dmu_l_t0 = (dmu_l_e - dmu_l_y0) * 0.040633460924 + dmu_l_x0;
+            dmu_l_x0 = dmu_l_e;
+            dmu_l_y0 = dmu_l_t0;
+            dmu_l_e = dmu_l_t0;
+            f32 dmu_l_t1 = (dmu_l_o - dmu_l_y1) * 0.150505129023 + dmu_l_x1;
+            dmu_l_x1 = dmu_l_o;
+            dmu_l_y1 = dmu_l_t1;
+            dmu_l_o = dmu_l_t1;
+            f32 dmu_l_t2 = (dmu_l_e - dmu_l_y2) * 0.300757055992 + dmu_l_x2;
+            dmu_l_x2 = dmu_l_e;
+            dmu_l_y2 = dmu_l_t2;
+            dmu_l_e = dmu_l_t2;
+            f32 dmu_l_t3 = (dmu_l_o - dmu_l_y3) * 0.460774504961 + dmu_l_x3;
+            dmu_l_x3 = dmu_l_o;
+            dmu_l_y3 = dmu_l_t3;
+            dmu_l_o = dmu_l_t3;
+            f32 dmu_l_t4 = (dmu_l_e - dmu_l_y4) * 0.609524314896 + dmu_l_x4;
+            dmu_l_x4 = dmu_l_e;
+            dmu_l_y4 = dmu_l_t4;
+            dmu_l_e = dmu_l_t4;
+            f32 dmu_l_t5 = (dmu_l_o - dmu_l_y5) * 0.738503841119 + dmu_l_x5;
+            dmu_l_x5 = dmu_l_o;
+            dmu_l_y5 = dmu_l_t5;
+            dmu_l_o = dmu_l_t5;
+            f32 dmu_l_t6 = (dmu_l_e - dmu_l_y6) * 0.849223810392 + dmu_l_x6;
+            dmu_l_x6 = dmu_l_e;
+            dmu_l_y6 = dmu_l_t6;
+            dmu_l_e = dmu_l_t6;
+            f32 dmu_l_t7 = (dmu_l_o - dmu_l_y7) * 0.949742783705 + dmu_l_x7;
+            dmu_l_x7 = dmu_l_o;
+            dmu_l_y7 = dmu_l_t7;
+            dmu_l_o = dmu_l_t7;
+            f32 dmd_l_s0 = dmu_l_o;
+            f32 dmd_l_s1 = dmu_l_e;
+            f32 dmd_l_t0 = (dmd_l_s0 - dmd_l_y0) * 0.040633460924 + dmd_l_x0;
+            dmd_l_x0 = dmd_l_s0;
+            dmd_l_y0 = dmd_l_t0;
+            dmd_l_s0 = dmd_l_t0;
+            f32 dmd_l_t1 = (dmd_l_s1 - dmd_l_y1) * 0.150505129023 + dmd_l_x1;
+            dmd_l_x1 = dmd_l_s1;
+            dmd_l_y1 = dmd_l_t1;
+            dmd_l_s1 = dmd_l_t1;
+            f32 dmd_l_t2 = (dmd_l_s0 - dmd_l_y2) * 0.300757055992 + dmd_l_x2;
+            dmd_l_x2 = dmd_l_s0;
+            dmd_l_y2 = dmd_l_t2;
+            dmd_l_s0 = dmd_l_t2;
+            f32 dmd_l_t3 = (dmd_l_s1 - dmd_l_y3) * 0.460774504961 + dmd_l_x3;
+            dmd_l_x3 = dmd_l_s1;
+            dmd_l_y3 = dmd_l_t3;
+            dmd_l_s1 = dmd_l_t3;
+            f32 dmd_l_t4 = (dmd_l_s0 - dmd_l_y4) * 0.609524314896 + dmd_l_x4;
+            dmd_l_x4 = dmd_l_s0;
+            dmd_l_y4 = dmd_l_t4;
+            dmd_l_s0 = dmd_l_t4;
+            f32 dmd_l_t5 = (dmd_l_s1 - dmd_l_y5) * 0.738503841119 + dmd_l_x5;
+            dmd_l_x5 = dmd_l_s1;
+            dmd_l_y5 = dmd_l_t5;
+            dmd_l_s1 = dmd_l_t5;
+            f32 dmd_l_t6 = (dmd_l_s0 - dmd_l_y6) * 0.849223810392 + dmd_l_x6;
+            dmd_l_x6 = dmd_l_s0;
+            dmd_l_y6 = dmd_l_t6;
+            dmd_l_s0 = dmd_l_t6;
+            f32 dmd_l_t7 = (dmd_l_s1 - dmd_l_y7) * 0.949742783705 + dmd_l_x7;
+            dmd_l_x7 = dmd_l_s1;
+            dmd_l_y7 = dmd_l_t7;
+            dmd_l_s1 = dmd_l_t7;
+            f32 dmd_l = 0.5 * (dmd_l_s0 + dmd_l_s1);
+            f32 dmu_r_e = v[1];
+            f32 dmu_r_o = v[1];
+            f32 dmu_r_t0 = (dmu_r_e - dmu_r_y0) * 0.040633460924 + dmu_r_x0;
+            dmu_r_x0 = dmu_r_e;
+            dmu_r_y0 = dmu_r_t0;
+            dmu_r_e = dmu_r_t0;
+            f32 dmu_r_t1 = (dmu_r_o - dmu_r_y1) * 0.150505129023 + dmu_r_x1;
+            dmu_r_x1 = dmu_r_o;
+            dmu_r_y1 = dmu_r_t1;
+            dmu_r_o = dmu_r_t1;
+            f32 dmu_r_t2 = (dmu_r_e - dmu_r_y2) * 0.300757055992 + dmu_r_x2;
+            dmu_r_x2 = dmu_r_e;
+            dmu_r_y2 = dmu_r_t2;
+            dmu_r_e = dmu_r_t2;
+            f32 dmu_r_t3 = (dmu_r_o - dmu_r_y3) * 0.460774504961 + dmu_r_x3;
+            dmu_r_x3 = dmu_r_o;
+            dmu_r_y3 = dmu_r_t3;
+            dmu_r_o = dmu_r_t3;
+            f32 dmu_r_t4 = (dmu_r_e - dmu_r_y4) * 0.609524314896 + dmu_r_x4;
+            dmu_r_x4 = dmu_r_e;
+            dmu_r_y4 = dmu_r_t4;
+            dmu_r_e = dmu_r_t4;
+            f32 dmu_r_t5 = (dmu_r_o - dmu_r_y5) * 0.738503841119 + dmu_r_x5;
+            dmu_r_x5 = dmu_r_o;
+            dmu_r_y5 = dmu_r_t5;
+            dmu_r_o = dmu_r_t5;
+            f32 dmu_r_t6 = (dmu_r_e - dmu_r_y6) * 0.849223810392 + dmu_r_x6;
+            dmu_r_x6 = dmu_r_e;
+            dmu_r_y6 = dmu_r_t6;
+            dmu_r_e = dmu_r_t6;
+            f32 dmu_r_t7 = (dmu_r_o - dmu_r_y7) * 0.949742783705 + dmu_r_x7;
+            dmu_r_x7 = dmu_r_o;
+            dmu_r_y7 = dmu_r_t7;
+            dmu_r_o = dmu_r_t7;
+            f32 dmd_r_s0 = dmu_r_o;
+            f32 dmd_r_s1 = dmu_r_e;
+            f32 dmd_r_t0 = (dmd_r_s0 - dmd_r_y0) * 0.040633460924 + dmd_r_x0;
+            dmd_r_x0 = dmd_r_s0;
+            dmd_r_y0 = dmd_r_t0;
+            dmd_r_s0 = dmd_r_t0;
+            f32 dmd_r_t1 = (dmd_r_s1 - dmd_r_y1) * 0.150505129023 + dmd_r_x1;
+            dmd_r_x1 = dmd_r_s1;
+            dmd_r_y1 = dmd_r_t1;
+            dmd_r_s1 = dmd_r_t1;
+            f32 dmd_r_t2 = (dmd_r_s0 - dmd_r_y2) * 0.300757055992 + dmd_r_x2;
+            dmd_r_x2 = dmd_r_s0;
+            dmd_r_y2 = dmd_r_t2;
+            dmd_r_s0 = dmd_r_t2;
+            f32 dmd_r_t3 = (dmd_r_s1 - dmd_r_y3) * 0.460774504961 + dmd_r_x3;
+            dmd_r_x3 = dmd_r_s1;
+            dmd_r_y3 = dmd_r_t3;
+            dmd_r_s1 = dmd_r_t3;
+            f32 dmd_r_t4 = (dmd_r_s0 - dmd_r_y4) * 0.609524314896 + dmd_r_x4;
+            dmd_r_x4 = dmd_r_s0;
+            dmd_r_y4 = dmd_r_t4;
+            dmd_r_s0 = dmd_r_t4;
+            f32 dmd_r_t5 = (dmd_r_s1 - dmd_r_y5) * 0.738503841119 + dmd_r_x5;
+            dmd_r_x5 = dmd_r_s1;
+            dmd_r_y5 = dmd_r_t5;
+            dmd_r_s1 = dmd_r_t5;
+            f32 dmd_r_t6 = (dmd_r_s0 - dmd_r_y6) * 0.849223810392 + dmd_r_x6;
+            dmd_r_x6 = dmd_r_s0;
+            dmd_r_y6 = dmd_r_t6;
+            dmd_r_s0 = dmd_r_t6;
+            f32 dmd_r_t7 = (dmd_r_s1 - dmd_r_y7) * 0.949742783705 + dmd_r_x7;
+            dmd_r_x7 = dmd_r_s1;
+            dmd_r_y7 = dmd_r_t7;
+            dmd_r_s1 = dmd_r_t7;
+            f32 dmd_r = 0.5 * (dmd_r_s0 + dmd_r_s1);
+            vd = <dmd_l, dmd_r>;
+        }
+        f32<> yc = <c_l, c_r>;
+        f32<> y = qb0 * yc + zpost;
+        zpost = qb1 * yc - qa1 * y;
+        f32 mk = 1.0;
+        if (auto_gain)
+        {
+            mk = dbgain(0.0 - ing);
+        }
+        f32<> o = y * mk;
+        if (delta)
+        {
+            o = (vd - y) * mk;
+        }
+        out = o;
+
+        f32 pin = fmax(fabs(v[0]), fabs(v[1]));
+        f32 pout = fmax(fabs(o[0]), fabs(o[1]));
+        f32 gr_now = fmax(0.0, todb(fmax(fabs(vt[0]), fabs(vt[1]))) - todb(fmax(fabs(yc[0]), fabs(yc[1]))));
+
+        // Meters: decaying envelopes, five-second peak holds, gain change held for the number.
+        in_env = fmax(pin, in_env * 0.9998);
+        out_env = fmax(pout, out_env * 0.9998);
+        f32 hold_len = 5.0 * sr;
+        if (pin >= in_pk)
+        {
+            in_pk = pin;
+            t_in = 0.0;
+        }
+        else
+        {
+            t_in = t_in + 1.0;
+            if (t_in > hold_len)
+            {
+                in_pk = pin;
+                t_in = 0.0;
+            }
+        }
+        if (pout >= out_pk)
+        {
+            out_pk = pout;
+            t_out = 0.0;
+        }
+        else
+        {
+            t_out = t_out + 1.0;
+            if (t_out > hold_len)
+            {
+                out_pk = pout;
+                t_out = 0.0;
+            }
+        }
+        if (gr_now >= gr_pk)
+        {
+            gr_pk = gr_now;
+            t_gr = 0.0;
+        }
+        else
+        {
+            t_gr = t_gr + 1.0;
+            if (t_gr > hold_len)
+            {
+                gr_pk = gr_now;
+                t_gr = 0.0;
+            }
+        }
+        t_disp = t_disp + 1.0;
+        if (t_disp > 1.0 * sr)
+        {
+            disp_gr = gr_pk;
+            t_disp = 0.0;
+        }
+        f32 gr_i = floor(bound(gr_now / 12.0, 0.0, 1.0) * 240.0 + 0.5);
+        f32 gh_i = floor(bound(disp_gr / 12.0, 0.0, 1.0) * 240.0 + 0.5);
+        f32 gr_code = (gr_i * 256.0 + gh_i) / 65536.0;
+
+        f32 ine = bound((todb(in_env) + 30.0) / 36.0, 0.0, 1.0);
+        f32 oute = bound((todb(out_env) + 30.0) / 36.0, 0.0, 1.0);
+        f32 inp = bound((todb(in_pk) + 30.0) / 36.0, 0.0, 1.0);
+        f32 outp = bound((todb(out_pk) + 30.0) / 36.0, 0.0, 1.0);
+        display = <ing / 24.0, (cdb + 12.0) / 12.0, k, ine>;
+        display2 = <gr_code, oute, inp, outp>;
+    }
+}

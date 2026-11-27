@@ -1,0 +1,540 @@
+component eb_eq
+{
+    audio_inport in;
+    audio_inport f32 hpf = 0.0;
+    audio_inport f32 low_gain = 0.0;
+    audio_inport f32 low_freq = 100.0;
+    audio_inport f32 low_q = 0.71;
+    audio_inport f32 lm_gain = 0.0;
+    audio_inport f32 lm_freq = 500.0;
+    audio_inport f32 lm_q = 1.0;
+    audio_inport f32 hm_gain = 0.0;
+    audio_inport f32 hm_freq = 2500.0;
+    audio_inport f32 hm_q = 1.0;
+    audio_inport f32 high_gain = 0.0;
+    audio_inport f32 high_freq = 8000.0;
+    audio_inport f32 high_q = 0.71;
+    audio_inport f32 lpf = 100.0;
+    value_inport i32 low_shape;
+    value_inport i32 high_shape;
+    value_inport i32 hp_slope;
+    value_inport i32 lp_slope;
+    value_inport i32 mode;
+    value_inport i32 air;
+    audio_outport out;
+    audio_outport f32<4> display;
+    audio_outport f32<4> display2;
+    audio_outport tap;
+    f32 b0_hp = 1.0;
+    f32 b1_hp = 0.0;
+    f32 b2_hp = 0.0;
+    f32 a1_hp = 0.0;
+    f32 a2_hp = 0.0;
+    f32<2> z1_hp = 0.0;
+    f32<2> z2_hp = 0.0;
+    f32 b0_hp2 = 1.0;
+    f32 b1_hp2 = 0.0;
+    f32 b2_hp2 = 0.0;
+    f32 a1_hp2 = 0.0;
+    f32 a2_hp2 = 0.0;
+    f32<2> z1_hp2 = 0.0;
+    f32<2> z2_hp2 = 0.0;
+    f32 b0_lo = 1.0;
+    f32 b1_lo = 0.0;
+    f32 b2_lo = 0.0;
+    f32 a1_lo = 0.0;
+    f32 a2_lo = 0.0;
+    f32<2> z1_lo = 0.0;
+    f32<2> z2_lo = 0.0;
+    f32 b0_lm = 1.0;
+    f32 b1_lm = 0.0;
+    f32 b2_lm = 0.0;
+    f32 a1_lm = 0.0;
+    f32 a2_lm = 0.0;
+    f32<2> z1_lm = 0.0;
+    f32<2> z2_lm = 0.0;
+    f32 b0_hm = 1.0;
+    f32 b1_hm = 0.0;
+    f32 b2_hm = 0.0;
+    f32 a1_hm = 0.0;
+    f32 a2_hm = 0.0;
+    f32<2> z1_hm = 0.0;
+    f32<2> z2_hm = 0.0;
+    f32 b0_hi = 1.0;
+    f32 b1_hi = 0.0;
+    f32 b2_hi = 0.0;
+    f32 a1_hi = 0.0;
+    f32 a2_hi = 0.0;
+    f32<2> z1_hi = 0.0;
+    f32<2> z2_hi = 0.0;
+    f32 b0_lp = 1.0;
+    f32 b1_lp = 0.0;
+    f32 b2_lp = 0.0;
+    f32 a1_lp = 0.0;
+    f32 a2_lp = 0.0;
+    f32<2> z1_lp = 0.0;
+    f32<2> z2_lp = 0.0;
+    f32 b0_lp2 = 1.0;
+    f32 b1_lp2 = 0.0;
+    f32 b2_lp2 = 0.0;
+    f32 a1_lp2 = 0.0;
+    f32 a2_lp2 = 0.0;
+    f32<2> z1_lp2 = 0.0;
+    f32<2> z2_lp2 = 0.0;
+    f32 b0_lo2 = 1.0;
+    f32 b1_lo2 = 0.0;
+    f32 b2_lo2 = 0.0;
+    f32 a1_lo2 = 0.0;
+    f32 a2_lo2 = 0.0;
+    f32<2> z1_lo2 = 0.0;
+    f32<2> z2_lo2 = 0.0;
+    f32 b0_air = 1.0;
+    f32 b1_air = 0.0;
+    f32 b2_air = 0.0;
+    f32 a1_air = 0.0;
+    f32 a2_air = 0.0;
+    f32<2> z1_air = 0.0;
+    f32<2> z2_air = 0.0;
+    i32 p_mode = -1;
+    i32 p_air = -1;
+    f32 p_hpf = -999.0;
+    f32 p_low_gain = -999.0;
+    f32 p_low_freq = -999.0;
+    f32 p_low_q = -999.0;
+    f32 p_lm_gain = -999.0;
+    f32 p_lm_freq = -999.0;
+    f32 p_lm_q = -999.0;
+    f32 p_hm_gain = -999.0;
+    f32 p_hm_freq = -999.0;
+    f32 p_hm_q = -999.0;
+    f32 p_high_gain = -999.0;
+    f32 p_high_freq = -999.0;
+    f32 p_high_q = -999.0;
+    f32 p_lpf = -999.0;
+    i32 p_low_shape = -1;
+    i32 p_high_shape = -1;
+    i32 p_hp_slope = -1;
+    i32 p_lp_slope = -1;
+    // Bell Q per mode: Console narrows as the gain grows (proportional Q), Passive is broad.
+    f32 bq(f32 q, f32 g, f32 md)
+    {
+        f32 r = q;
+        if (md > 0.5 && md < 1.5)
+        {
+            r = fmin(8.0, q * (0.4 + 0.12 * fabs(g)));
+        }
+        if (md > 1.5)
+        {
+            r = q * 0.6;
+        }
+        return fmax(r, 0.1);
+    }
+    // Shelf Q per mode: Console overshoots a little (the British shelf bump), Passive is gentle.
+    f32 sq(f32 q, f32 md)
+    {
+        f32 r = q;
+        if (md > 0.5 && md < 1.5)
+        {
+            r = fmin(4.0, q * 1.4);
+        }
+        if (md > 1.5)
+        {
+            r = q * 0.7;
+        }
+        return fmax(r, 0.1);
+    }
+    reset
+    {
+        z1_hp = 0.0;
+        z2_hp = 0.0;
+        z1_lo2 = 0.0;
+        z2_lo2 = 0.0;
+        z1_air = 0.0;
+        z2_air = 0.0;
+        p_mode = -1;
+        p_air = -1;
+        z1_hp2 = 0.0;
+        z2_hp2 = 0.0;
+        z1_lo = 0.0;
+        z2_lo = 0.0;
+        z1_lm = 0.0;
+        z2_lm = 0.0;
+        z1_hm = 0.0;
+        z2_hm = 0.0;
+        z1_hi = 0.0;
+        z2_hi = 0.0;
+        z1_lp = 0.0;
+        z2_lp = 0.0;
+        z1_lp2 = 0.0;
+        z2_lp2 = 0.0;
+        p_hpf = -999.0;
+        p_low_gain = -999.0;
+        p_low_freq = -999.0;
+        p_low_q = -999.0;
+        p_lm_gain = -999.0;
+        p_lm_freq = -999.0;
+        p_lm_q = -999.0;
+        p_hm_gain = -999.0;
+        p_hm_freq = -999.0;
+        p_hm_q = -999.0;
+        p_high_gain = -999.0;
+        p_high_freq = -999.0;
+        p_high_q = -999.0;
+        p_lpf = -999.0;
+        p_low_shape = -1;
+        p_high_shape = -1;
+        p_hp_slope = -1;
+        p_lp_slope = -1;
+    }
+    process
+    {
+        f32<> x = in;
+        f32 sr = EC.samplerate;
+        f32 mdf = cast(mode, f32);
+        if (mode != p_mode || air != p_air)
+        {
+            // A new mode changes every band's curve: recompute them all.
+            p_mode = mode;
+            p_air = air;
+            p_low_gain = -999.0;
+            p_lm_gain = -999.0;
+            p_hm_gain = -999.0;
+            p_high_gain = -999.0;
+            b0_air = 1.0;
+            b1_air = 0.0;
+            b2_air = 0.0;
+            a1_air = 0.0;
+            a2_air = 0.0;
+            if (air > 0)
+            {
+                // Air: a broad high shelf at 14 kHz.
+                f32 w0 = 6.283185307 * fmin(14000.0, 0.42 * sr) / sr;
+                f32 cw = cos(w0);
+                f32 sw = sin(w0);
+                f32 A = exp(2.0 * cast(air, f32) * 0.0575646273);
+                f32 sA = sqrt(A);
+                f32 al2 = sw * sA / 0.5;
+                f32 ia = 1.0 / ((A + 1.0) - (A - 1.0) * cw + al2);
+                b0_air = (A * ((A + 1.0) + (A - 1.0) * cw + al2)) * ia;
+                b1_air = (-2.0 * A * ((A - 1.0) + (A + 1.0) * cw)) * ia;
+                b2_air = (A * ((A + 1.0) + (A - 1.0) * cw - al2)) * ia;
+                a1_air = (2.0 * ((A - 1.0) - (A + 1.0) * cw)) * ia;
+                a2_air = ((A + 1.0) - (A - 1.0) * cw - al2) * ia;
+            }
+        }
+        if (hpf != p_hpf || hp_slope != p_hp_slope)
+        {
+            p_hpf = hpf;
+            p_hp_slope = hp_slope;
+            b0_hp = 1.0;
+            b1_hp = 0.0;
+            b2_hp = 0.0;
+            a1_hp = 0.0;
+            a2_hp = 0.0;
+            b0_hp2 = 1.0;
+            b1_hp2 = 0.0;
+            b2_hp2 = 0.0;
+            a1_hp2 = 0.0;
+            a2_hp2 = 0.0;
+            if (hpf > 0.5)
+            {
+                f32 w0 = 6.283185307 * fmin(fmax(20.0 * exp(0.06907755 * hpf), 20.0), 20000.0) / sr;
+                f32 cw = cos(w0);
+                f32 sw = sin(w0);
+                if (hp_slope == 0)
+                {
+                    f32 ik = 1.0 / (1.0 + cw);
+                    f32 kk = sw * ik;
+                    f32 il = 1.0 / (1.0 + kk);
+                    b0_hp = il;
+                    b1_hp = -il;
+                    a1_hp = (kk - 1.0) * il;
+                }
+                else
+                {
+                    f32 q1 = 0.70710678;
+                    if (hp_slope == 2)
+                    {
+                        q1 = 0.5411961;
+                    }
+                f32 al_hp = sw / (2.0 * q1);
+            f32 ia_hp = 1.0 / (1.0 + al_hp);
+            b0_hp = ((1.0 + cw) * 0.5) * ia_hp;
+            b1_hp = (-(1.0 + cw)) * ia_hp;
+            b2_hp = ((1.0 + cw) * 0.5) * ia_hp;
+            a1_hp = (-2.0 * cw) * ia_hp;
+            a2_hp = (1.0 - al_hp) * ia_hp;
+                    if (hp_slope == 2)
+                    {
+                f32 al_hp2 = sw / (2.0 * 1.306563);
+            f32 ia_hp2 = 1.0 / (1.0 + al_hp2);
+            b0_hp2 = ((1.0 + cw) * 0.5) * ia_hp2;
+            b1_hp2 = (-(1.0 + cw)) * ia_hp2;
+            b2_hp2 = ((1.0 + cw) * 0.5) * ia_hp2;
+            a1_hp2 = (-2.0 * cw) * ia_hp2;
+            a2_hp2 = (1.0 - al_hp2) * ia_hp2;
+                    }
+                }
+            }
+        }
+        if (low_gain != p_low_gain || low_freq != p_low_freq || low_q != p_low_q || low_shape != p_low_shape)
+        {
+            p_low_gain = low_gain;
+            p_low_freq = low_freq;
+            p_low_q = low_q;
+            p_low_shape = low_shape;
+            if (low_shape == 0)
+            {
+            f32 w0 = 6.283185307 * fmin(fmax(low_freq, 20.0), 20000.0) / sr;
+            f32 cw = cos(w0);
+            f32 sw = sin(w0);
+            f32 A = exp(low_gain * 0.0575646273);
+            f32 sA = sqrt(A);
+            f32 al2 = sw * sA / sq(low_q, mdf);
+            f32 ia_lo = 1.0 / ((A + 1.0) + (A - 1.0) * cw + al2);
+            b0_lo = (A * ((A + 1.0) - (A - 1.0) * cw + al2)) * ia_lo;
+            b1_lo = (2.0 * A * ((A - 1.0) - (A + 1.0) * cw)) * ia_lo;
+            b2_lo = (A * ((A + 1.0) - (A - 1.0) * cw - al2)) * ia_lo;
+            a1_lo = (-2.0 * ((A - 1.0) + (A + 1.0) * cw)) * ia_lo;
+            a2_lo = ((A + 1.0) + (A - 1.0) * cw - al2) * ia_lo;
+            }
+            else
+            {
+            f32 w0 = 6.283185307 * fmin(fmax(low_freq, 20.0), 20000.0) / sr;
+            f32 cw = cos(w0);
+            f32 sw = sin(w0);
+            f32 A = exp(low_gain * 0.0575646273);
+            f32 al = sw / (2.0 * bq(low_q, low_gain, mdf));
+            f32 ia_lo = 1.0 / (1.0 + al / A);
+            b0_lo = (1.0 + al * A) * ia_lo;
+            b1_lo = (-2.0 * cw) * ia_lo;
+            b2_lo = (1.0 - al * A) * ia_lo;
+            a1_lo = (-2.0 * cw) * ia_lo;
+            a2_lo = (1.0 - al / A) * ia_lo;
+            }
+            b0_lo2 = 1.0;
+            b1_lo2 = 0.0;
+            b2_lo2 = 0.0;
+            a1_lo2 = 0.0;
+            a2_lo2 = 0.0;
+            if (mode == 2 && low_shape == 0 && low_gain > 0.0)
+            {
+                // Passive: boosting the low shelf also cuts just above it (the boost-and-attenuate trick).
+                f32 w0 = 6.283185307 * fmin(fmax(low_freq * 2.5, 20.0), 20000.0) / sr;
+                f32 cw = cos(w0);
+                f32 sw = sin(w0);
+                f32 A = exp(-0.4 * low_gain * 0.0575646273);
+                f32 al = sw / (2.0 * 0.9);
+                f32 ia = 1.0 / (1.0 + al / A);
+                b0_lo2 = (1.0 + al * A) * ia;
+                b1_lo2 = (-2.0 * cw) * ia;
+                b2_lo2 = (1.0 - al * A) * ia;
+                a1_lo2 = (-2.0 * cw) * ia;
+                a2_lo2 = (1.0 - al / A) * ia;
+            }
+        }
+        if (lm_gain != p_lm_gain || lm_freq != p_lm_freq || lm_q != p_lm_q)
+        {
+            p_lm_gain = lm_gain;
+            p_lm_freq = lm_freq;
+            p_lm_q = lm_q;
+            f32 w0 = 6.283185307 * fmin(fmax(lm_freq, 20.0), 20000.0) / sr;
+            f32 cw = cos(w0);
+            f32 sw = sin(w0);
+            f32 A = exp(lm_gain * 0.0575646273);
+            f32 al = sw / (2.0 * bq(lm_q, lm_gain, mdf));
+            f32 ia_lm = 1.0 / (1.0 + al / A);
+            b0_lm = (1.0 + al * A) * ia_lm;
+            b1_lm = (-2.0 * cw) * ia_lm;
+            b2_lm = (1.0 - al * A) * ia_lm;
+            a1_lm = (-2.0 * cw) * ia_lm;
+            a2_lm = (1.0 - al / A) * ia_lm;
+        }
+        if (hm_gain != p_hm_gain || hm_freq != p_hm_freq || hm_q != p_hm_q)
+        {
+            p_hm_gain = hm_gain;
+            p_hm_freq = hm_freq;
+            p_hm_q = hm_q;
+            f32 w0 = 6.283185307 * fmin(fmax(hm_freq, 20.0), 20000.0) / sr;
+            f32 cw = cos(w0);
+            f32 sw = sin(w0);
+            f32 A = exp(hm_gain * 0.0575646273);
+            f32 al = sw / (2.0 * bq(hm_q, hm_gain, mdf));
+            f32 ia_hm = 1.0 / (1.0 + al / A);
+            b0_hm = (1.0 + al * A) * ia_hm;
+            b1_hm = (-2.0 * cw) * ia_hm;
+            b2_hm = (1.0 - al * A) * ia_hm;
+            a1_hm = (-2.0 * cw) * ia_hm;
+            a2_hm = (1.0 - al / A) * ia_hm;
+        }
+        if (high_gain != p_high_gain || high_freq != p_high_freq || high_q != p_high_q || high_shape != p_high_shape)
+        {
+            p_high_gain = high_gain;
+            p_high_freq = high_freq;
+            p_high_q = high_q;
+            p_high_shape = high_shape;
+            if (high_shape == 0)
+            {
+            f32 w0 = 6.283185307 * fmin(fmax(high_freq, 20.0), 20000.0) / sr;
+            f32 cw = cos(w0);
+            f32 sw = sin(w0);
+            f32 A = exp(high_gain * 0.0575646273);
+            f32 sA = sqrt(A);
+            f32 al2 = sw * sA / sq(high_q, mdf);
+            f32 ia_hi = 1.0 / ((A + 1.0) - (A - 1.0) * cw + al2);
+            b0_hi = (A * ((A + 1.0) + (A - 1.0) * cw + al2)) * ia_hi;
+            b1_hi = (-2.0 * A * ((A - 1.0) + (A + 1.0) * cw)) * ia_hi;
+            b2_hi = (A * ((A + 1.0) + (A - 1.0) * cw - al2)) * ia_hi;
+            a1_hi = (2.0 * ((A - 1.0) - (A + 1.0) * cw)) * ia_hi;
+            a2_hi = ((A + 1.0) - (A - 1.0) * cw - al2) * ia_hi;
+            }
+            else
+            {
+            f32 w0 = 6.283185307 * fmin(fmax(high_freq, 20.0), 20000.0) / sr;
+            f32 cw = cos(w0);
+            f32 sw = sin(w0);
+            f32 A = exp(high_gain * 0.0575646273);
+            f32 al = sw / (2.0 * bq(high_q, high_gain, mdf));
+            f32 ia_hi = 1.0 / (1.0 + al / A);
+            b0_hi = (1.0 + al * A) * ia_hi;
+            b1_hi = (-2.0 * cw) * ia_hi;
+            b2_hi = (1.0 - al * A) * ia_hi;
+            a1_hi = (-2.0 * cw) * ia_hi;
+            a2_hi = (1.0 - al / A) * ia_hi;
+            }
+        }
+        if (lpf != p_lpf || lp_slope != p_lp_slope)
+        {
+            p_lpf = lpf;
+            p_lp_slope = lp_slope;
+            b0_lp = 1.0;
+            b1_lp = 0.0;
+            b2_lp = 0.0;
+            a1_lp = 0.0;
+            a2_lp = 0.0;
+            b0_lp2 = 1.0;
+            b1_lp2 = 0.0;
+            b2_lp2 = 0.0;
+            a1_lp2 = 0.0;
+            a2_lp2 = 0.0;
+            if (lpf < 99.5)
+            {
+                f32 w0 = 6.283185307 * fmin(fmax(20.0 * exp(0.06907755 * lpf), 20.0), 20000.0) / sr;
+                f32 cw = cos(w0);
+                f32 sw = sin(w0);
+                if (lp_slope == 0)
+                {
+                    f32 ik = 1.0 / (1.0 + cw);
+                    f32 kk = sw * ik;
+                    f32 il = 1.0 / (1.0 + kk);
+                    b0_lp = kk * il;
+                    b1_lp = kk * il;
+                    a1_lp = (kk - 1.0) * il;
+                }
+                else
+                {
+                    f32 q1 = 0.70710678;
+                    if (lp_slope == 2)
+                    {
+                        q1 = 0.5411961;
+                    }
+                f32 al_lp = sw / (2.0 * q1);
+            f32 ia_lp = 1.0 / (1.0 + al_lp);
+            b0_lp = ((1.0 - cw) * 0.5) * ia_lp;
+            b1_lp = (1.0 - cw) * ia_lp;
+            b2_lp = ((1.0 - cw) * 0.5) * ia_lp;
+            a1_lp = (-2.0 * cw) * ia_lp;
+            a2_lp = (1.0 - al_lp) * ia_lp;
+                    if (lp_slope == 2)
+                    {
+                f32 al_lp2 = sw / (2.0 * 1.306563);
+            f32 ia_lp2 = 1.0 / (1.0 + al_lp2);
+            b0_lp2 = ((1.0 - cw) * 0.5) * ia_lp2;
+            b1_lp2 = (1.0 - cw) * ia_lp2;
+            b2_lp2 = ((1.0 - cw) * 0.5) * ia_lp2;
+            a1_lp2 = (-2.0 * cw) * ia_lp2;
+            a2_lp2 = (1.0 - al_lp2) * ia_lp2;
+                    }
+                }
+            }
+        }
+        f32<> y_hp = b0_hp * x + z1_hp;
+        z1_hp = b1_hp * x - a1_hp * y_hp + z2_hp;
+        z2_hp = b2_hp * x - a2_hp * y_hp;
+        f32<> y_hp2 = b0_hp2 * y_hp + z1_hp2;
+        z1_hp2 = b1_hp2 * y_hp - a1_hp2 * y_hp2 + z2_hp2;
+        z2_hp2 = b2_hp2 * y_hp - a2_hp2 * y_hp2;
+        f32<> y_lo = b0_lo * y_hp2 + z1_lo;
+        z1_lo = b1_lo * y_hp2 - a1_lo * y_lo + z2_lo;
+        z2_lo = b2_lo * y_hp2 - a2_lo * y_lo;
+        f32<> y_lo2 = b0_lo2 * y_lo + z1_lo2;
+        z1_lo2 = b1_lo2 * y_lo - a1_lo2 * y_lo2 + z2_lo2;
+        z2_lo2 = b2_lo2 * y_lo - a2_lo2 * y_lo2;
+        f32<> y_lm = b0_lm * y_lo2 + z1_lm;
+        z1_lm = b1_lm * y_lo2 - a1_lm * y_lm + z2_lm;
+        z2_lm = b2_lm * y_lo2 - a2_lm * y_lm;
+        f32<> y_hm = b0_hm * y_lm + z1_hm;
+        z1_hm = b1_hm * y_lm - a1_hm * y_hm + z2_hm;
+        z2_hm = b2_hm * y_lm - a2_hm * y_hm;
+        f32<> y_hi = b0_hi * y_hm + z1_hi;
+        z1_hi = b1_hi * y_hm - a1_hi * y_hi + z2_hi;
+        z2_hi = b2_hi * y_hm - a2_hi * y_hi;
+        f32<> y_air = b0_air * y_hi + z1_air;
+        z1_air = b1_air * y_hi - a1_air * y_air + z2_air;
+        z2_air = b2_air * y_hi - a2_air * y_air;
+        f32<> y_lp = b0_lp * y_air + z1_lp;
+        z1_lp = b1_lp * y_air - a1_lp * y_lp + z2_lp;
+        z2_lp = b2_lp * y_air - a2_lp * y_lp;
+        f32<> y_lp2 = b0_lp2 * y_lp + z1_lp2;
+        z1_lp2 = b1_lp2 * y_lp - a1_lp2 * y_lp2 + z2_lp2;
+        z2_lp2 = b2_lp2 * y_lp - a2_lp2 * y_lp2;
+        f32<> y = y_lp2;
+        out = y;
+        f32<> boosted = y * 50.0;
+        tap = boosted;
+        f32 sh_lo = 0.0;
+        if (low_shape == 1)
+        {
+            sh_lo = 1.0;
+        }
+        f32 sh_hi = 0.0;
+        if (high_shape == 1)
+        {
+            sh_hi = 1.0;
+        }
+        f32 scale = 0.00000005960464477539;
+        f32 c_lo = (sh_lo * 1310720.0 + floor(fmin(300.0, fmax(0.0, (low_gain + 15.0) * 10.0)) + 0.5) * 4096.0 + floor(fmin(4095.0, fmax(0.0, log10(fmax(low_freq, 20.0) / 20.0) / 3.0 * 4095.0)) + 0.5)) * scale;
+        f32 c_lm = (floor(fmin(300.0, fmax(0.0, (lm_gain + 15.0) * 10.0)) + 0.5) * 4096.0 + floor(fmin(4095.0, fmax(0.0, log10(fmax(lm_freq, 20.0) / 20.0) / 3.0 * 4095.0)) + 0.5)) * scale;
+        f32 c_hm = (floor(fmin(300.0, fmax(0.0, (hm_gain + 15.0) * 10.0)) + 0.5) * 4096.0 + floor(fmin(4095.0, fmax(0.0, log10(fmax(hm_freq, 20.0) / 20.0) / 3.0 * 4095.0)) + 0.5)) * scale;
+        f32 c_hi = (sh_hi * 1310720.0 + floor(fmin(300.0, fmax(0.0, (high_gain + 15.0) * 10.0)) + 0.5) * 4096.0 + floor(fmin(4095.0, fmax(0.0, log10(fmax(high_freq, 20.0) / 20.0) / 3.0 * 4095.0)) + 0.5)) * scale;
+        f32 hp_i = 0.0;
+        if (hpf > 0.5)
+        {
+            hp_i = floor(fmin(4095.0, fmax(0.0, hpf * 40.95)) + 0.5);
+        }
+        f32 c_fl = (hp_i * 4096.0 + floor(fmin(4095.0, fmax(0.0, lpf * 40.95)) + 0.5)) * scale;
+        f32 c_q = (floor(fmin(360.0, fmax(0.0, (lm_q - 0.4) * 100.0)) + 0.5) * 512.0 + floor(fmin(360.0, fmax(0.0, (hm_q - 0.4) * 100.0)) + 0.5)) * scale;
+        display = <c_lo, c_lm, c_hm, c_hi>;
+        f32 c_qe = (floor(fmin(360.0, fmax(0.0, (low_q - 0.4) * 100.0)) + 0.5) * 512.0 + floor(fmin(360.0, fmax(0.0, (high_q - 0.4) * 100.0)) + 0.5)) * scale;
+        f32 hs = 1.0;
+        if (hp_slope == 0)
+        {
+            hs = 0.0;
+        }
+        if (hp_slope == 2)
+        {
+            hs = 2.0;
+        }
+        f32 ls = 1.0;
+        if (lp_slope == 0)
+        {
+            ls = 0.0;
+        }
+        if (lp_slope == 2)
+        {
+            ls = 2.0;
+        }
+        f32 c_sl = (hs * 4.0 + ls + mdf * 16.0 + cast(air, f32) * 64.0) * scale;
+        display2 = <c_fl, c_q, c_qe, c_sl>;
+    }
+}

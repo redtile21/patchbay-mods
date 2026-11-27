@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "projectId": "elodea-blackstar.saturation",
+  "name": "EB Saturation",
+  "surface": "device",
+  "target": {
+    "bitwigVersion": "6.1.3",
+    "platform": "windows-x86_64"
+  },
+  "identity": {
+    "uuid": "c3a95d17-84e2-4f60-b7d1-5a06e9c2481f",
+    "creator": "Elodea Blackstar",
+    "category": "Audio FX"
+  },
+  "presentation": {
+    "type": "audio-fx",
+    "description": "Elodea Blackstar saturation with tape, tube, soft clip and hard clip curves."
+  },
+  "sources": {
+    "nitro": [
+      "saturation.nitro"
+    ],
+    "sksl": [
+      "panel.sksl"
+    ]
+  },
+  "adapter": {
+    "type": "external-builder",
+    "argv": [
+      "python",
+      "{workspace}/build.py",
+      "--out",
+      "{output}"
+    ]
+  },
+  "output": {
+    "path": "build/windows-6.1.3/EB Saturation.bwdevice",
+    "libraryPath": "EB Saturation.bwdevice"
+  },
+  "preflight": {
+    "profile": "bitwig-6.1.3-hybrid",
+    "expectedNitroInputs": 9,
+    "expectedNitroOutputs": 3,
+    "maxDrawingVectors": 2,
+    "requiredAudioInputSourceClassId": 1371,
+    "requiredDelayCompensationInputSourceClassId": 154,
+    "requiredProxyInputCount": 2,
+    "requireSkiaCompiler": true,
+    "controlContract": {
+      "schema": 1,
+      "shaderRole": "non-interactive-display",
+      "controls": [
+        {
+          "parameter": "DRIVE",
+          "widgetClass": 1687,
+          "drawOwners": [
+            "native"
+          ],
+          "inputOwner": "native",
+          "knobSize": 2,
+          "gestures": [
+            "drag",
+            "reset"
+          ],
+          "defaultNormalized": 0.0
+        },
+        {
+          "parameter": "BIAS",
+          "widgetClass": 1687,
+          "drawOwners": [
+            "native"
+          ],
+          "inputOwner": "native",
+          "knobSize": 2,
+          "gestures": [
+            "drag",
+            "reset"
+          ],
+          "defaultNormalized": 0.5
+        },
+        {
+          "parameter": "TONE",
+          "widgetClass": 1687,
+          "drawOwners": [
+            "native"
+          ],
+          "inputOwner": "native",
+          "knobSize": 2,
+          "gestures": [
+            "drag",
+            "reset"
+          ],
+          "defaultNormalized": 0.5
+        },
+        {
+          "parameter": "MIX",
+          "widgetClass": 1687,
+          "drawOwners": [
+            "native"
+          ],
+          "inputOwner": "native",
+          "knobSize": 2,
+          "gestures": [
+            "drag",
+            "reset"
+          ],
+          "defaultNormalized": 1.0
+        },
+        {
+          "parameter": "OUTPUT",
+          "widgetClass": 1687,
+          "drawOwners": [
+            "native"
+          ],
+          "inputOwner": "native",
+          "knobSize": 2,
+          "gestures": [
+            "drag",
+            "reset"
+          ],
+          "defaultNormalized": 0.8
+        },
+        {
+          "parameter": "TYPE",
+          "widgetClass": 1714,
+          "drawOwners": [
+            "native"
+          ],
+          "inputOwner": "native",
+          "gestures": [
+            "select"
+          ],
+          "defaultNormalized": 0.0,
+          "statesNormalized": [
+            0.0,
+            0.3333333333333333,
+            0.6666666666666666,
+            1.0
+          ]
+        },
+        {
+          "parameter": "AUTO_GAIN",
+          "widgetClass": 1714,
+          "drawOwners": [
+            "native"
+          ],
+          "inputOwner": "native",
+          "gestures": [
+            "select"
+          ],
+          "defaultNormalized": 0.0,
+          "statesNormalized": [
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "parameter": "OVERSAMPLING",
+          "widgetClass": 1714,
+          "drawOwners": [
+            "native"
+          ],
+          "inputOwner": "native",
+          "gestures": [
+            "select"
+          ],
+          "defaultNormalized": 0.0,
+          "statesNormalized": [
+            0.0,
+            1.0
+          ]
+        }
+      ]
+    }
+  }
+}
