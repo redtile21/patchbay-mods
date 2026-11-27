@@ -80,6 +80,11 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
       in the preset "EB BlackStrip Default" (pages Knob 1, Knob 2, Knob 3: the six slots' knob, plus Out/Match,
       Amount/Character, Input/A-B). `presets/add_remote_pages.py` adds them to any strip preset.
 
+- [x] F1 device help for every EB device: text in `help/help_text.py`, served by the mod (Bitwig's own help
+      tables are in the app bundle). Each control gets a help ID and a callout side (help location 0 hides it);
+      the device's root group is its help section. The strip describes slot 1 only, the EQ its LOW band and
+      High-Pass. Confirmed in Bitwig 2026-11-27.
+
 ## 5. New units
 
 - [x] Gate/Expander, De-esser, Transient Shaper, Clipper (EB Gate, EB De-esser, EB Transient, EB Clipper; scaffolded by
