@@ -73,20 +73,10 @@ def icon_toggle(ref, x, y, w, h, icon, title, tip):
         "label_style#6267": v("Byte", 1), "color#7527": v("Int16", 1)})
 
 
-def main_panel(drawing_refs, out_ref, type_refs, view_ref, in_meter_ref, out_meter_ref, knob_refs, backdrop_ref, ref=None,
+def main_panel(drawing_refs, out_ref, type_refs, in_meter_ref, out_meter_ref, knob_refs, backdrop_ref, ref=None,
                match_ref=None, character_ref=None, amount_ref=None, char_input_ref=None, move_refs=(), ab_ref=None, target_ref=None, reset_ref=None):
     items = [drawing_item(backdrop_ref, 0, 0, PANEL_WIDTH, PANEL_HEIGHT)]
     items.append(drawing_item(in_meter_ref, IN_X, METER_Y, IN_W, METER_H))
-    items.append(obj(1683, "label_panel_item", {
-        "layout_settings#6226": v("Object", grid_layout(CHAR_X, 42, CHAR_W, 4)),
-        "text#6219": v("String", "VIEW"), "color#6520": v("Int16", 1),
-        "horizontal_alignment#6400": v("Byte", 1), "vertical_alignment#6401": v("Byte", 1)}))
-    items.append(obj(1702, "toggle_button_panel_item", {
-        "layout_settings#6226": v("Object", grid_layout(CHAR_X, 47, CHAR_W, 5)),
-        "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
-        "tooltip_text#6867": v("String", "Open or close the expanded view"), "data_model#6220": view_ref,
-        "title#6241": v("String", "View"), "icon_name#6239": v("String", "zoom.svg"), "style#6240": v("Byte", 2),
-        "label_style#6267": v("Byte", 1), "color#7527": v("Int16", 1)}))
     for i, tref in enumerate(type_refs):
         items.append(chooser(f"Slot {i + 1} unit", tref, X0 + i * (SLOT_W + GAP), 0, SLOT_W))
     for i, dref in enumerate(drawing_refs):
@@ -286,7 +276,6 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     character = indexed_parameter("Character", "CHARACTER", ("Clean", "Analog", "Tube", "Tape"), 0)
     char_amount = parameter("Character Amount", "CHARACTER_AMOUNT", 0.0, 100.0, 50.0, 0)
     char_input = boolean_parameter("Character Input", "CHARACTER_INPUT", False)
-    view = boolean_parameter("Expanded View", "VIEW", False)
     ab = boolean_parameter("A/B", "AB", False)
     lufs_target = indexed_parameter("Loudness Target", "LUFS_TARGET", ("Off", "-14", "-16", "-23"), 1)
     lufs_reset = boolean_parameter("Reset Integrated Loudness", "LUFS_RESET", False)
@@ -334,11 +323,21 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     meter_out = meter_atom(meter_binary, [wire(stage_out), wire(lufs_target), wire(lufs_reset)])
     out_drawing = drawing_atom(meter_out, "OUT_METER", meter_shader, [wire(stage_out, 1)])   # audioHigh: Match state and gain
     output_proxy["fields"]["settings#6194"] = settings([wire(meter_out, 0)])
-    panel = main_panel([ref(d) for d in drawings], ref(out_gain), [ref(t) for t in types], ref(view),
+    panel = main_panel([ref(d) for d in drawings], ref(out_gain), [ref(t) for t in types],
                        ref(in_drawing), ref(out_drawing), [[ref(k) for k in row] for row in knobs], ref(backdrop), ref,
                        ref(match), ref(character), ref(char_amount), ref(char_input), [ref(m) for m in moves], ref(ab), ref(lufs_target), ref(lufs_reset))
+    window = obj(1680, "panel", {
+        "name#6211": v("String", "Expanded"),
+        "root_item#6212": v("Object", obj(1681, "grid_panel_item", {
+            # Placeholder: Bitwig's window for it is closed at once by the mod, which opens the expanded view instead.
+            "layout_settings#6226": v("NullObject"), "items#6221": v("ObjectList", owned()),
+            "border_style#6228": v("Byte", 0), "title#6242": v("String", ""),
+            "show_title#6243": v("Bool", False), "title_color#6522": v("Byte", 6), "brightness#6245": v("Byte", 1)})),
+        "width#6232": v("Int16", 4), "height#6233": v("Byte", 4),
+        "expressions#6277": v("ObjectList", owned()),
+    })
     identity = project["identity"]
-    children = [backdrop, audio_source, compensation, out_gain, match, character, char_amount, char_input, *types, *[k for row in knobs for k in row], view, *moves, ab, lufs_target, lufs_reset, meter_in, in_drawing, char_in]
+    children = [backdrop, audio_source, compensation, out_gain, match, character, char_amount, char_input, *types, *[k for row in knobs for k in row], *moves, ab, lufs_target, lufs_reset, meter_in, in_drawing, char_in]
     for ph, sl, tp, dr in zip(placeholders, slots, taps, drawings):
         children += [ph, sl, tp, dr]
     children += [char_out, stage_out, meter_out, out_drawing]
@@ -347,7 +346,11 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     body = obj(151, "device_contents", {
         "proxy_in_ports#177": v("ObjectList", owned(input_proxy, note_proxy)),
         "child_components#173": v("ObjectList", owned(*children)),
-        "panels#6213": v("ObjectList", owned(panel)),
+        "panels#6213": v("ObjectList", owned(panel, window)),
+        # The window button in the device header (as on Polysynth) appears when the device has a maximized panel
+        # (Bitwig's GJP.af(), field 7549); the mod opens the expanded view when it is clicked.
+        "maximized_panel#7549": ref(window),
+        "is_allowed_to_show_maximized_panel#10663": v("Bool", True),
         "proxy_out_ports#178": v("ObjectList", owned(output_proxy)),
         "device_UUID#385": v("Uuid", identity["uuid"]), "device_name#386": v("String", project["name"]),
         "description#2057": v("String", project["presentation"]["description"]),
@@ -364,7 +367,7 @@ def document(project, binary, tap_binary, meter_binary, shader, meter_shader, ba
     object_ids = {id(item): index for index, item in enumerate(iter_owned_objects(body), 1)}
     for wrapper, key, target in bindings:
         wrapper[key] = object_ids[id(target)]
-    revision = hashlib.sha1(f"{identity['uuid']}/v47".encode("utf-8")).hexdigest()
+    revision = hashlib.sha1(f"{identity['uuid']}/v51".encode("utf-8")).hexdigest()
     meta = metadata({**project, "presentation": project["presentation"]}, revision)
     return {
         "header": {"format_version": 3, "serialization_format": 2, "document_version": 207,

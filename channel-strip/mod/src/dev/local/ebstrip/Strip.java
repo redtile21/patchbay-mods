@@ -44,7 +44,7 @@ final class Strip {
     private record Hit(Object object, String path) {}
 
     private static String identifierOf(Object o) {
-        return identifierOf(o, text -> text.matches("SLOT[1-6]_(TYPE|CHAIN|K[1-3])|INPUT_GAIN|VIEW|MOVE_[1-5]|AB|LUFS_RESET"));
+        return identifierOf(o, text -> text.matches("SLOT[1-6]_(TYPE|CHAIN|K[1-3])|INPUT_GAIN|MOVE_[1-5]|AB|LUFS_RESET"));
     }
 
     private static String identifierOf(Object o, java.util.function.Predicate<String> accept) {
@@ -118,7 +118,6 @@ final class Strip {
     private static final class Watch {
         final Ctx c; final utt strip;
         final lpr[] types = new lpr[7];
-        Object view; // the "Expanded View" button's atom, if the strip has one
         final Object[] moves = new Object[6]; // MOVE_n buttons: swap slot n with slot n + 1
         Object ab;                             // the A/B switch
         int side;                              // 0 = A, 1 = B (the side the strip currently shows)
@@ -154,8 +153,6 @@ final class Strip {
                 w.types[n] = (lpr) atom;
                 w.chains[n] = (k3K) chain.object;
             }
-            Object viewAtom = findByIdentifier(strip, "VIEW");
-            if (viewAtom != null) w.view = viewAtom;
             for (int n = 1; n <= 5; n++) w.moves[n] = findByIdentifier(strip, "MOVE_" + n);
         w.ab = findByIdentifier(strip, "AB");
         if (w.ab instanceof bitwig.obf.cbF b) w.side = b.Anf() ? 1 : 0;
@@ -284,13 +281,6 @@ final class Strip {
         if (ours) onChangesEnded();
     }
 
-    private static Watch watchWithView(Object atom) {
-        synchronized (WATCHES) {
-            for (Watch w : WATCHES) if (w.view == atom) return w;
-        }
-        return null;
-    }
-
     // ---- the three macro knobs under each slot ----
 
     private static final String[][] KNOB_PARAMS = {
@@ -405,7 +395,7 @@ final class Strip {
     private static final ThreadLocal<Boolean> RESETTING = ThreadLocal.withInitial(() -> false);
     private static long lastButton;
 
-    /** Called after the "Expanded View" button's atom is set: opens the view, then lets the button spring back. */
+    /** Called after one of the strip's buttons is set: Reset, A/B or a slot-move arrow. */
     static void buttonSet(bitwig.obf.cbF atom, String via) {
         if (RESETTING.get()) return;
         long now = System.currentTimeMillis();
@@ -426,21 +416,26 @@ final class Strip {
             moveSet(atom, Integer.parseInt(ident.substring(5)));
             return;
         }
-        if (!"VIEW".equals(ident)) return;
-        lastButton = now;
-        Watch w = watchWithView(atom);
-        if (w == null && !AUTO_FAILED.contains(atom)) {
-            autoArm(atom);
-            w = watchWithView(atom);
-        }
-        if (w == null) return;
-        final Watch watch = w;
+    }
+
+    // ---- header window button: the strip declares a maximized panel, so Bitwig shows its window icon ----
+    // A panel can't show device chains (Bitwig's nested_device_chain_slot_panel_item is only a slot button), so the
+    // click opens the mod's expanded view and Bitwig's own window is closed straight away.
+
+    private static final Map<Object, utt> WINDOW_OWNERS = Collections.synchronizedMap(new java.util.WeakHashMap<>());
+
+    /** Called (by the hook) after a device's window is opened or closed from its header button. */
+    static void windowSet(Object device, boolean open) {
+        if (!open || RESETTING.get()) return;
+        utt strip = windowOwner(device);
+        if (strip == null) return;
+        MOD.log("header window button pressed");
         drf.EO().runAtEndOfCurrentEvent(() -> {
             try {
                 RESETTING.set(true);
-                atom.MgQ(false);
+                ((com.bitwig.flt.document.core.master.device.JHy) device).MgQ(false);
             } catch (Throwable t) {
-                MOD.log("could not reset the view button", t);
+                MOD.log("could not close Bitwig's window", t);
             } finally {
                 RESETTING.set(false);
             }
@@ -449,7 +444,33 @@ final class Strip {
             StripViews.closeAll();
             return;
         }
-        openViewFor(watch);
+        Watch watch = null;
+        synchronized (WATCHES) {
+            for (Watch w : WATCHES) if (w.strip == strip) watch = w;
+        }
+        if (watch == null) watch = armStrip(strip);
+        if (watch != null) openViewFor(watch);
+    }
+
+    /** The strip whose document model (Bitwig's GJP, which owns the window state) this is; null for other devices. */
+    private static utt windowOwner(Object device) {
+        utt known = WINDOW_OWNERS.get(device);
+        if (known != null) return known;
+        synchronized (WATCHES) {
+            for (Watch w : WATCHES) if (modelOf(w.strip) == device) { WINDOW_OWNERS.put(device, w.strip); return w.strip; }
+        }
+        Object found = findUp(device, o -> o instanceof utt u && STRIP_UUIDS.contains(String.valueOf(u.beI())) && modelOf(u) == device, 8, 6000);
+        if (found instanceof utt u) { WINDOW_OWNERS.put(device, u); return u; }
+        MOD.log("window button: not a strip (" + device.getClass().getName() + ")");
+        return null;
+    }
+
+    private static Object modelOf(utt strip) {
+        try {
+            return strip.getClass().getMethod("edx").invoke(strip);
+        } catch (Throwable t) {
+            return null;
+        }
     }
 
     // ---- reorder: the arrows between neighbouring slots swap their units, settings included ----
@@ -663,7 +684,7 @@ final class Strip {
     private static boolean autoArm(Object atom) {
         try {
             String id = identifierOf(atom);
-            if (id == null || !id.matches("SLOT[1-6]_TYPE|VIEW|MOVE_[1-5]|AB|SLOT[1-6]_K[1-3]")) return false;
+            if (id == null || !id.matches("SLOT[1-6]_TYPE|MOVE_[1-5]|AB|SLOT[1-6]_K[1-3]")) return false;
             utt strip = (utt) findUp(atom, o -> o instanceof utt u && STRIP_UUIDS.contains(String.valueOf(u.beI())), 8, 6000);
             if (strip == null || armStrip(strip) == null) { AUTO_FAILED.add(atom); return false; }
             return true;
@@ -690,8 +711,6 @@ final class Strip {
             w.types[n] = (lpr) a;
             w.chains[n] = (k3K) chain.object;
         }
-        Object viewAtom = findByIdentifier(strip, "VIEW");
-        if (viewAtom != null) w.view = viewAtom;
         for (int n = 1; n <= 5; n++) w.moves[n] = findByIdentifier(strip, "MOVE_" + n);
         w.ab = findByIdentifier(strip, "AB");
         if (w.ab instanceof bitwig.obf.cbF b) w.side = b.Anf() ? 1 : 0;

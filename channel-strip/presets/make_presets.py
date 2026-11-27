@@ -237,7 +237,7 @@ def build(name, recipe, base, units):
     meta["preset_name#4830"]["value"] = name
     slots = recipe["slots"]
     strip_vals = {"OUTPUT_GAIN": 0.0, "MATCH": False, "CHARACTER": "Clean", "CHARACTER_AMOUNT": 50.0,
-                  "CHARACTER_INPUT": False, "VIEW": False, "AB": False, **{f"MOVE_{n}": False for n in range(1, 6)}}
+                  "CHARACTER_INPUT": False, "AB": False, **{f"MOVE_{n}": False for n in range(1, 6)}}
     strip_vals.update(recipe.get("strip", {}))
     knob_vals = {}
     for n, s in enumerate(slots, start=1):
@@ -262,6 +262,9 @@ def build(name, recipe, base, units):
             n = int(i[4])
             lst = fields(cp)["#2273"]["value"]["fields"]["#841"]["value"]["fields"]["#135"]
             lst["value"] = [unit_objs[n]] if n in unit_objs else []
+    # The VIEW toggle is gone (the header window button opens the expanded view): drop its stored value.
+    kids = meta["#164"]["value"]["fields"]["child_presets#524"]
+    kids["value"] = [cp for cp in kids["value"] if ident(cp) != "VIEW"]
     remote_pages(meta, slots)
     refresh_shaders(meta, SHADERS.get("EB BlackStrip", {}))
     for obj in unit_objs.values():

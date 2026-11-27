@@ -66,9 +66,10 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
 - [x] Show the applied match gain on the output meter (MATCH and the gain under True Peak, while Match is on).
 - [x] A/B snapshots of the whole strip: an A/B switch in the Character column; flipping keeps the side you leave
       (units, settings, Out, Match, Character) and loads the other. Session only, not saved with the project.
-- [ ] View button in the device header (a small square, as on native devices with an expanded view) instead of
-      the VIEW toggle in the Character column: needs research into how Bitwig shows that button and whether the mod
-      can catch it.
+- [x] View button in the device header (the window icon, as on Polysynth) instead of the VIEW toggle: the strip
+      declares a maximized panel (`maximized_panel#7549`), which makes Bitwig show the icon; the mod hooks the window
+      open (`JHy.MgQ(Z)`), closes Bitwig's window and opens the expanded view. A panel can't hold device chains
+      (`nested_device_chain_slot_panel_item` is only a slot button), so the view stays a mod window.
 - [x] Remote control pages: Bitwig keeps them with a device instance or preset, not in the .bwdevice, so they ship
       in the preset "EB BlackStrip Default" (pages Knob 1, Knob 2, Knob 3: the six slots' knob, plus Out/Match,
       Amount/Character, Input/A-B). `presets/add_remote_pages.py` adds them to any strip preset.

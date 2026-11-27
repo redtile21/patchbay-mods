@@ -84,6 +84,16 @@ public final class StripHooks {
     }
 
 
+    // The device header's window button calls this on the device's model to open or close its window.
+    @Hook(target = com.bitwig.flt.document.core.master.device.JHy.class, method = "MgQ(Z)V", at = At.BEFORE_RETURN, id = "device-window")
+    public static void deviceWindow(@This com.bitwig.flt.document.core.master.device.JHy device) {
+        try {
+            Strip.windowSet(device, device.jTT());
+        } catch (Throwable t) {
+            // never let the watcher reach Bitwig's code
+        }
+    }
+
     @Hook(target = com.bitwig.flt.document.core.master.device.vP2.class,
           method = "Gef(Lcom/bitwig/flt/document/core/master/device/sgH;I)V", at = At.ENTRY, id = "device-added")
     public static void deviceAdded(@Arg(0) Object device) {
