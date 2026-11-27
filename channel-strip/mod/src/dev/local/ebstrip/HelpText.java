@@ -16,6 +16,7 @@ final class HelpText {
         TEXT.put("eb.clipper.panel_drawing.title", "Transfer curve and meters");
         TEXT.put("eb.clipper.softness.desc", "0 is a hard clip; higher values start rounding the peaks earlier, for a softer sound.");
         TEXT.put("eb.clipper.tilt.desc", "Tilt EQ around 1 kHz before the clipper, undone after it: positive clips the highs harder, negative the lows.");
+        TEXT.put("eb.clipper.title", "EB Clipper");
         TEXT.put("eb.compressor.attack.desc", "How fast the compressor reacts once the level goes over the threshold, in ms. Slower lets more of each transient through.");
         TEXT.put("eb.compressor.detector.desc", "Peak follows every peak; RMS follows the average level for smoother compression. Opto and Vari-Mu always use RMS.");
         TEXT.put("eb.compressor.knee.desc", "Width of the soft knee in dB: compression eases in over this range around the threshold. 0 is a hard knee.");
@@ -29,6 +30,7 @@ final class HelpText {
         TEXT.put("eb.compressor.sc_hpf.desc", "High-pass filter on the detector only, in Hz, so the low end doesn't drive the compressor. Below 20 Hz it is off.");
         TEXT.put("eb.compressor.stereo_link.desc", "How much the two channels share the same gain reduction: 100 % keeps the stereo image steady, 0 % compresses each side on its own.");
         TEXT.put("eb.compressor.threshold.desc", "Level above which compression starts, in dB.");
+        TEXT.put("eb.compressor.title", "EB Compressor");
         TEXT.put("eb.deesser.freq.desc", "Frequency above which sibilance is detected and, in Split mode, turned down.");
         TEXT.put("eb.deesser.mode.desc", "Split: turns down only the band above the frequency. Wide: turns down the whole signal while sibilance is detected.");
         TEXT.put("eb.deesser.panel_drawing.desc", "The left meter (DET) is the detected sibilance with the threshold as a line, the right meter the output. The response shows the band being turned down (orange) and by how much right now; the orange bar is the gain reduction (GR). KHZ is the frequency.");
@@ -38,6 +40,7 @@ final class HelpText {
         TEXT.put("eb.deesser.spectrum.desc", "The output spectrum, with the de-esser's response drawn on top.");
         TEXT.put("eb.deesser.spectrum.title", "Spectrum");
         TEXT.put("eb.deesser.threshold.desc", "Sibilance level above which the de-esser acts, in dB.");
+        TEXT.put("eb.deesser.title", "EB De-esser");
         TEXT.put("eb.eq.air.desc", "A broad high shelf at 14 kHz (+2, +4 or +6 dB) on top of the four bands, for open, airy highs.");
         TEXT.put("eb.eq.high_freq.desc", "Frequency of the high band.");
         TEXT.put("eb.eq.high_gain.desc", "Boost or cut of the high band, in dB.");
@@ -62,6 +65,7 @@ final class HelpText {
         TEXT.put("eb.eq.panel_drawing.title", "Response curve");
         TEXT.put("eb.eq.spectrum.desc", "The output spectrum with the EQ's response curve on top: a yellow line for the filters and a coloured line and point for each band.");
         TEXT.put("eb.eq.spectrum.title", "Response and spectrum");
+        TEXT.put("eb.eq.title", "EB EQ");
         TEXT.put("eb.gain.gain.desc", "Output level of the unit, in dB. 0 dB leaves the level unchanged.");
         TEXT.put("eb.gain.invert_l.desc", "Inverts the polarity of the left channel. Use it to fix a channel recorded out of polarity.");
         TEXT.put("eb.gain.invert_r.desc", "Inverts the polarity of the right channel.");
@@ -69,6 +73,7 @@ final class HelpText {
         TEXT.put("eb.gain.pan.desc", "Constant-power pan: the centre keeps its level, and a hard pan sends everything to one side.");
         TEXT.put("eb.gain.panel_drawing.desc", "Left and right level meters with five-second peak holds and their peaks in dB, then the pan position (marker, centre tick) and the width (bar, with a tick at 100 %).");
         TEXT.put("eb.gain.panel_drawing.title", "Meters");
+        TEXT.put("eb.gain.title", "EB Gain");
         TEXT.put("eb.gain.width.desc", "Stereo width: 0 % is mono, 100 % unchanged, 200 % twice the side signal for a wider image. Width works on the mid and side signals, so the centre stays where it is.");
         TEXT.put("eb.gate.attack.desc", "How fast the gate opens, in ms.");
         TEXT.put("eb.gate.hold.desc", "How long the gate stays open after the signal falls below the threshold, in ms.");
@@ -80,6 +85,7 @@ final class HelpText {
         TEXT.put("eb.gate.release.desc", "How fast the gate closes, in ms.");
         TEXT.put("eb.gate.sc_hpf.desc", "High-pass filter on the detector only, in Hz, so low rumble doesn't open the gate. Below 20 Hz it is off.");
         TEXT.put("eb.gate.threshold.desc", "Level below which the gate closes, in dB.");
+        TEXT.put("eb.gate.title", "EB Gate");
         TEXT.put("eb.limiter.auto_release.desc", "Program-dependent release: short peaks recover fast, while sustained limiting recovers slowly, to avoid pumping.");
         TEXT.put("eb.limiter.ceiling.desc", "The highest level the output reaches, in dBFS.");
         TEXT.put("eb.limiter.input_gain.desc", "Gain into the limiter, in dB: raise it to make the signal louder against the ceiling.");
@@ -89,6 +95,7 @@ final class HelpText {
         TEXT.put("eb.limiter.panel_drawing.title", "Transfer curve and meters");
         TEXT.put("eb.limiter.release.desc", "How fast the limiter recovers after a peak, in ms.");
         TEXT.put("eb.limiter.stereo_link.desc", "How much the two channels share the same gain reduction: 100 % keeps the stereo image steady.");
+        TEXT.put("eb.limiter.title", "EB Limiter");
         TEXT.put("eb.limiter.true_peak.desc", "Also limits the peaks between samples (true peak), which can otherwise go over the ceiling after conversion or encoding.");
         TEXT.put("eb.saturation.auto_gain.desc", "Turns the output down as the drive goes up, so the level stays about the same and you hear the change in tone rather than in loudness.");
         TEXT.put("eb.saturation.bias.desc", "Makes the curve asymmetric, which adds even harmonics (a warmer, thicker sound).");
@@ -98,6 +105,7 @@ final class HelpText {
         TEXT.put("eb.saturation.oversampling.desc", "2x oversampling: the curve runs at twice the sample rate, which removes most of the aliasing (harsh, unrelated tones) when driven hard. Adds a few samples of delay. The strip's QUALITY switch sets it for every unit.");
         TEXT.put("eb.saturation.panel_drawing.desc", "The left meter is the input and the right meter the output, each with a five-second peak hold and its peak in dB above it; numbers turn orange above 0 dB. The curve shows how input maps to output with the current type, drive and bias, and the dot marks the current level.");
         TEXT.put("eb.saturation.panel_drawing.title", "Curve and meters");
+        TEXT.put("eb.saturation.title", "EB Saturation");
         TEXT.put("eb.saturation.tone.desc", "Tilt EQ around 1 kHz after the curve: negative is darker, positive brighter.");
         TEXT.put("eb.saturation.type.desc", "Tape: the highs saturate first, with a head bump around 75 Hz and a softer top as you drive it. Tube: even harmonics that grow with the level. Soft Clip and Hard Clip: plain curves. Transformer: the lows hit the core harder. Console: a gentle, forward knee. Exciter: adds harmonics to the highs only. Diode Si: clean, then a hard knee. Diode Ge: soft, early and dark.");
         TEXT.put("eb.strip.ab.desc", "Flips between two complete versions of the strip (units, settings, Out, Match and Character). The first flip makes B a copy of A. Kept for the session.");
@@ -109,17 +117,18 @@ final class HelpText {
         TEXT.put("eb.strip.lufs_reset.desc", "Restarts the integrated loudness measurement.");
         TEXT.put("eb.strip.lufs_target.desc", "Loudness target for the INT readout: -14 (streaming), -16 or -23 LUFS (broadcast), or Off.");
         TEXT.put("eb.strip.match.desc", "Auto gain match: keeps the output as loud as the input (by K-weighted short-term loudness), so you can judge the processing without being fooled by a level change.");
-        TEXT.put("eb.strip.move.desc", "Swaps this slot with its neighbour, moving the units and their settings.");
+        TEXT.put("eb.strip.move.desc", "The arrows beside each slot's top knob swap it with its neighbour, moving the units and their settings.");
         TEXT.put("eb.strip.out_meter.desc", "The output level with peak hold, and readouts: short-term loudness (LUFS), integrated loudness (INT: green within 1 LU of the target, orange above, blue below), true peak, the applied match gain (MATCH, while Match is on) and the stereo correlation bar (CORR, red below zero).");
         TEXT.put("eb.strip.out_meter.title", "Output meter");
         TEXT.put("eb.strip.output_gain.desc", "Output level of the strip, in dB. With Match on, it trims on top of the matched level.");
         TEXT.put("eb.strip.oversampling.desc", "2x oversampling for the whole strip: the Character stage, and the Saturation and Clipper units in the slots, which follow this switch.");
-        TEXT.put("eb.strip.slot_drawing.desc", "The unit in the slot with its input and output levels, and its gain reduction on dynamics units. Below, the names and values of the three macro knobs.");
-        TEXT.put("eb.strip.slot_drawing.title", "Slot");
+        TEXT.put("eb.strip.slot_drawing.desc", "The six slots run left to right and all work the same way; slot 1 is described here. The face shows the unit in the slot with its input and output levels, and its gain reduction on dynamics units. Below, the names and values of the three macro knobs.");
+        TEXT.put("eb.strip.slot_drawing.title", "Slots");
         TEXT.put("eb.strip.slot_k1.desc", "The slot's first macro knob, linked to the loaded unit's most important control (for example Threshold on the Compressor). Its name and value are shown above it.");
         TEXT.put("eb.strip.slot_k2.desc", "The slot's second macro knob, linked to one of the loaded unit's main controls.");
         TEXT.put("eb.strip.slot_k3.desc", "The slot's third macro knob, linked to one of the loaded unit's main controls.");
         TEXT.put("eb.strip.slot_type.desc", "The unit in this slot: Gain, EQ, Compressor, Saturation, Limiter, Gate, De-esser, Transient, Clipper or Visualizer, or Bypass for an empty slot. Choosing one loads that unit (with the EB Strip Console mod); each slot remembers its last settings per unit type for the session.");
+        TEXT.put("eb.strip.title", "EB BlackStrip");
         TEXT.put("eb.transient.attack.desc", "More (positive) or less (negative) attack on each hit, in percent.");
         TEXT.put("eb.transient.mix.desc", "Dry/wet mix in percent.");
         TEXT.put("eb.transient.output.desc", "Output level in dB.");
@@ -127,6 +136,7 @@ final class HelpText {
         TEXT.put("eb.transient.panel_drawing.title", "Envelope and meters");
         TEXT.put("eb.transient.speed.desc", "How long a transient lasts: Fast for clicks and hats, Medium for most drums, Slow for toms and bass.");
         TEXT.put("eb.transient.sustain.desc", "More (positive) or less (negative) sustain after each hit, in percent.");
+        TEXT.put("eb.transient.title", "EB Transient");
         TEXT.put("eb.visualizer.field_drawing.desc", "Eight frequency bands from 60 Hz (bottom) to 14 kHz (top). Each dot's position is the band's pan, its size and colour its level. The bar behind it is the band's width: none for mono, the whole field when the sides are unrelated, and red when the band goes out of phase (it will thin out in mono). The bar along the bottom is the overall correlation, red below zero.");
         TEXT.put("eb.visualizer.field_drawing.title", "Stereo field");
         TEXT.put("eb.visualizer.grid_drawing.desc", "RMS (blue) and peak (orange) level over about the last six seconds, from -60 dB at the bottom to 0 dB at the top, with lines at -6, -12, -24 and -48 dB.");
@@ -135,6 +145,7 @@ final class HelpText {
         TEXT.put("eb.visualizer.level.title", "Level history");
         TEXT.put("eb.visualizer.spectrum.desc", "The live spectrum of the signal, with a frequency axis.");
         TEXT.put("eb.visualizer.spectrum.title", "Spectrum");
+        TEXT.put("eb.visualizer.title", "EB Visualizer");
         TEXT.put("eb.visualizer.waveform.desc", "The mid (mono sum) signal, scrolling over about the last six seconds.");
         TEXT.put("eb.visualizer.waveform.title", "Waveform");
     }

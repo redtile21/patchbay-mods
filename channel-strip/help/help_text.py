@@ -177,9 +177,11 @@ HELP = {
                         "Threshold on the Compressor). Its name and value are shown above it.",
     "eb.strip.slot_k2": "The slot's second macro knob, linked to one of the loaded unit's main controls.",
     "eb.strip.slot_k3": "The slot's third macro knob, linked to one of the loaded unit's main controls.",
-    "eb.strip.move": "Swaps this slot with its neighbour, moving the units and their settings.",
-    "eb.strip.slot_drawing.title": "Slot",
-    "eb.strip.slot_drawing.desc": "The unit in the slot with its input and output levels, and its gain reduction on "
+    "eb.strip.move": "The arrows beside each slot's top knob swap it with its neighbour, moving the units and their "
+                     "settings.",
+    "eb.strip.slot_drawing.title": "Slots",
+    "eb.strip.slot_drawing.desc": "The six slots run left to right and all work the same way; slot 1 is described here. "
+                                  "The face shows the unit in the slot with its input and output levels, and its gain reduction on "
                                   "dynamics units. Below, the names and values of the three macro knobs.",
     "eb.strip.character": "A gentle colour stage after the slots: Clean, Analog (light console), Tube (even harmonics) "
                           "or Tape (soft highs, low bump).",
@@ -222,3 +224,12 @@ HELP = {
                                         "the band goes out of phase (it will thin out in mono). The bar along the bottom is "
                                         "the overall correlation, red below zero.",
 }
+
+# Each device's root group is its one help section; its label in the help view.
+SECTIONS = {
+    "gain": "EB Gain", "eq": "EB EQ", "compressor": "EB Compressor", "saturation": "EB Saturation",
+    "limiter": "EB Limiter", "gate": "EB Gate", "deesser": "EB De-esser", "transient": "EB Transient",
+    "clipper": "EB Clipper", "strip": "EB BlackStrip", "visualizer": "EB Visualizer",
+}
+for _dev, _name in SECTIONS.items():
+    HELP.setdefault(f"eb.{_dev}.title", _name)

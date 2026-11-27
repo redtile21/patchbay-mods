@@ -96,6 +96,44 @@ public final class StripHooks {
 
     // ---- F1 device help: the help widget looks up "<help id>.desc" and ".title"; answer the EB devices' keys ----
 
+    // Bitwig's help view describes only controls inside a section: a group item with a help ID, found below the
+    // panel's root. The EB devices keep every control in the root group (help ID "eb.<device>"), so offer that
+    // root as the section once the view has collected its own.
+    // The list argument is gone by the method's return, so it is kept on entry (UI thread only).
+    static Object helpSourceList;
+
+    @Hook(target = com.bitwig.flt.widget.core.device.CyJ.class, method = "sCA(Ljava/util/List;)V", at = At.ENTRY, id = "help-sources")
+    public static void helpSources(@Arg(0) Object list) {
+        helpSourceList = list;
+    }
+
+    @Hook(target = com.bitwig.flt.widget.core.device.CyJ.class, method = "sCA(Ljava/util/List;)V", at = At.BEFORE_RETURN, id = "help-sections")
+    public static void helpSections(@This com.bitwig.flt.widget.core.device.CyJ view) {
+        Object list = helpSourceList;
+        helpSourceList = null;
+        if (!(list instanceof java.util.List)) return;
+        try {
+            java.util.List<Object> sections = null;
+            for (Object o : (java.util.List<?>) list) {
+                Object root = ((bitwig.obf.t1D) o).byf();
+                if (!(root instanceof bitwig.obf.IrK)) continue;
+                String id = ((bitwig.obf.wue) root).unz();
+                if (id == null || !id.startsWith("eb.")) continue;
+                if (sections == null) {
+                    java.lang.reflect.Field f = com.bitwig.flt.widget.core.device.CyJ.class.getDeclaredField("Heb");
+                    f.setAccessible(true);
+                    @SuppressWarnings("unchecked") java.util.List<Object> l = (java.util.List<Object>) f.get(view);
+                    sections = l;
+                }
+                if (sections != null && !sections.contains(root)) sections.add(root);
+            }
+        } catch (Throwable t) {
+            if (helpFailures++ < 3) Strip.MOD.log("help: could not add the device section", t);
+        }
+    }
+
+    static int helpFailures;
+
     @Hook(target = com.bitwig.flt.widget.core.device.CyJ.class, method = "sCA(LZXC;)Ljava/lang/String;", at = At.REPLACE_CALL,
           callOwner = bitwig.obf.drf.class, call = "wLf", occurrence = 1, id = "help-desc")
     public static String helpDesc(String key) {
