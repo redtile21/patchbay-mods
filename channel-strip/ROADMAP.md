@@ -91,10 +91,10 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
 
 ## 6. Metering
 
-- [ ] EB Visualizer (`devices/visualizer`), a separate device: spectrum, scrolling waveform, level history (RMS and
-      peak, about 6 s) and a stereo field (8 bands by pan and level, correlation bar). Built on the display items that
+- [x] EB Visualizer (`devices/visualizer`), a separate device: spectrum, scrolling waveform, level history (RMS and
+      peak, about 6 s) and a stereo field (8 bands by pan, level and width, frequency labels, correlation bar). Built on the display items that
       work in a Patchbay device: the spectrum and the scope observer (a scrolling time plot). The sonogram and the
-      lightweight oscilloscope stayed blank in tests. First build installed; needs checking in Bitwig.
+      lightweight oscilloscope stayed blank in tests. Confirmed in Bitwig 2026-11-27.
 - [x] Correlation meter on the output (bar under the readouts, red below zero).
 - [x] Integrated LUFS (BS.1770 gated) as INT, a reset icon, and a target chooser (-14, -16, -23): green within
       1 LU, orange above.
