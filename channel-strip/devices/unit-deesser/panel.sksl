@@ -128,8 +128,8 @@ float number(float2 p, float2 o, float h, float val) {
 // @frame
 
 const float MT = 22.;
-const float MB = 170.;
-const float MH = 148.;
+const float MB = 186.;
+const float MH = 164.;
 // Meter fill shared with the EB BlackStrip meters: blue, light blue, amber near the top, red at the very top.
 float3 ramp(float t) {
     float3 c = mix(float3(.22, .52, .82), float3(.42, .74, .95), smoothstep(0., .75, t));
@@ -171,8 +171,8 @@ float splitdb(float fx, float f, float g, float wide) {
 }
 
 half4 main(float2 fragCoord) {
-    // 56 x 47 grid units -> 224 x 188 design units.
-    float2 p = fragCoord / iResolution.xy * float2(224., 188.);
+    // 56 x 51 grid units -> 224 x 204 design units.
+    float2 p = fragCoord / iResolution.xy * float2(224., 204.);
     float3 color = float3(.060, .064, .072);
     float3 blue = float3(.30, .68, .92);
     float3 red = float3(.98, .52, .14);
@@ -189,14 +189,14 @@ half4 main(float2 fragCoord) {
     float gr = ghi / 240. * 24.0;
     float grlive = gri / 240. * 24.0;
 
-    // Response over the native spectrum (36..164 x 20..172 design units = the display item's rect):
+    // Response over the native spectrum (36..164 x 20..188 design units = the display item's rect):
     // 100 Hz .. 20 kHz across, +18 dB at the top to -42 dB at the bottom, as the spectrum is drawn.
-    if (p.x >= 36. && p.x < 164. && p.y >= 20. && p.y < 172.) {
+    if (p.x >= 36. && p.x < 164. && p.y >= 20. && p.y < 188.) {
         float gx = (p.x - 36.) / 128.;
         float fx = 100. * pow(200., gx);
-        float yz = 20. + 18. / 60. * 152.;
-        float yr = 20. + (18. - splitdb(fx, f, dbg(-rng), wide)) / 60. * 152.;
-        float yl = 20. + (18. - splitdb(fx, f, dbg(-grlive), wide)) / 60. * 152.;
+        float yz = 20. + 18. / 60. * 168.;
+        float yr = 20. + (18. - splitdb(fx, f, dbg(-rng), wide)) / 60. * 168.;
+        float yl = 20. + (18. - splitdb(fx, f, dbg(-grlive), wide)) / 60. * 168.;
         float fl = log(f / 100.) / log(200.) * 128. + 36.;
         float a = 0.;
         float3 c = float3(0.);

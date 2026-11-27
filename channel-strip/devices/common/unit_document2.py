@@ -24,7 +24,8 @@ PANEL_HEIGHT = 53
 KNOB_W, KNOB_H, PITCH_X, PITCH_Y = 19, 14, 20, 16
 METER_W = 6
 CAP_CY, CAP_R = 3.66, 2.17      # the native knob's cap inside its rectangle (measured on a screenshot), grid units
-TOP = 3
+TOP = 1          # frames sit half a unit from the panel edge, as on Bitwig's own devices
+CTRL_TOP = TOP + 1   # first knob row / section titles inside the control frame
 # Bitwig display colours (RCp): 1 orange, 4 blue, 6 white, 10 mint. Chooser styles (Gpo): 0 button, 1 display, 4 flat, 7 plain; each spec keeps its own chooser_style.
 TITLE_COLOR = 1
 CHOOSER_COLOR = 1
@@ -32,7 +33,7 @@ CHOOSER_COLOR = 1
 
 def geometry(spec):
     dw = spec.get("display_w", 34)
-    x = 2
+    x = 1
     g = {"dw": dw}
     if spec.get("layout") == "bar":
         g["disp_x"] = 2
@@ -50,9 +51,9 @@ def geometry(spec):
     if spec["meters"].get("out"):
         g["out_x"] = x
         x += METER_W + 1
-    g["knob_x"] = x + 2
+    g["knob_x"] = x + 1
     ncols = (max([c for c, r in spec["knob_pos"]] + [c for c, y in spec.get("chooser_col", [])] + [int(t[5][0]) for t in spec.get("toggles", []) if t[5]] + [c[0] for c in spec.get("cells", [])]) + 1) if "knob_pos" in spec else spec["cols"]
-    g["width"] = g["knob_x"] + ncols * spec.get("pitch_x", PITCH_X) + 2 + spec.get("extra_w", 0)
+    g["width"] = g["knob_x"] + ncols * spec.get("pitch_x", PITCH_X) + spec.get("extra_w", 0)
     return g
 
 
@@ -70,7 +71,7 @@ def cell_rects(spec, g):
     for cell in spec.get("cells", []):
         col, row, title, ids = cell[:4]
         w = cell[4] if len(cell) > 4 else spec.get("knob_w", KNOB_W)
-        x, y0 = g["knob_x"] + col * px, TOP + spec.get("row0", 0) + int(row * py)
+        x, y0 = g["knob_x"] + col * px, CTRL_TOP + spec.get("row0", 0) + int(row * py)
         labels.append((x, y0, w, title))
         n = len(ids)
         for k, ident in enumerate(ids):
@@ -122,7 +123,7 @@ def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, disp
                 j = i - nb
                 kx, ky = g["side_x"] + (j % spec["side_cols"]) * PITCH_X, TOP + (j // spec["side_cols"]) * PITCH_Y
         elif kp:
-            kx, ky = g["knob_x"] + kp[i][0] * spec.get("pitch_x", PITCH_X), TOP + spec.get("row0", 0) + int(kp[i][1] * spec.get("pitch_y", PITCH_Y))
+            kx, ky = g["knob_x"] + kp[i][0] * spec.get("pitch_x", PITCH_X), CTRL_TOP + spec.get("row0", 0) + int(kp[i][1] * spec.get("pitch_y", PITCH_Y))
         else:
             kx, ky = g["knob_x"] + (i % cols) * PITCH_X, TOP + (i // cols) * PITCH_Y
         knob_rects.append((kx, ky, spec.get("knob_w", KNOB_W), spec.get("knob_h", KNOB_H), dec))
@@ -135,7 +136,7 @@ def main_panel(spec, g, knob_refs, choice_refs, drawing_ref, in_vu, out_vu, disp
             "label_color#7056": v("Int16", 6), "pie_color#7057": v("Byte", 6)}))
     for (lc, ltext) in spec.get("section_labels", []):
         items.append(obj(1683, "label_panel_item", {
-            "layout_settings#6226": v("Object", grid_layout(g["knob_x"] + lc * spec.get("pitch_x", PITCH_X), TOP, spec.get("pitch_x", PITCH_X) - 1, 5)),
+            "layout_settings#6226": v("Object", grid_layout(g["knob_x"] + lc * spec.get("pitch_x", PITCH_X), CTRL_TOP, spec.get("pitch_x", PITCH_X) - 1, 5)),
             "text#6219": v("String", ltext), "color#6520": v("Int16", spec.get("section_color", TITLE_COLOR)),
             "horizontal_alignment#6400": v("Byte", 1), "vertical_alignment#6401": v("Byte", 1)}))
     for (lc, ly, lw, ltext) in spec.get("free_labels", []):
@@ -369,11 +370,11 @@ def document(spec, project, binary, shader):
     output_proxy = proxy(output=True)
     output_proxy["fields"]["settings#6194"] = settings([wire(dsp, 0)])
     disp_h = spec.get("display_h", PANEL_HEIGHT - 2 * TOP)
-    frames = [(g["disp_x"] - .2, TOP - .2, g["disp_x"] + g["dw"] + .2, TOP + disp_h + .2)]
+    frames = [(g["disp_x"] - .3, TOP - .3, g["disp_x"] + g["dw"] + .3, TOP + disp_h + .3)]
     if spec.get("layout") == "bar":
         frames.append((g["side_x"] - .5, TOP - .2, g["width"] - 1.5, PANEL_HEIGHT - TOP + .2))
     else:
-        frames.append((g["knob_x"] - .5, TOP - .2, g["width"] - 1.5, PANEL_HEIGHT - TOP + .2))
+        frames.append((g["knob_x"] - .8, TOP - .3, g["width"] - .3, PANEL_HEIGHT - TOP + .3))
     shader_src = backdrop_shader(g["width"], frames)
     backdrop = obj(5512, "", {
         "settings#6194": settings([connection() for _ in range(9)]),

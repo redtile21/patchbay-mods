@@ -11,10 +11,10 @@ SPEC = {
     "cols": 2, "display_w": 56,
     "titles": {"STEREO_LINK": "Link", "INPUT_GAIN": "Input"},
     "knob_pos": [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1)],
-    "knob_size": 1, "knob_w": 15, "knob_h": 12, "pitch_x": 16, "pitch_y": 12, "row0": 0, "chooser_style": 0, "revision": 29,
+    "knob_size": 1, "knob_w": 15, "knob_h": 12, "pitch_x": 16, "pitch_y": 12, "row0": 0, "chooser_style": 0, "revision": 30,
     # Option cells (shared frame): (column, row, title, controls[, width])
     "cells": [(1, 2, 'MODE', ['MODE']), (0, 3, 'AUTO REL', ['AUTO_RELEASE']), (1, 3, 'TRUE PEAK', ['TRUE_PEAK'])],
-    "meters": {}, "vectors": 2, "display_h": 47,
+    "meters": {}, "vectors": 2, "display_h": 51,
     "choices": [
         ("Mode", "MODE", ("Transparent", "Punchy", "Loud"), 0,
          "Transparent limits cleanly; Punchy soft-clips the peaks first; Loud clips harder and releases faster", "mode"),

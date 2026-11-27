@@ -19,7 +19,7 @@ SPEC = {
     ],
     "cols": 5,
     "knob_pos": [(0, 0), (1, 0), (1, 1), (1, 2), (2, 0), (2, 1), (2, 2), (3, 0), (3, 1), (3, 2), (4, 0), (4, 1), (4, 2), (0, 1.5)],
-    "chooser_col": [(1, 45), (4, 45), (0, 21), (0, 39)],
+    "chooser_col": [(1, 44), (4, 44), (0, 20), (0, 38)],
     # Option cells (shared frame): MODE and AIR in their own column, titles level with the band titles
     "cells": [(5, -0.5, "MODE", ["MODE"]), (5, 0.5, "AIR", ["AIR"])],
     "knob_size": 1, "knob_w": 15, "knob_h": 12, "pitch_x": 16, "pitch_y": 12, "row0": 6,
@@ -27,10 +27,10 @@ SPEC = {
     "chooser_style": 0,
     "section_labels": [(0, "FILTERS"), (1, "LOW"), (2, "LOW-MID"), (3, "HIGH-MID"), (4, "HIGH")],
     "meters": {},
-    "revision": 29,
+    "revision": 30,
     "vectors": 2,
     "display_w": 78,
-    "display_h": 47,
+    "display_h": 51,
     "native_display": "eq",
     "gate": "source-document",
     "choices": [

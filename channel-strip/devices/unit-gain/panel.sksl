@@ -132,8 +132,8 @@ float number(float2 p, float2 o, float h, float val) {
 // @frame
 
 const float MT = 22.;
-const float MB = 118.;
-const float MH = 96.;
+const float MB = 134.;
+const float MH = 112.;
 // Meter fill shared with the EB BlackStrip meters: blue, light blue, amber near the top, red at the very top.
 float3 ramp(float t) {
     float3 c = mix(float3(.22, .52, .82), float3(.42, .74, .95), smoothstep(0., .75, t));
@@ -155,8 +155,8 @@ float3 meterpx(float2 p, float3 color, float x0, float x1, float lvl, float pk) 
 }
 
 half4 main(float2 fragCoord) {
-    // 16 x 47 grid units -> 64 x 188 design units: the two narrow meters side by side, pan and width bars under them.
-    float2 p = fragCoord / iResolution.xy * float2(64., 188.);
+    // 16 x 51 grid units -> 64 x 204 design units: the two narrow meters side by side, pan and width bars under them.
+    float2 p = fragCoord / iResolution.xy * float2(64., 204.);
     float3 color = float3(.060, .064, .072);
     float3 blue = float3(.30, .68, .92);
     float pan = audioMedium.y * 200. - 100.;
@@ -169,23 +169,23 @@ half4 main(float2 fragCoord) {
     if (number(p, float2(34., 7.), 9., rpk) > .5) color = numcol(rpk, .05);
 
     // Pan: centre tick and marker.
-    if (p.x >= 6. && p.x <= 58. && p.y >= 136. && p.y <= 144.) {
+    if (p.x >= 6. && p.x <= 58. && p.y >= 152. && p.y <= 160.) {
         color = float3(.040, .042, .048);
         float pos = (p.x - 6.) / 52.;
         if (abs(pos - .5) < .012) color = float3(.2, .23, .26);
         if (abs(pos - (pan + 100.) / 200.) < .03) color = blue;
     }
     // Width: bar from the left, tick at 100 percent.
-    if (p.x >= 6. && p.x <= 58. && p.y >= 162. && p.y <= 170.) {
+    if (p.x >= 6. && p.x <= 58. && p.y >= 178. && p.y <= 186.) {
         color = float3(.040, .042, .048);
         float pos = (p.x - 6.) / 52.;
         if (pos < audioMedium.z) color = blue;
         if (abs(pos - .5) < .012) color = float3(.8, .85, .9);
     }
     // Captions (shared frame): L and R under the meters, PAN and WIDTH under their bars.
-    color = caption_at(p, color, 18., 130., 12., 0., 0., 0., 0.);
-    color = caption_at(p, color, 46., 130., 18., 0., 0., 0., 0.);
-    color = caption_at(p, color, 32., 156., 16., 1., 14., 0., 0.);
+    color = caption_at(p, color, 18., 146., 12., 0., 0., 0., 0.);
+    color = caption_at(p, color, 46., 146., 18., 0., 0., 0., 0.);
+    color = caption_at(p, color, 32., 172., 16., 1., 14., 0., 0.);
     color = caption(p, color, 32., 23., 9., 4., 20., 8.);
     return half4(half3(color), 1.);
 }

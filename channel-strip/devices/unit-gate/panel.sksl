@@ -128,8 +128,8 @@ float number(float2 p, float2 o, float h, float val) {
 // @frame
 
 const float MT = 22.;
-const float MB = 170.;
-const float MH = 148.;
+const float MB = 186.;
+const float MH = 164.;
 // Meter fill shared with the EB BlackStrip meters: blue, light blue, amber near the top, red at the very top.
 float3 ramp(float t) {
     float3 c = mix(float3(.22, .52, .82), float3(.42, .74, .95), smoothstep(0., .75, t));
@@ -170,8 +170,8 @@ float gcurve(float x, float t, float r, float m) {
 }
 
 half4 main(float2 fragCoord) {
-    // 80 x 47 grid units -> 320 x 188 design units.
-    float2 p = fragCoord / iResolution.xy * float2(320., 188.);
+    // 80 x 51 grid units -> 320 x 204 design units.
+    float2 p = fragCoord / iResolution.xy * float2(320., 204.);
     float3 color = float3(.060, .064, .072);
     float3 grid = float3(.150, .160, .175);
     float3 blue = float3(.30, .68, .92);
