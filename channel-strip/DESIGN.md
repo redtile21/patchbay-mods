@@ -44,15 +44,21 @@ EB BlackStrip (container .bwdevice)
 
 ### 2.2 Devices
 
+All device sources are in `devices/` (§4 builds them). Built files go to `built/Bitwig-6.1.7/`.
+
 | Folder | Device | Notes |
 |---|---|---|
-| `devices/blackstrip/` | EB BlackStrip (container) | sources mirrored from the blueprint checkout (`devices/eb-strip`), see §4; flat charcoal "TDR" look with a shader backdrop (`backdrop.sksl`) and framed sections |
-| `devices/unit-gain/` | EB Gain | gain, pan, width, polarity, mono |
-| `devices/unit-eq/` | EB EQ | native spectrum (output boosted +34 dB by the `tap` outport so it fills the display), band lines and points, shader response curve |
-| `devices/unit-compressor/` | EB Compressor | transfer-curve shader, meters |
-| `devices/unit-saturation/` | EB Saturation | tape, tube, soft and hard clip |
-| `devices/unit-limiter/` | EB Limiter | lookahead limiter, meters |
-| `devices/strip/` | older strip experiments | not used |
+| `devices/eb-strip/` | EB BlackStrip (container) | flat charcoal "TDR" look with a shader backdrop (`backdrop.sksl`) and framed sections; meters, character, gain match |
+| `devices/eb-unit/` | (shared) | the unit document builder (`unit_document2.py`), frame and segment shaders every unit uses |
+| `devices/eb-gain/` | EB Gain | gain, pan, width, polarity, mono |
+| `devices/eb-eq/` | EB EQ | native spectrum (output boosted +34 dB by the `tap` outport so it fills the display), band lines and points, shader response curve |
+| `devices/eb-compressor/` | EB Compressor | VCA, Opto, FET, Vari-Mu; transfer-curve shader, meters |
+| `devices/eb-saturation/` | EB Saturation | nine types, 2x oversampling |
+| `devices/eb-limiter/` | EB Limiter | lookahead limiter, true peak |
+| `devices/eb-gate/`, `eb-deesser/`, `eb-transient/`, `eb-clipper/` | EB Gate, De-esser, Transient, Clipper | scaffolded by `common/new_units.py` |
+| `devices/eb-visualizer/` | EB Visualizer | spectrum, scope observer, level history, stereo field |
+| `devices/eb-blackstar-strip/` | older strip spike (Spike B) | not built; its README records what decoding a chain slot taught |
+| `devices/common/` | (shared) | glyphs, metal knobs, help IDs, half-band filter and unit scaffold generators |
 
 Shared look: `PALETTE.md` (units, strip face and meters use one palette).
 
@@ -108,15 +114,20 @@ saturation, lookahead peak limiter, constant-power pan). We do not use decrypted
 
 ## 4. Building (macOS)
 
-The blueprint toolchain lives in a separate checkout (`~/Developer/bitwig-blueprint-work/bitwig-devices-blueprint`)
-because parts of it are GPL-3.0; this repo holds only our sources and mirrors them under `devices/`.
+The sources live in `devices/`. The build tools are in a checkout of polarity's blueprint
+(`~/Developer/bitwig-blueprint-work/bitwig-devices-blueprint`, or `$BLUEPRINT`), and each device's `build.py` finds
+them relative to its own folder, so the builds run there. `build-devices.sh` does it all:
 
 ```
-cd ~/Developer/bitwig-blueprint-work/bitwig-devices-blueprint
-.venv/bin/python devices/eb-strip/build.py --compiler-inputs local/host-tools/macos-arm64-bitwig-6.1.7/compiler-inputs.json
-# units use their own build.py with --project-file devices/eb-xxx/bitwig-project.macos-6.1.7.json
-cp devices/eb-strip/build/macos-6.1.7/*.bwdevice ~/Developer/bitwig-blueprint-work/patchbay-devices/
+sh channel-strip/build-devices.sh              # all 11 devices
+sh channel-strip/build-devices.sh eq strip     # just these
 ```
+
+It copies `devices/eb-*` and `devices/common/*` into the checkout, builds, and writes the `.bwdevice` files to
+`built/Bitwig-6.1.7/` (committed). Edit sources here, never in the checkout: if the checkout's copy differs, the script
+stops and lists the files (`--pull` takes the checkout's version into the project, `--push` overwrites the checkout).
+For testing in Bitwig, add `built/Bitwig-6.1.7` in Patchbay's Device Folders. `eb-strip-console/release.sh` takes the
+devices from there too.
 
 Mod: `eb-strip-console/build.sh` (needs JDK 25 and the Patchbay folder), then copy `out/eb-strip-console` to
 `~/Desktop/Bitwig Patchbay/mods/` and restart Bitwig. Check for `BUILD_OK`.

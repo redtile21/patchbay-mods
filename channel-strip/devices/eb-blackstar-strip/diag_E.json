@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "projectId": "elodea-blackstar.strip",
+  "name": "EB Strip Diag E",
+  "surface": "device",
+  "target": {
+    "bitwigVersion": "6.1.7",
+    "platform": "macos-arm64"
+  },
+  "identity": {
+    "uuid": "0a0f663d-9113-5c12-8d35-6b1c15aa09de",
+    "creator": "Elodea Blackstar",
+    "category": "Container"
+  },
+  "presentation": {
+    "type": "audio-fx",
+    "description": "Diagnostic E: no limiter"
+  },
+  "sources": {
+    "nitro": [
+      "slot_E.nitro"
+    ],
+    "sksl": [
+      "panel.sksl"
+    ]
+  },
+  "adapter": {
+    "type": "external-builder",
+    "argv": [
+      "python",
+      "{workspace}/build.py",
+      "--out",
+      "{output}"
+    ]
+  },
+  "output": {
+    "path": "build/diag/EB Strip Diag E.bwdevice",
+    "libraryPath": "EB Strip Diag E.bwdevice"
+  },
+  "preflight": {
+    "profile": "source-document",
+    "recallSafety": {
+      "canary": "runtime_magic",
+      "arrays": []
+    }
+  }
+}

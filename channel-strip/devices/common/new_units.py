@@ -3,7 +3,7 @@ import shutil
 import uuid
 from pathlib import Path
 
-DEV = Path.home() / "Developer/bitwig-blueprint-work/bitwig-devices-blueprint/devices"
+DEV = Path(__file__).resolve().parents[1]  # channel-strip/devices; build with ../build-devices.sh
 comp_sksl = (DEV / "eb-compressor/panel.sksl").read_text()
 HEAD = comp_sksl[comp_sksl.index("float sdseg"):comp_sksl.index("half4 main")]
 HEAD = HEAD.replace(HEAD[HEAD.index("float curve("):HEAD.index("const float MT")], "")

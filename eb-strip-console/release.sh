@@ -2,11 +2,12 @@
 # Makes the two release ZIPs in ../releases (macOS):
 #   eb-strip-console-<version>.zip  the mod, with its source, for Patchbay's Add Mod
 #   EB-BlackStrip-<version>.zip     the devices and presets, with the README
-# The version is mod.json's. Needs what build.sh needs, plus the built devices in $DEVICES.
+# The version is mod.json's. Needs what build.sh needs, plus the built devices in $DEVICES (channel-strip/built/Bitwig-6.1.7,
+# made by channel-strip/build-devices.sh).
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
 STRIP=$(cd "$HERE/../channel-strip" && pwd)
-DEVICES=${DEVICES:-$HOME/Developer/bitwig-blueprint-work/patchbay-devices}
+DEVICES=${DEVICES:-$STRIP/built/Bitwig-6.1.7}
 JDK=${JAVA_HOME:-$HOME/.local/jdk/jdk-25.0.5+8/Contents/Home}
 VERSION=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['mod']['version'])" "$HERE/mod.json")
 REL="$STRIP/releases"; STAGE="$HERE/build/release"

@@ -9,7 +9,8 @@ each unit type at default settings, and only their values are changed.
 
     python3 make_presets.py OUT_DIR DEVICES_DIR templates/units-b.json templates/units-a.json
 (units-b is first: its remote page provides the page and slot templates). A preset also stores each display's shader
-code; DEVICES_DIR (the installed .bwdevice files) supplies the current code, so presets show the current panels.
+code; DEVICES_DIR (the built .bwdevice files, ../built/Bitwig-6.1.7) supplies the current code, so presets show the
+current panels.
 writes OUT_DIR/<name>.json for each preset; encode with `bwmodule-parser from-json`.
 """
 from __future__ import annotations
@@ -53,7 +54,7 @@ def hpf(hz):
 
 def spec(unit):
     ns = {}
-    exec((HERE.parent / "devices" / f"unit-{UNIT_DIRS[unit]}" / "spec.py").read_text(), ns)
+    exec((HERE.parent / "devices" / f"eb-{UNIT_DIRS[unit]}" / "spec.py").read_text(), ns)
     return ns["SPEC"]
 
 

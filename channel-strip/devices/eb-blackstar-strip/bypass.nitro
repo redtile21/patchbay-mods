@@ -1,0 +1,30 @@
+component eb_slot_bypass
+{
+    audio_inport dry;
+    audio_inport wet;
+    value_inport i32 bypass;
+
+    audio_outport out;
+
+    f32 amount = 1.0;
+
+    reset
+    {
+        amount = 1.0;
+    }
+
+    process
+    {
+        f32 target = 1.0;
+        if (bypass == 0)
+        {
+            target = 0.0;
+        }
+        f32 k = 1.0 - exp(-1.0 / (0.015 * EC.samplerate));
+        amount = amount + k * (target - amount);
+        f32<> d = dry;
+        f32<> w = wet;
+        f32<> y = w * amount + d * (1.0 - amount);
+        out = y;
+    }
+}

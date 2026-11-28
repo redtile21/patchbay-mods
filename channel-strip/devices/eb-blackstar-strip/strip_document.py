@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import importlib.util
 from pathlib import Path
 
@@ -89,7 +90,7 @@ def spectrum_display(analyser_ref, x, y, w, h):
         "top_margin_visible#10291": v("Bool", False), "bottom_margin_visible#10292": v("Bool", False)})
 
 
-def main_panel(slot_info, in_ref, out_ref):
+def main_panel(slot_info, in_ref, out_ref, extra=()):
     items = []
     for i, (type_ref, knob_refs, analyser_ref, drawing_ref) in enumerate(slot_info):
         x = EDGE + i * (SW + GAP)
@@ -102,6 +103,7 @@ def main_panel(slot_info, in_ref, out_ref):
         items.append(chooser(f"Slot {i + 1}: device or bypass", type_ref, x, 2, SW))
         for j, kr in enumerate(knob_refs):
             items.append(small_knob("", f"Slot {i + 1} knob {j + 1}", kr, x + 1 + j * 14, 39))
+    items.extend(extra)
     items.append(small_knob("In", "Input gain in dB", in_ref, 2, 14, 15))
     items.append(small_knob("Out", "Output gain in dB", out_ref, PANEL_WIDTH - 17, 14, 15))
     grid = obj(1681, "grid_panel_item", {
@@ -164,8 +166,34 @@ def document(project, binaries, shader):
     stage_out = stage_core(gain_bin, [wire(previous), wire(out_gain), connection(), connection(), wire(stage_kind)])
     output_proxy = proxy(output=True)
     output_proxy["fields"]["settings#6194"] = settings([wire(stage_out)])
+    extra, popups = [], []
+    if os.environ.get("STRIP_POPUP_SPIKE"):
+        def group(expr_target, rect, knob):
+            return obj(1681, "grid_panel_item", {
+                "layout_settings#6226": v("Object", grid_layout(*rect)), "items#6221": v("ObjectList", owned(knob)),
+                "border_style#6228": v("Byte", 0), "title#6242": v("String", ""), "show_title#6243": v("Bool", False),
+                "title_color#6522": v("Byte", 6), "brightness#6245": v("Byte", 1)})
+        forms = [("T1 eq3", "SLOT1_TYPE == 3"), ("T2 ne3", "SLOT1_TYPE != 3"), ("T3 tern", "SLOT1_TYPE == 3 ? 1.0 : 0.0"),
+                 ("T4 bump", "1.0 - (SLOT1_TYPE - 3.0) * (SLOT1_TYPE - 3.0)"), ("T5 mul", "(SLOT1_TYPE == 3) * 1.0"),
+                 ("T6 raw", "SLOT1_TYPE"), ("T7 gt", "SLOT1_TYPE > 2.5"), ("T8 and", "SLOT1_TYPE >= 3.0 && SLOT1_TYPE <= 3.0")]
+        groups, exprs = [], []
+        for n, (title, e) in enumerate(forms):
+            gx = group(0, (2 + (n // 4) * 64, 2 + (n % 4) * 20, 62, 18), small_knob(title, e, ref(knobs[0][0]), 0, 0, 40))
+            groups.append(gx)
+            exprs.append(obj(1728, "panel_expression", {"expression#6274": v("String", e), "panel_item#6275": ref(gx), "attribute_id#6316": v("Int16", 6309)}))
+        root = obj(1681, "grid_panel_item", {
+            "layout_settings#6226": v("NullObject"), "items#6221": v("ObjectList", owned(*groups)),
+            "border_style#6228": v("Byte", 0), "title#6242": v("String", ""), "show_title#6243": v("Bool", False),
+            "title_color#6522": v("Byte", 6), "brightness#6245": v("Byte", 1)})
+        popup = obj(1680, "panel", {"name#6211": v("String", "Slot 1 detail"), "root_item#6212": v("Object", root),
+                    "width#6232": v("Int16", 132), "height#6233": v("Byte", 84), "expressions#6277": v("ObjectList", owned(*exprs))})
+        popups.append(popup)
+        extra.append(obj(1726, "popup_panel_button_panel_item", {
+            "layout_settings#6226": v("Object", grid_layout(EDGE + SW - 11, 33, 10, 6)),
+            "is_visible#6309": v("Bool", True), "is_enabled#6310": v("Bool", True),
+            "tooltip_text#6867": v("String", "Slot 1 full controls"), "panel_to_show#6270": v("Object", popup)}))
     panel = main_panel([(ref(types[i]), [ref(k) for k in knobs[i]], ref(analysers[i]), ref(drawings[i])) for i in range(SLOTS)],
-                       ref(in_gain), ref(out_gain))
+                       ref(in_gain), ref(out_gain), extra)
     identity = project["identity"]
     children = [audio_source, compensation, in_gain, out_gain, stage_kind, *types, *(k for row in knobs for k in row), stage_in]
     for dsp, drawing, analyser in zip(dsps, drawings, analysers):

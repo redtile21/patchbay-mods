@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "projectId": "elodea-blackstar.strip",
+  "name": "EB Strip Diag C",
+  "surface": "device",
+  "target": {
+    "bitwigVersion": "6.1.7",
+    "platform": "macos-arm64"
+  },
+  "identity": {
+    "uuid": "51be5641-1a33-5b81-8371-3c8d459bb95d",
+    "creator": "Elodea Blackstar",
+    "category": "Container"
+  },
+  "presentation": {
+    "type": "audio-fx",
+    "description": "Diagnostic C: gain only"
+  },
+  "sources": {
+    "nitro": [
+      "slot_C.nitro"
+    ],
+    "sksl": [
+      "panel.sksl"
+    ]
+  },
+  "adapter": {
+    "type": "external-builder",
+    "argv": [
+      "python",
+      "{workspace}/build.py",
+      "--out",
+      "{output}"
+    ]
+  },
+  "output": {
+    "path": "build/diag/EB Strip Diag C.bwdevice",
+    "libraryPath": "EB Strip Diag C.bwdevice"
+  },
+  "preflight": {
+    "profile": "source-document",
+    "recallSafety": {
+      "canary": "runtime_magic",
+      "arrays": []
+    }
+  }
+}
