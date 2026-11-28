@@ -106,7 +106,7 @@ Each mode is a chooser inside the same unit; knobs and automation stay the same,
 
 ## 7. Release
 
-- [x] Icon, README with screenshots, release ZIPs (`mod/release.sh`; 0.9.0 in `releases/`), and a guide for
+- [x] Icon, README with screenshots, release ZIPs (`eb-strip-console/release.sh`; 0.9.0 in `releases/`), and a guide for
       others building devices and mods (`docs/building-bitwig-devices-and-mods.md`).
 - [ ] Demo project.
 - [ ] Check other Bitwig versions (6.1.4) and Windows.
