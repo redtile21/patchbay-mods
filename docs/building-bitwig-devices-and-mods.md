@@ -42,6 +42,11 @@ These are the habits that saved the most round trips. Put them in your agent's i
    Compressor+" gets an answer you can use; "test it" doesn't. Ask for a screenshot when the result is visual.
 9. **Keep a running notes file of gotchas** (like this one) and read it at the start of every session.
 10. **Never edit Bitwig's install, never ship Bitwig's files, never try to decrypt native device files.**
+11. **Keep the sources and the built devices in your own repository.** The blueprint's builds only run inside its
+    checkout, so it's tempting to work there, but your files are then untracked in someone else's clone, and built
+    devices end up in a loose folder. Keep sources in your repo, have a script copy them into the checkout, build with
+    `--out` pointing back into your repo, and commit the built `.bwdevice` files. Make the script stop if the
+    checkout's copy has changed, so an edit made there is never silently overwritten.
 
 ## Device documents (`.bwdevice`)
 

@@ -1,0 +1,168 @@
+component eb_slot
+{
+    audio_inport in;
+    audio_inport f32 k1 = 50.0;
+    audio_inport f32 k2 = 50.0;
+    audio_inport f32 k3 = 50.0;
+    value_inport i32 kind;
+
+    audio_outport out;
+    audio_outport f32<4> display;
+    audio_outport f32<4> display2;
+
+    f32<2>[1024] dl;
+    f32[1024] gt_buf;
+    i32 runtime_magic = 0;
+    i32 wp = 0;
+    i32 p_kind = -1;
+    f32 p_k1 = -999.0;
+    f32 p_k2 = -999.0;
+    f32 p_k3 = -999.0;
+    f32 in_env = 0.0;
+    f32 out_env = 0.0;
+    f32 gr_db = 0.0;
+    f32 lgain = 1.0;
+    f32 b0_a = 1.0;
+    f32 b1_a = 0.0;
+    f32 b2_a = 0.0;
+    f32 a1_a = 0.0;
+    f32 a2_a = 0.0;
+    f32<2> z1_a = 0.0;
+    f32<2> z2_a = 0.0;
+    f32 b0_b = 1.0;
+    f32 b1_b = 0.0;
+    f32 b2_b = 0.0;
+    f32 a1_b = 0.0;
+    f32 a2_b = 0.0;
+    f32<2> z1_b = 0.0;
+    f32<2> z2_b = 0.0;
+    f32 b0_c = 1.0;
+    f32 b1_c = 0.0;
+    f32 b2_c = 0.0;
+    f32 a1_c = 0.0;
+    f32 a2_c = 0.0;
+    f32<2> z1_c = 0.0;
+    f32<2> z2_c = 0.0;
+
+    f32 dbgain(f32 v)
+    {
+        return exp(v * 0.11512925464970229);
+    }
+    f32 bound(f32 v, f32 lo, f32 hi)
+    {
+        return fmax(lo, fmin(hi, v));
+    }
+    f32 tanh_(f32 v)
+    {
+        f32 e = exp(2.0 * bound(v, -12.0, 12.0));
+        return (e - 1.0) / (e + 1.0);
+    }
+    f32 shape(f32 v, f32 kd)
+    {
+        f32 r = 0.0;
+        if (kd < 0.5)
+        {
+            r = tanh_(v);
+        }
+        else
+        {
+            if (kd < 1.5)
+            {
+                if (v >= 0.0)
+                {
+                    r = tanh_(v);
+                }
+                else
+                {
+                    r = tanh_(v * 0.7) / 0.7;
+                }
+            }
+            else
+            {
+                if (kd < 2.5)
+                {
+                    f32 c = bound(v, -1.0, 1.0);
+                    r = 1.5 * c - 0.5 * c * c * c;
+                }
+                else
+                {
+                    r = bound(v, -1.0, 1.0);
+                }
+            }
+        }
+        return r;
+    }
+
+    reset
+    {
+        runtime_magic = 0;
+        p_kind = -1;
+    }
+
+    process
+    {
+        f32 sr = EC.samplerate;
+        if (runtime_magic != 715203)
+        {
+            runtime_magic = 715203;
+            wp = 0;
+            i32 j = 0;
+            while (j < 1024)
+            {
+                dl[j] = 0.0;
+                gt_buf[j] = 1.0;
+                j = j + 1;
+            }
+        }
+        if (kind != p_kind)
+        {
+            p_kind = kind;
+            p_k1 = -999.0;
+            p_k2 = -999.0;
+            p_k3 = -999.0;
+            gr_db = 0.0;
+            lgain = 1.0;
+            z1_a = 0.0;
+            z2_a = 0.0;
+            z1_b = 0.0;
+            z2_b = 0.0;
+            z1_c = 0.0;
+            z2_c = 0.0;
+        }
+        f32<> x = in;
+        f32<> y = x;
+        f32 aux = 0.0;
+        f32 pin = fmax(fabs(x[0]), fabs(x[1]));
+
+        // ---- 1: gain, pan, width ----
+        if (kind == 1)
+        {
+            f32 g = (bound(k1, 0.0, 100.0) - 50.0) * 0.48;
+            f32 lin = dbgain(g);
+            f32 pn = (bound(k2, 0.0, 100.0) - 50.0) * 2.0;
+            f32 angle = (pn + 100.0) * 0.00785398163;
+            f32 gl = cos(angle) * 1.41421356;
+            f32 gr = sin(angle) * 1.41421356;
+            f32 wd = bound(k3, 0.0, 100.0) * 0.02;
+            f32 mid = (x[0] + x[1]) * 0.5;
+            f32 side = (x[0] - x[1]) * 0.5 * wd;
+            y = <(mid + side) * lin * gl, (mid - side) * lin * gr>;
+        }
+
+        // ---- 6: utility gain in dB (input / output stages of the strip) ----
+        if (kind == 6)
+        {
+            y = x * dbgain(bound(k1, -24.0, 24.0));
+        }
+
+        out = y;
+        f32 pout = fmax(fabs(y[0]), fabs(y[1]));
+        in_env = fmax(pin, in_env * 0.9995);
+        out_env = fmax(pout, out_env * 0.9995);
+        f32 ine = bound((20.0 * log10(fmax(0.000001, in_env)) + 60.0) / 66.0, 0.0, 1.0);
+        f32 oute = bound((20.0 * log10(fmax(0.000001, out_env)) + 60.0) / 66.0, 0.0, 1.0);
+        f32 kd = cast(kind, f32);
+        display = <kd * 0.125, ine, oute, aux>;
+        display2 = <bound(k1, 0.0, 100.0) * 0.01, bound(k2, 0.0, 100.0) * 0.01, bound(k3, 0.0, 100.0) * 0.01, 0.0>;
+    }
+}

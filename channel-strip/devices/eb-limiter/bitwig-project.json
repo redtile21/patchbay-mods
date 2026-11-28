@@ -61,7 +61,7 @@
             "native"
           ],
           "inputOwner": "native",
-          "knobSize": 2,
+          "knobSize": 1,
           "gestures": [
             "drag",
             "reset"
@@ -75,7 +75,7 @@
             "native"
           ],
           "inputOwner": "native",
-          "knobSize": 2,
+          "knobSize": 1,
           "gestures": [
             "drag",
             "reset"
@@ -89,7 +89,7 @@
             "native"
           ],
           "inputOwner": "native",
-          "knobSize": 2,
+          "knobSize": 1,
           "gestures": [
             "drag",
             "reset"
@@ -103,7 +103,7 @@
             "native"
           ],
           "inputOwner": "native",
-          "knobSize": 2,
+          "knobSize": 1,
           "gestures": [
             "drag",
             "reset"
@@ -117,7 +117,7 @@
             "native"
           ],
           "inputOwner": "native",
-          "knobSize": 2,
+          "knobSize": 1,
           "gestures": [
             "drag",
             "reset"

@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "projectId": "elodea-blackstar.strip",
+  "name": "EB Strip Popup Spike",
+  "surface": "device",
+  "target": {
+    "bitwigVersion": "6.1.7",
+    "platform": "macos-arm64"
+  },
+  "identity": {
+    "uuid": "0c3b7e52-91aa-4d0e-8a6f-3d1e5b7c9a21",
+    "creator": "Elodea Blackstar",
+    "category": "Container"
+  },
+  "presentation": {
+    "type": "audio-fx",
+    "description": "Elodea Blackstar channel strip: six device slots in series with input and output gain and per-slot bypass."
+  },
+  "sources": {
+    "nitro": [
+      "slot.nitro"
+    ],
+    "sksl": [
+      "panel.sksl"
+    ]
+  },
+  "adapter": {
+    "type": "external-builder",
+    "argv": [
+      "python",
+      "{workspace}/build.py",
+      "--out",
+      "{output}"
+    ]
+  },
+  "output": {
+    "path": "build/spike/EB Strip Popup Spike.bwdevice",
+    "libraryPath": "EB Strip Popup Spike.bwdevice"
+  },
+  "preflight": {
+    "profile": "source-document",
+    "recallSafety": {
+      "canary": "runtime_magic",
+      "arrays": []
+    }
+  }
+}
