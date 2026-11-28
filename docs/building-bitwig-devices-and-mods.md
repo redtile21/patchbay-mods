@@ -234,6 +234,22 @@ has turned off, and may fail for unrelated reasons. A `DEEP_VERIFY_FAIL` here is
   those and nothing from the web. Take screenshots at the size you want them shown.
 - Be honest about versions. A mod written against a Bitwig build that isn't one of Patchbay's reference builds
   (6.1.3 and 6.1.4 as of loader 0.36) runs only on that exact build until it's ported to a reference build.
+- **Patchbay Launcher** lists, installs and updates mods and devices straight from GitHub, but only for repositories
+  laid out the way its [publishing guide](https://github.com/arius77R/patchbay-launcher/blob/main/docs/PUBLISHING.md)
+  says. Read it before your first release; the traps that cost time here:
+  - Each mod's manifest must be at `<mod-id>/mod.json` at the top of the repository. If a repository has any such
+    folders, a released mod without one is treated as removed and hidden. A mod kept in `project/mod/` disappears.
+  - The release asset is `<mod-id>-<version>.zip` (`1.2.0` or `1.2.0-dev.3`, nothing else in the name), attached to a
+    published GitHub release, with `mod.id` and `mod.version` inside matching the file name.
+  - `mod.name` is `Category: Name` with a category from the guide's fixed list (`Devices`, not `Device`).
+  - List every framework in `requires`, including the ones you only use through `registrations` (Actions and Menus,
+    Settings): the Launcher installs dependencies from `requires` alone.
+  - Any manifest change is a new version; never replace a release file under the same version.
+  - Devices: `.bwdevice` files on the default branch, optionally under `Bitwig-<version>/` folders (the Launcher picks
+    the build for the user's Bitwig). Descriptions come from a table in the root `README.md` whose first column links
+    the exact file name (`| [My Device](Bitwig-6.1.7/My%20Device.bwdevice) | Device | What it does | ... |`); previews
+    from `previews/<file name, lower case, spaces as hyphens>.png`.
+  - Add the repository topic `patchbay-mod` or `patchbay-devices` so it shows in the Launcher's source list.
 - Icons for mod actions are 21 × 21 SVGs, black on transparent (Bitwig tints them). Draw your own; never copy
   Bitwig's.
 

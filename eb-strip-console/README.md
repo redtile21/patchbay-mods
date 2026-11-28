@@ -8,7 +8,7 @@ units, a character stage, loudness metering and automatic gain match, all on one
 
 ![EB BlackStrip on a track](images/strip.png)
 
-Version 0.9.0. Built and tested with **Bitwig Studio 6.1.7 on macOS** with Patchbay (BML) loader 0.36. Other Bitwig
+Version 0.9.1. Built and tested with **Bitwig Studio 6.1.7 on macOS** with Patchbay (BML) loader 0.36. Other Bitwig
 versions and Windows or Linux are not tested yet (see [Limits](#limits)).
 
 ## What you get
@@ -62,23 +62,37 @@ also set up the strip's remote control pages.
 
 ## Install
 
-You need Bitwig Studio 6.1.7 (macOS) and Patchbay with loader 0.36 or later. Two downloads:
+You need Bitwig Studio 6.1.7 (macOS) and Patchbay with loader 0.36 or later.
 
-- `eb-strip-console-0.9.0.zip`: the mod.
-- `EB-BlackStrip-0.9.0.zip`: the devices and presets.
+### With Patchbay Launcher
 
-1. **The mod.** In the Patchbay window, go to **Mods**, click **Add Mod…** and pick `eb-strip-console-0.9.0.zip`
-   (don't unpack it). Tick **Device: EB Strip Console**. Ticking it also ticks the frameworks it needs (Actions and
-   Menus, Notifications), which come with Patchbay.
-2. **The devices.** Unpack `EB-BlackStrip-0.9.0.zip` somewhere permanent, for example your Documents folder. In
-   Patchbay, open **Device Folders** under Tools and add its `Devices` folder. Make sure the framework
-   **Nitro Devices** is ticked.
+1. **The mod.** In **Sources → Mods**, add `redtile21/patchbay-mods`. In **Mods**, install
+   **Devices: EB Strip Console**. The Launcher also installs the frameworks it needs (Actions and Menus,
+   Notifications, Nitro Devices).
+2. **The devices.** In **Sources → Devices**, add `redtile21/Patchbay-devices`. In **Devices**, install the eleven EB
+   devices. The Launcher adds their folder to Patchbay's Device Folders.
+3. **The presets.** The Launcher doesn't handle presets. Download `EB-BlackStrip-0.9.1.zip` (step 2 below) and copy
+   its `Presets/EB BlackStrip` folder into your Bitwig library's presets folder.
+4. Press **Load**. In Bitwig, find **EB BlackStrip** in the device browser and drop it on a track.
+
+### By hand
+
+Two downloads, from [patchbay-mods/channel-strip/releases](https://github.com/redtile21/patchbay-mods/tree/main/channel-strip/releases):
+
+- `eb-strip-console-0.9.1.zip`: the mod.
+- `EB-BlackStrip-0.9.1.zip`: the devices and presets.
+
+1. **The mod.** In the Patchbay window, go to **Mods**, click **Add Mod…** and pick `eb-strip-console-0.9.1.zip`
+   (don't unpack it). Tick **Devices: EB Strip Console**. Ticking it also ticks the frameworks it needs (Actions and
+   Menus, Notifications, Nitro Devices), which come with Patchbay.
+2. **The devices.** Unpack `EB-BlackStrip-0.9.1.zip` somewhere permanent, for example your Documents folder. In
+   Patchbay, open **Device Folders** under Tools and add its `Devices` folder.
 3. **The presets.** Copy the `Presets/EB BlackStrip` folder into your Bitwig library's presets folder
    (`~/Documents/Bitwig Studio/Library/Presets/` by default; Bitwig's Settings > Locations shows yours).
 4. Press **Load** in Patchbay. In Bitwig, find **EB BlackStrip** in the device browser and drop it on a track.
 
-To update, add the newer mod ZIP the same way (Patchbay keeps your tick), replace the devices folder's contents, and
-restart Bitwig.
+To update by hand, add the newer mod ZIP the same way (Patchbay keeps your tick), replace the devices folder's
+contents, and restart Bitwig.
 
 ## Using it
 
