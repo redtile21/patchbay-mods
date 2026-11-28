@@ -3,7 +3,7 @@
   "mod": {
     "id": "save-new-version",
     "name": "Project: Save New Version",
-    "version": "0.2.0-dev.1",
+    "version": "0.2.0-dev.2",
     "author": "Scott",
     "description": "Adds a Save New Version action (shortcut and Commander) that saves the project as the next version of its .bwproject file (name-2, name-3 ... or name-ddMMyyHHmm) and continues under the new name."
   },
@@ -24,6 +24,16 @@
       "consumer": "action-menu-composition-framework",
       "descriptor": "actions.properties",
       "jar": "helper.jar"
+    }
+  ],
+  "requires": [
+    {
+      "id": "action-menu-composition-framework",
+      "min_version": "0.8.0-dev.1"
+    },
+    {
+      "id": "preferences-composition-framework",
+      "min_version": "1.0.0"
     }
   ]
 }

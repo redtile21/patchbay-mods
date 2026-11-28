@@ -1,4 +1,4 @@
-# Tracks: Default Tracks
+# Arranger: Default Tracks
 
 A Patchbay mod for Bitwig Studio. It adds two actions that create a track after the selected one (or at the end when no track is selected) and load your own Chain preset into it:
 

@@ -2,8 +2,8 @@
   "manifest_version": 2,
   "mod": {
     "id": "eb-strip-console",
-    "name": "Device: EB Strip Console",
-    "version": "0.9.0",
+    "name": "Devices: EB Strip Console",
+    "version": "0.9.1",
     "author": "Scott",
     "description": "Companion for the EB BlackStrip channel strip: loads the unit each slot names, links the macro knobs, swaps slots, keeps A/B snapshots, opens the expanded view, runs strip-wide 2x oversampling and serves the F1 help of every EB device.",
     "area": "Device",
@@ -23,8 +23,16 @@
   },
   "requires": [
     {
+      "id": "action-menu-composition-framework",
+      "min_version": "0.8.0-dev.1"
+    },
+    {
       "id": "notifications-framework",
       "min_version": "0.3.0-dev.1"
+    },
+    {
+      "id": "custom-device-registrar",
+      "min_version": "1.3.0-dev.3"
     }
   ],
   "resources": {
