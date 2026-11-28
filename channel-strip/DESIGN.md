@@ -56,9 +56,9 @@ EB BlackStrip (container .bwdevice)
 
 Shared look: `PALETTE.md` (units, strip face and meters use one palette).
 
-### 2.3 Companion mod (`mod/`, id `eb-strip-console`)
+### 2.3 Companion mod (`../eb-strip-console/`, id `eb-strip-console`)
 
-Java mod built against Bitwig's obfuscated classes (compile jar in `mod/build-cache`). Pieces:
+Java mod built against Bitwig's obfuscated classes (compile jar in `eb-strip-console/build-cache`). Pieces:
 
 | File | Job |
 |---|---|
@@ -118,7 +118,7 @@ cd ~/Developer/bitwig-blueprint-work/bitwig-devices-blueprint
 cp devices/eb-strip/build/macos-6.1.7/*.bwdevice ~/Developer/bitwig-blueprint-work/patchbay-devices/
 ```
 
-Mod: `channel-strip/mod/build.sh` (needs JDK 25 and the Patchbay folder), then copy `out/eb-strip-console` to
+Mod: `eb-strip-console/build.sh` (needs JDK 25 and the Patchbay folder), then copy `out/eb-strip-console` to
 `~/Desktop/Bitwig Patchbay/mods/` and restart Bitwig. Check for `BUILD_OK`.
 
 ## 5. Lessons that bite

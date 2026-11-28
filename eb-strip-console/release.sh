@@ -5,7 +5,7 @@
 # The version is mod.json's. Needs what build.sh needs, plus the built devices in $DEVICES.
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
-STRIP=$(dirname "$HERE")
+STRIP=$(cd "$HERE/../channel-strip" && pwd)
 DEVICES=${DEVICES:-$HOME/Developer/bitwig-blueprint-work/patchbay-devices}
 JDK=${JAVA_HOME:-$HOME/.local/jdk/jdk-25.0.5+8/Contents/Home}
 VERSION=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['mod']['version'])" "$HERE/mod.json")
@@ -40,7 +40,7 @@ cp "$HERE/README.md" "$D/"
 for img in $(grep -o '](images/[^)]*)' "$HERE/README.md" | sed 's/^](//; s/)$//' | sort -u); do
   cp "$HERE/$img" "$D/$img"
 done
-cp "$STRIP/../LICENSE" "$D/LICENSE.txt"
+cp "$HERE/../LICENSE" "$D/LICENSE.txt"
 
 rm -f "$REL/eb-strip-console-$VERSION.zip" "$REL/EB-BlackStrip-$VERSION.zip"
 (cd "$STAGE" && zip -q -r -X "$REL/eb-strip-console-$VERSION.zip" eb-strip-console -x '*.DS_Store')

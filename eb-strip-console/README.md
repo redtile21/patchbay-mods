@@ -106,9 +106,9 @@ restart Bitwig.
 
 ## Build from source
 
-The source is in [patchbay-mods/channel-strip](https://github.com/redtile21/patchbay-mods/tree/main/channel-strip):
-the devices are built with [bitwig-devices-blueprint](https://github.com/polarity/bitwig-devices-blueprint) (Nitro
-DSP, SkSL display shaders, Python document builders), the mod with Patchbay's mod kit (`mod/build.sh`, JDK 25).
-`mod/release.sh` makes both ZIPs.
+The source is in [patchbay-mods](https://github.com/redtile21/patchbay-mods). `channel-strip/` holds the devices,
+built with [bitwig-devices-blueprint](https://github.com/polarity/bitwig-devices-blueprint) (Nitro DSP, SkSL display
+shaders, Python document builders), the presets and the F1 help text; `eb-strip-console/` holds the mod, built with
+Patchbay's mod kit (`build.sh`, JDK 25). `eb-strip-console/release.sh` makes both ZIPs.
 
 License: GPL-3.0, like the rest of the repository.
